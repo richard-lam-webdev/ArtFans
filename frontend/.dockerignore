@@ -1,0 +1,14 @@
+# Dart & Flutter
+.dart_tool/
+.packages
+.buildlog
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+pubspec.lock
+
+# Node modules, IDE, build
+build/
+.idea/
+.vscode/
+.git/
