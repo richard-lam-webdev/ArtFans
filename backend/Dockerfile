@@ -19,7 +19,6 @@ WORKDIR /app
 
 COPY --from=builder /src/initdb ./
 COPY --from=builder /src/onlyart-api ./
-COPY --from=builder /src/internal/migrations ./internal/migrations
 
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
