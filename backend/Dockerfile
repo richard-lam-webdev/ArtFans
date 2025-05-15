@@ -20,8 +20,8 @@ WORKDIR /app
 COPY --from=builder /src/initdb ./
 COPY --from=builder /src/onlyart-api ./
 
-COPY entrypoint.sh ./
-RUN chmod +x entrypoint.sh
+COPY entrypoint.sh /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 ENTRYPOINT ["./entrypoint.sh"]
