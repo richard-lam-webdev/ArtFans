@@ -73,7 +73,7 @@ jobs:
       - name: Build & Run backend
         working-directory: backend
         run: |
-          go build -o app main.go
+          go build -o app ./cmd/server/main.go
           nohup ./app &
 
       # Tests d’intégration Flutter/Web sur ce backend
