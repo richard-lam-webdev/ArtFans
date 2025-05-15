@@ -86,7 +86,7 @@ jobs:
         run: flutter pub get
       - name: Run integration tests on Web
         working-directory: frontend
-        run: flutter test integration_test/app_test.dart -d web-server --browser-name=chrome
+        run: flutter test integration_test/app_test.dart -d web-server
 
   # 3) Tests d’intégration “prod-like” via Docker – Phase 2 validation prod-like
   prod-integration:
