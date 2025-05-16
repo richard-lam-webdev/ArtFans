@@ -91,7 +91,11 @@ jobs:
         working-directory: frontend
         env:
           DISPLAY: :99
-        run: flutter test integration_test/app_test.dart --platform chrome -d chrome
+        run: |
+          flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/app_test.dart \
+            -d chrome
 
 
   # 4) Build & Upload Artifacts
@@ -136,3 +140,6 @@ jobs:
 
       - name: Upload Go Binary
         uses: actions/upload-artifact@v4
+        with:
+          name: go-binary
+          path: backend/bin/artfans-server
