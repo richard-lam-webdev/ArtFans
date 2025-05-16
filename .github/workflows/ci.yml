@@ -100,19 +100,19 @@ jobs:
 
       # Upload artifacts
       - name: Upload Flutter APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: flutter-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
 
       - name: Upload Flutter Web
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: flutter-web
           path: frontend/build/web
 
       - name: Upload Go Binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: go-binary
           path: backend/bin/artfans-server
