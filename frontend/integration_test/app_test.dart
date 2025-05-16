@@ -5,7 +5,7 @@ import 'package:frontend/main.dart'
 
 void main() {
   // 1) Initialise le binding pour l’intégration
-  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('Lancement de l’app et affichage de l\'écran d\'accueil', (
     tester,
