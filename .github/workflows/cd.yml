@@ -1,0 +1,40 @@
+name: docker-ssh-cd
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) Active l'agent SSH avec la clé privée stockée dans les Secrets
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      # 2) Déploiement "pull & build" via SSH
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOS'
+            set -e
+            cd /opt/artfans
+
+            # Si repo absent => clone, sinon pull
+            if [ -d .git ]; then
+              git pull origin main
+            else
+              git clone https://github.com/${{ github.repository }} .
+            fi
+
+            # Construire et (re)lancer
+            docker compose pull         # seulement postgres
+            docker compose build        # reconstruit api + app
+            docker compose up -d --remove-orphans
+            docker image prune -f
+          EOS
