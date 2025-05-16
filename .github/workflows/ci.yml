@@ -61,22 +61,18 @@ jobs:
     name: Runner-based Integration Tests
     needs: lint-and-test
     runs-on: ubuntu-latest
-    services:
-      chrome:
-        image: selenium/standalone-chrome:latest
-        options: --shm-size=2gb
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Lancer l’API Go localement
+      # 1️⃣ Build & run l’API Go
       - name: Build & Run backend
         working-directory: backend
         run: |
           go build -o app ./cmd/server/main.go
           nohup ./app &
 
-      # Tests d’intégration Flutter/Web sur ce backend
+      # 2️⃣ Setup Flutter & dépendances
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -84,17 +80,30 @@ jobs:
       - name: Install Flutter dependencies
         working-directory: frontend
         run: flutter pub get
-     
-      # 3) Installer et démarrer ChromeDriver
-      - name: Install ChromeDriver
-        run: sudo apt-get update && sudo apt-get install -y chromium-chromedriver
 
+      # 3️⃣ Installer ChromeDriver & Xvfb
+      - name: Install ChromeDriver & Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver xvfb
+
+      # 4️⃣ Démarrer le display virtuel
+      - name: Start Xvfb on :99
+        run: Xvfb :99 -screen 0 1920x1080x24 &
+        env:
+          DISPLAY: :99
+
+      # 5️⃣ Démarrer ChromeDriver
       - name: Start ChromeDriver
         run: chromedriver --port=4444 --url-base=/wd/hub &
+        env:
+          DISPLAY: :99
 
-    # ) Lancer les tests d’intégration via flutter drive
+      # 6️⃣ Lancer les tests d’intégration Web
       - name: Run integration tests on Web with flutter drive
         working-directory: frontend
+        env:
+          DISPLAY: :99
         run: |
           flutter drive \
             --driver=test_driver/integration_test.dart \
@@ -106,10 +115,6 @@ jobs:
     name: Prod-like Integration Tests
     needs: lint-and-test
     runs-on: ubuntu-latest
-    services:
-      chrome:
-        image: selenium/standalone-chrome:latest
-        options: --shm-size=2gb
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
