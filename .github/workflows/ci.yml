@@ -7,19 +7,14 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # 1) Lint & Tests Go
+  # 1) Go Lint & Tests
   go-check:
-    name: Go Lint & Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Setup Go
         uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-
+        with: { go-version: '1.21' }
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -27,63 +22,99 @@ jobs:
             ~/.cache/go-build
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
-
       - name: Go fmt & vet
         working-directory: backend
         run: |
           go fmt ./...
           go vet ./...
-
       - name: Go unit tests
         working-directory: backend
         run: go test ./... -coverprofile=coverage.out
 
-  # 2) Analyse Flutter (pas de tests)
+  # 2) Flutter Analyze
   flutter-analyze:
-    name: Flutter Analyze
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
+      - uses: actions/checkout@v3
       - name: Cache Flutter Pub
         uses: actions/cache@v3
         with:
           path: ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ hashFiles('frontend/pubspec.yaml') }}
+          key: ${{ runner.os }}-flutter-pub-${{ hashFiles('frontend/pubspec.yaml') }}
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with: { flutter-version: '3.29.2' }
+      - name: Install Flutter dependencies
+        working-directory: frontend
+        run: flutter pub get
+      - name: Dart analyze
+        working-directory: frontend
+        run: flutter analyze
+
+  # 3) Flutter Integration Tests
+  flutter-integration:
+    name: Flutter Integration Tests
+    needs: flutter-analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Re-utilise le cache pub
+      - name: Cache Flutter Pub
+        uses: actions/cache@v3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-flutter-pub-${{ hashFiles('frontend/pubspec.yaml') }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.2'
+        with: { flutter-version: '3.29.2' }
 
       - name: Install Flutter dependencies
         working-directory: frontend
         run: flutter pub get
 
-      - name: Dart analyze
-        working-directory: frontend
-        run: flutter analyze
+      # Installer ChromeDriver et Xvfb pour le device web-server
+      - name: Install ChromeDriver & Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver xvfb
 
-  # 3) Build Artifacts (Flutter + Go)
+      - name: Start Xvfb on :99
+        run: Xvfb :99 -screen 0 1920x1080x24 &
+        env:
+          DISPLAY: :99
+
+      - name: Start ChromeDriver
+        run: chromedriver --port=4444 --url-base=/wd/hub &
+        env:
+          DISPLAY: :99
+
+      - name: Run integration tests on Web
+        working-directory: frontend
+        env:
+          DISPLAY: :99
+        run: |
+          flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/app_test.dart \
+            -d web-server
+
+  # 4) Build & Upload Artifacts
   build-and-upload:
     name: Build & Upload Artifacts
-    needs: [ go-check, flutter-analyze ]
+    needs: [ go-check, flutter-analyze, flutter-integration ]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
       # Flutter build
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.2'
-
+        with: { flutter-version: '3.29.2' }
       - name: Build Android APK
         working-directory: frontend
         run: flutter build apk --release
-
       - name: Build Web bundle
         working-directory: frontend
         run: flutter build web --release
@@ -91,9 +122,7 @@ jobs:
       # Go build
       - name: Setup Go
         uses: actions/setup-go@v4
-        with:
-          go-version: '1.21'
-
+        with: { go-version: '1.21' }
       - name: Build Go binary
         working-directory: backend
         run: go build -o bin/artfans-server ./cmd/server
@@ -113,6 +142,3 @@ jobs:
 
       - name: Upload Go Binary
         uses: actions/upload-artifact@v4
-        with:
-          name: go-binary
-          path: backend/bin/artfans-server
