@@ -75,14 +75,19 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
-      # → Installer Chromium & Xvfb pour émuler un display
-      - name: Install Chromium & Xvfb
+      # → Installer Chromium, ChromeDriver & Xvfb pour émuler un display
+      - name: Install Chromium, ChromeDriver & Xvfb
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-browser xvfb
+          sudo apt-get install -y chromium-browser chromium-chromedriver xvfb
 
       - name: Start Xvfb on :99
         run: Xvfb :99 -screen 0 1920x1080x24 &
+        env:
+          DISPLAY: :99
+
+      - name: Start ChromeDriver
+        run: chromedriver --port=4444 --url-base=/wd/hub &
         env:
           DISPLAY: :99
 
