@@ -84,9 +84,22 @@ jobs:
       - name: Install Flutter dependencies
         working-directory: frontend
         run: flutter pub get
-      - name: Run integration tests on Web
+     
+      # 3) Installer et démarrer ChromeDriver
+      - name: Install ChromeDriver
+        run: sudo apt-get update && sudo apt-get install -y chromium-chromedriver
+
+      - name: Start ChromeDriver
+        run: chromedriver --port=4444 --url-base=/wd/hub &
+
+    # ) Lancer les tests d’intégration via flutter drive
+      - name: Run integration tests on Web with flutter drive
         working-directory: frontend
-        run: flutter test integration_test/app_test.dart -d web-server
+        run: |
+          flutter drive \
+            --driver=test_driver/integration_test.dart \
+            --target=integration_test/app_test.dart \
+            -d web-server
 
   # 3) Tests d’intégration “prod-like” via Docker – Phase 2 validation prod-like
   prod-integration:
