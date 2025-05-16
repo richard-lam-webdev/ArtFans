@@ -7,21 +7,13 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # 1) Go Lint & Tests
   go-check:
+    name: Go Lint & Tests
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with: { go-version: '1.21' }
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
       - name: Go fmt & vet
         working-directory: backend
         run: |
@@ -31,130 +23,65 @@ jobs:
         working-directory: backend
         run: go test ./... -coverprofile=coverage.out
 
-  # 2) Flutter Analyze
   flutter-analyze:
+    name: Flutter Analyze
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
     steps:
       - uses: actions/checkout@v3
-      - name: Cache Flutter Pub
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-flutter-pub-${{ hashFiles('frontend/pubspec.yaml') }}
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with: { flutter-version: '3.29.2' }
-      - name: Install Flutter dependencies
-        working-directory: frontend
-        run: flutter pub get
       - name: Dart analyze
         working-directory: frontend
         run: flutter analyze
 
-  # 3) Flutter Integration Tests
   flutter-integration:
     name: Flutter Integration Tests
     needs: flutter-analyze
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      # → Cache et setup Flutter
-      - name: Cache Flutter Pub
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-flutter-pub-${{ hashFiles('frontend/pubspec.yaml') }}
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.2'
-
-      - name: Install Flutter dependencies
-        working-directory: frontend
-        run: flutter pub get
-
-      # → Installer Google Chrome & ChromeDriver compatibles
-      - name: Install Google Chrome
-        run: |
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable unzip xvfb
-
-      - name: Install matching ChromeDriver
-        run: |
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
-          CHROMEDRIVER_VERSION=$(wget -qO- https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION)
-          wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip
-          unzip /tmp/chromedriver.zip -d /tmp/
-          sudo mv /tmp/chromedriver /usr/local/bin/chromedriver
-          sudo chmod +x /usr/local/bin/chromedriver
-
-      - name: Start Xvfb on :99
+      - uses: actions/checkout@v3
+      - name: Start Xvfb
         run: Xvfb :99 -screen 0 1920x1080x24 &
         env:
           DISPLAY: :99
-
-      - name: Start ChromeDriver
-        run: chromedriver --port=4444 --url-base=/wd/hub &
-        env:
-          DISPLAY: :99
-
-      # → Lancer les tests d’intégration en mode web
       - name: Run integration tests on Web
         working-directory: frontend
         env:
           DISPLAY: :99
-        run: |
-          flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/app_test.dart \
-            -d chrome
+        run: flutter drive \
+               --driver=test_driver/integration_test.dart \
+               --target=integration_test/app_test.dart \
+               -d web-server
 
-
-  # 4) Build & Upload Artifacts
   build-and-upload:
     name: Build & Upload Artifacts
     needs: [ go-check, flutter-analyze, flutter-integration ]
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
     steps:
       - uses: actions/checkout@v3
-
-      # Flutter build
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with: { flutter-version: '3.29.2' }
       - name: Build Android APK
         working-directory: frontend
         run: flutter build apk --release
       - name: Build Web bundle
         working-directory: frontend
         run: flutter build web --release
-
-      # Go build
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with: { go-version: '1.21' }
       - name: Build Go binary
         working-directory: backend
         run: go build -o bin/artfans-server ./cmd/server
-
-      # Upload artifacts
       - name: Upload Flutter APK
         uses: actions/upload-artifact@v4
         with:
           name: flutter-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
-
       - name: Upload Flutter Web
         uses: actions/upload-artifact@v4
         with:
           name: flutter-web
           path: frontend/build/web
-
       - name: Upload Go Binary
         uses: actions/upload-artifact@v4
         with:
