@@ -91,7 +91,7 @@ jobs:
         working-directory: frontend
         env:
           DISPLAY: :99
-        run: flutter test integration_test/app_test.dart --platform chrome
+        run: flutter test integration_test/app_test.dart --platform chrome -d chrome
 
 
   # 4) Build & Upload Artifacts
