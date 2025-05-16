@@ -11,7 +11,7 @@ jobs:
     name: Go Lint & Tests
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
+      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
       - uses: actions/checkout@v3
       - name: Go fmt & vet
@@ -27,7 +27,7 @@ jobs:
     name: Flutter Analyze
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
+      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
       - uses: actions/checkout@v3
       - name: Dart analyze
@@ -39,7 +39,7 @@ jobs:
     needs: flutter-analyze
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
+      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
       - uses: actions/checkout@v3
       - name: Start Xvfb
@@ -60,7 +60,7 @@ jobs:
     needs: [ go-check, flutter-analyze, flutter-integration ]
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:latest
+      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
       - uses: actions/checkout@v3
       - name: Build Android APK
