@@ -82,10 +82,11 @@ jobs:
         run: flutter pub get
 
       # 3️⃣ Installer ChromeDriver & Xvfb
-      - name: Install ChromeDriver & Xvfb
+      - name: Install Chromium, ChromeDriver & Xvfb
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-chromedriver xvfb
+          sudo apt-get install -y chromium-browser chromium-chromedriver xvfb
+
 
       # 4️⃣ Démarrer le display virtuel
       - name: Start Xvfb on :99
@@ -104,11 +105,13 @@ jobs:
         working-directory: frontend
         env:
           DISPLAY: :99
+          CHROME_EXECUTABLE: chromium-browser
         run: |
           flutter drive \
             --driver=test_driver/integration_test.dart \
             --target=integration_test/app_test.dart \
             -d chrome
+
 
   # 3) Tests d’intégration “prod-like” via Docker – Phase 2 validation prod-like
   prod-integration:
