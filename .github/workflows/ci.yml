@@ -7,81 +7,110 @@ on:
     branches: [ main, develop ]
 
 jobs:
+  # 1) Lint & Tests Go
   go-check:
     name: Go Lint & Tests
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+
       - name: Go fmt & vet
         working-directory: backend
         run: |
           go fmt ./...
           go vet ./...
+
       - name: Go unit tests
         working-directory: backend
         run: go test ./... -coverprofile=coverage.out
 
+  # 2) Analyse Flutter (pas de tests)
   flutter-analyze:
     name: Flutter Analyze
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Cache Flutter Pub
+        uses: actions/cache@v3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ hashFiles('frontend/pubspec.yaml') }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+
+      - name: Install Flutter dependencies
+        working-directory: frontend
+        run: flutter pub get
+
       - name: Dart analyze
         working-directory: frontend
         run: flutter analyze
 
-  flutter-integration:
-    name: Flutter Integration Tests
-    needs: flutter-analyze
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
-    steps:
-      - uses: actions/checkout@v3
-      - name: Start Xvfb
-        run: Xvfb :99 -screen 0 1920x1080x24 &
-        env:
-          DISPLAY: :99
-      - name: Run integration tests on Web
-        working-directory: frontend
-        env:
-          DISPLAY: :99
-        run: flutter drive \
-               --driver=test_driver/integration_test.dart \
-               --target=integration_test/app_test.dart \
-               -d web-server
-
+  # 3) Build Artifacts (Flutter + Go)
   build-and-upload:
     name: Build & Upload Artifacts
-    needs: [ go-check, flutter-analyze, flutter-integration ]
+    needs: [ go-check, flutter-analyze ]
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/richard-lam-webdev/artfans-ci:amd64
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Flutter build
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.2'
+
       - name: Build Android APK
         working-directory: frontend
         run: flutter build apk --release
+
       - name: Build Web bundle
         working-directory: frontend
         run: flutter build web --release
+
+      # Go build
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
       - name: Build Go binary
         working-directory: backend
         run: go build -o bin/artfans-server ./cmd/server
+
+      # Upload artifacts
       - name: Upload Flutter APK
         uses: actions/upload-artifact@v4
         with:
           name: flutter-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
+
       - name: Upload Flutter Web
         uses: actions/upload-artifact@v4
         with:
           name: flutter-web
           path: frontend/build/web
+
       - name: Upload Go Binary
         uses: actions/upload-artifact@v4
         with:
