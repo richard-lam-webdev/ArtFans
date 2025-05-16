@@ -57,48 +57,42 @@ jobs:
     needs: flutter-analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      # Re-utilise le cache pub
+      # → Cache et setup Flutter
       - name: Cache Flutter Pub
         uses: actions/cache@v3
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-flutter-pub-${{ hashFiles('frontend/pubspec.yaml') }}
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
-        with: { flutter-version: '3.29.2' }
+        with:
+          flutter-version: '3.29.2'
 
       - name: Install Flutter dependencies
         working-directory: frontend
         run: flutter pub get
 
-      # Installer ChromeDriver et Xvfb pour le device web-server
-      - name: Install ChromeDriver & Xvfb
+      # → Installer Chromium & Xvfb pour émuler un display
+      - name: Install Chromium & Xvfb
         run: |
           sudo apt-get update
-          sudo apt-get install -y chromium-chromedriver xvfb
+          sudo apt-get install -y chromium-browser xvfb
 
       - name: Start Xvfb on :99
         run: Xvfb :99 -screen 0 1920x1080x24 &
         env:
           DISPLAY: :99
 
-      - name: Start ChromeDriver
-        run: chromedriver --port=4444 --url-base=/wd/hub &
-        env:
-          DISPLAY: :99
-
+      # → Lancer les tests d’intégration en mode web
       - name: Run integration tests on Web
         working-directory: frontend
         env:
           DISPLAY: :99
-        run: |
-          flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/app_test.dart \
-            -d web-server
+        run: flutter test integration_test/app_test.dart --platform chrome
+
 
   # 4) Build & Upload Artifacts
   build-and-upload:
