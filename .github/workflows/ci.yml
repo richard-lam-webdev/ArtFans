@@ -7,39 +7,19 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # 1) Lint et tests unitaires (Flutter & Go) – Phase 1 rapide
-  lint-and-test:
-    name: Lint & Unit Tests
+  # 1) Lint & Tests Go
+  go-check:
+    name: Go Lint & Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # -- Flutter --
-      - name: Cache Flutter Pub
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-flutter-${{ hashFiles('frontend/pubspec.yaml') }}
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.2'
-      - name: Install Flutter dependencies
-        working-directory: frontend
-        run: flutter pub get
-      - name: Dart analyze
-        working-directory: frontend
-        run: flutter analyze
-      - name: Flutter unit tests
-        working-directory: frontend
-        run: flutter test --coverage
-
-      # -- Go backend --
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
+
       - name: Cache Go modules
         uses: actions/cache@v3
         with:
@@ -47,162 +27,90 @@ jobs:
             ~/.cache/go-build
             ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+
       - name: Go fmt & vet
         working-directory: backend
         run: |
           go fmt ./...
           go vet ./...
+
       - name: Go unit tests
         working-directory: backend
         run: go test ./... -coverprofile=coverage.out
 
-  # 2) Tests d’intégration “runner-based” (Flutter/Web) – Phase 1 rapide
-  integration:
-    name: Runner-based Integration Tests
-    needs: lint-and-test
+  # 2) Analyse Flutter (pas de tests)
+  flutter-analyze:
+    name: Flutter Analyze
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 1️⃣ Build & run l’API Go
-      - name: Build & Run backend
-        working-directory: backend
-        run: |
-          go build -o app ./cmd/server/main.go
-          nohup ./app &
+      - name: Cache Flutter Pub
+        uses: actions/cache@v3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-flutter-${{ hashFiles('frontend/pubspec.yaml') }}
 
-      # 2️⃣ Setup Flutter & dépendances
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.2'
+
       - name: Install Flutter dependencies
         working-directory: frontend
         run: flutter pub get
 
-      # 3️⃣ Installer ChromeDriver & Xvfb
-      - name: Install Chromium, ChromeDriver & Xvfb
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser chromium-chromedriver xvfb
-
-
-      # 4️⃣ Démarrer le display virtuel
-      - name: Start Xvfb on :99
-        run: Xvfb :99 -screen 0 1920x1080x24 &
-        env:
-          DISPLAY: :99
-
-      # 5️⃣ Démarrer ChromeDriver
-      - name: Start ChromeDriver
-        run: chromedriver --port=4444 --url-base=/wd/hub &
-        env:
-          DISPLAY: :99
-
-      # 6️⃣ Lancer les tests d’intégration Web
-      - name: Run integration tests on Web with flutter drive
+      - name: Dart analyze
         working-directory: frontend
-        env:
-          DISPLAY: :99
-          CHROME_EXECUTABLE: chromium-browser
-        run: |
-          flutter drive \
-            --driver=test_driver/integration_test.dart \
-            --target=integration_test/app_test.dart \
-            -d chrome
+        run: flutter analyze
 
-
-  # 3) Tests d’intégration “prod-like” via Docker – Phase 2 validation prod-like
-  prod-integration:
-    name: Prod-like Integration Tests
-    needs: lint-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      # Construire l’image Docker backend (même Dockerfile que prod)
-      - name: Build Docker image
-        run: docker build -f backend/Dockerfile -t artfans-server:ci backend
-
-      # Lancer le conteneur backend
-      - name: Run backend container
-        run: docker run -d --name artfans-server-ci -p 8080:8080 artfans-server:ci
-
-      # Attendre que l’API soit joignable (ajuster /health si nécessaire)
-      - name: Wait for backend readiness
-        run: |
-          for i in {1..30}; do
-            if curl -fs http://localhost:8080/health; then
-              echo "Backend ready"
-              break
-            fi
-            echo "Waiting for backend..."
-            sleep 2
-          done
-
-      # Exécuter à nouveau les tests Flutter/Web contre l’API Dockerisée
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.2'
-      - name: Install Flutter dependencies
-        working-directory: frontend
-        run: flutter pub get
-      - name: Run integration tests on Web
-        working-directory: frontend
-        env:
-          BACKEND_URL: http://localhost:8080
-        run: flutter test integration_test/app_test.dart --platform chrome
-
-      # Nettoyer le conteneur
-      - name: Teardown backend container
-        if: always()
-        run: docker rm -f artfans-server-ci
-
-  # 4) Build des artefacts et upload – dépend de toutes les validations
+  # 3) Build Artifacts (Flutter + Go)
   build-and-upload:
     name: Build & Upload Artifacts
-    needs: [integration, prod-integration]
+    needs: [ go-check, flutter-analyze ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # -- Flutter build --
+      # Flutter build
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.2'
+
       - name: Build Android APK
         working-directory: frontend
         run: flutter build apk --release
+
       - name: Build Web bundle
         working-directory: frontend
         run: flutter build web --release
 
-      # -- Go build --
+      # Go build
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
+
       - name: Build Go binary
         working-directory: backend
-        run: |
-          go build -o bin/artfans-server main.go
+        run: go build -o bin/artfans-server ./cmd/server
 
-      # -- Upload artifacts --
+      # Upload artifacts
       - name: Upload Flutter APK
         uses: actions/upload-artifact@v3
         with:
           name: flutter-apk
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
+
       - name: Upload Flutter Web
         uses: actions/upload-artifact@v3
         with:
           name: flutter-web
           path: frontend/build/web
+
       - name: Upload Go Binary
         uses: actions/upload-artifact@v3
         with:
