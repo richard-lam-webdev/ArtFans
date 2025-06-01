@@ -1,13 +1,20 @@
-# .env et secrets
+# ====================================
+#          Fichiers sensibles
+# ====================================
 .env
 .env.*.local
 
-# Logs
+# ====================================
+#              Logs
+# ====================================
 *.log
 
-# === Backend Go ===
-# binaires
+# ====================================
+#        Backend Go (binary + cache)
+# ====================================
+# Binaires
 /backend/bin/
+# Exécutables
 /backend/*.exe
 /backend/**/*.exe
 /backend/*.dll
@@ -16,21 +23,44 @@
 
 # Cache Go mod
 /backend/pkg/
+# Cache éventuel d’autres outils Go
 /backend/.cache/
 
-# === Frontend Flutter ===
-frontend/.dart_tool/
-frontend/.packages
-frontend/.flutter-plugins
-frontend/.flutter-plugins-dependencies
-frontend/.metadata
-frontend/build/
+# ====================================
+#       Frontend Flutter (artefacts)
+# ====================================
+# Dossiers créés par Flutter
+/frontend/.dart_tool/
+/frontend/.pub-cache/
+/frontend/.packages
+/frontend/.flutter-plugins
+/frontend/.flutter-plugins-dependencies
+/frontend/.metadata
 
-# IDE
+# Build outputs (Android, iOS, Web, …)
+# → évite de versionner tous les fichiers compilés
+/frontend/build/
+# Si tu as un dossier android/ au sein de frontend
+/frontend/android/.gradle/
+/frontend/android/app/*.keystore
+
+# iOS (Pods, frameworks, etc.), si tu supportes iOS dans ce projet
+/frontend/ios/Pods/
+/frontend/ios/.symlinks/
+/frontend/ios/Flutter/Flutter.framework
+/frontend/ios/Flutter/Flutter.podspec
+/frontend/ios/Runner.xcworkspace
+/frontend/ios/Runner.xcodeproj/project.xcworkspace
+
+# ====================================
+#           Configuration IDE
+# ====================================
 *.iml
 .idea/
 .vscode/
 
-# OS
+# ====================================
+#           Fichiers système
+# ====================================
 .DS_Store
 Thumbs.db
