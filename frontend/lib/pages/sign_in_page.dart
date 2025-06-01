@@ -1,3 +1,5 @@
+// lib/pages/sign_in_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
@@ -23,29 +25,37 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> _submitEmailSignIn() async {
+    // Si le Widget n’est plus monté, on ne lance même pas la suite
     if (!mounted) return;
-    setState(() => _isLoading = true);
 
+    setState(() => _isLoading = true);
     try {
       await _authService.signInWithEmail(
         email: _emailCtrl.text.trim(),
         password: _pwdCtrl.text.trim(),
       );
+      // La redirection au dashboard se fait via le StreamBuilder global (AuthGate)
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
+      // On vérifie mounted avant d’accéder à context
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
+      }
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      // Ici, on ne “return” plus.
+      // On vérifie simplement que le widget est toujours monté avant de faire le setState.
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      // Fin du finally sans return
     }
   }
 
   Future<void> _submitEmailRegister() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
 
+    setState(() => _isLoading = true);
     try {
       await _authService.registerWithEmail(
         email: _emailCtrl.text.trim(),
@@ -53,31 +63,37 @@ class _SignInPageState extends State<SignInPage> {
       );
       // L’utilisateur est automatiquement connecté après inscription
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
+      }
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      // Pas de return dans finally
     }
   }
 
   Future<void> _signInWithGoogle() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
 
+    setState(() => _isLoading = true);
     try {
       await _authService.signInWithGoogle();
-      // Le StreamBuilder redirige automatiquement si la connexion réussit
+      // Le StreamBuilder (AuthGate) gère la redirection si la connexion réussit
     } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
+      }
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      // Pas de return dans finally
     }
   }
 
