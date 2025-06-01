@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 
 class SignInPage extends StatefulWidget {
-  const SignInPage({Key? key}) : super(key: key);
+  const SignInPage({super.key});
 
   @override
   State<SignInPage> createState() => _SignInPageState();
@@ -23,24 +23,29 @@ class _SignInPageState extends State<SignInPage> {
   }
 
   Future<void> _submitEmailSignIn() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       await _authService.signInWithEmail(
         email: _emailCtrl.text.trim(),
         password: _pwdCtrl.text.trim(),
       );
-      // La redirection au dashboard se fait via un StreamBuilder
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
     } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _submitEmailRegister() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       await _authService.registerWithEmail(
         email: _emailCtrl.text.trim(),
@@ -48,23 +53,30 @@ class _SignInPageState extends State<SignInPage> {
       );
       // L’utilisateur est automatiquement connecté après inscription
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
     } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _signInWithGoogle() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       await _authService.signInWithGoogle();
+      // Le StreamBuilder redirige automatiquement si la connexion réussit
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erreur : ${e.message}')));
     } finally {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -124,7 +136,16 @@ class _SignInPageState extends State<SignInPage> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _isLoading ? null : _submitEmailRegister,
-                        child: const Text('S’enregistrer'),
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Text('S’enregistrer'),
                       ),
                     ),
                   ],
@@ -147,7 +168,14 @@ class _SignInPageState extends State<SignInPage> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.login),
-                    label: const Text('Se connecter avec Google'),
+                    label:
+                        _isLoading
+                            ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Text('Se connecter avec Google'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black87,
