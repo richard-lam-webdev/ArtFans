@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "43036920420",
+    "project_id": "artfans-68ff4",
+    "storage_bucket": "artfans-68ff4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:43036920420:android:da2aab9789e29a44836d71",
+        "android_client_info": {
+          "package_name": "com.example.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCVsnCa8sP2BgD6pB_ITmdAWTQQxPa72k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
