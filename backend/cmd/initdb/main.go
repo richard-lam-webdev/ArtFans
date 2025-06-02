@@ -12,92 +12,104 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// ----- Modèles GORM -----
+type Role string
 
-type Utilisateur struct {
-	ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	NomUtilisateur  string    `gorm:"column:nomutilisateur;unique;not null"`
-	Email           string    `gorm:"unique;not null"`
-	MotDePasseHache string    `gorm:"column:motdepassehaché;not null"`
-	Role            string    `gorm:"type:role;not null"`
-	DateCreation    time.Time `gorm:"column:datecréation;autoCreateTime"`
+const (
+	RoleCreator    Role = "creator"
+	RoleSubscriber Role = "subscriber"
+	RoleAdmin      Role = "admin"
+)
+
+type PaymentStatus string
+
+const (
+	StatusPending   PaymentStatus = "pending"
+	StatusSucceeded PaymentStatus = "succeeded"
+	StatusFailed    PaymentStatus = "failed"
+)
+
+type User struct {
+	ID            uuid.UUID      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	Username      string         `gorm:"unique;not null"`
+	Email         string         `gorm:"unique;not null"`
+	Password      string         `gorm:"not null"`
+	Role          Role           `gorm:"type:role;not null"`
+	CreatedAt     time.Time      `gorm:"autoCreateTime"`
+	Subscriptions []Subscription `gorm:"foreignKey:SubscriberID"`
+	Contents      []Content      `gorm:"foreignKey:CreatorID"`
+	SIRET         string         `gorm:"size:14"`
+	LegalStatus   string
+	LegalName     string
+	Address       string
+	Country       string
+	VATNumber     string
+	BirthDate     *time.Time
 }
 
-type Abonnement struct {
-	ID         uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDCreateur uuid.UUID `gorm:"column:idcréateur;not null"`
-	IDAbonne   uuid.UUID `gorm:"column:idabonné;not null"`
-	DateDebut  time.Time `gorm:"column:datedébut;not null"`
-	DateFin    time.Time `gorm:"column:datefin;not null"`
-	IDPaiement uuid.UUID `gorm:"column:idpaiement;not null"`
-}
-
-type Paiement struct {
+type Subscription struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDAbonnement uuid.UUID `gorm:"column:idabonnement;not null"`
-	Montant      float64   `gorm:"type:money;not null"`
-	DatePaiement time.Time `gorm:"column:datepaiement;not null"`
-	Statut       string    `gorm:"column:statut;type:statutpaiement;not null"`
+	CreatorID    uuid.UUID `gorm:"not null"`
+	SubscriberID uuid.UUID `gorm:"not null"`
+	StartDate    time.Time `gorm:"not null"`
+	EndDate      time.Time
+	PaymentID    uuid.UUID
 }
 
-type Contenu struct {
-	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDCreateur   uuid.UUID `gorm:"column:idcréateur;not null"`
-	Titre        string    `gorm:"not null"`
-	Texte        string    `gorm:"not null"`
-	DateCreation time.Time `gorm:"column:datecréation;autoCreateTime"`
-	Prix         float64   `gorm:"type:money;not null"`
-	EstFloute    bool      `gorm:"column:estflouté;default:false"`
+type Payment struct {
+	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	SubscriptionID uuid.UUID `gorm:"not null"`
+	Amount         int       `gorm:"not null"`
+	PaidAt         time.Time
+	Status         PaymentStatus `gorm:"type:payment_status;not null"`
 }
 
-type Commentaire struct {
-	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDContenu    uuid.UUID `gorm:"column:idcontenu;not null"`
-	IDAuteur     uuid.UUID `gorm:"column:idauteur;not null"`
-	Texte        string    `gorm:"not null"`
-	DateCreation time.Time `gorm:"column:datecréation;autoCreateTime"`
+type Content struct {
+	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	CreatorID uuid.UUID `gorm:"not null"`
+	Title     string    `gorm:"not null"`
+	Body      string    `gorm:"not null"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
+	Price     int       `gorm:"not null"`
+	FilePath  string    `gorm:"not null"`
+}
+
+type Comment struct {
+	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ContentID uuid.UUID `gorm:"not null"`
+	AuthorID  uuid.UUID `gorm:"not null"`
+	Text      string    `gorm:"not null"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
 type Like struct {
-	ID            uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDContenu     uuid.UUID `gorm:"column:idcontenu;not null"`
-	IDUtilisateur uuid.UUID `gorm:"column:idutilisateur;not null"`
-	DateCreation  time.Time `gorm:"column:datecréation;autoCreateTime"`
+	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ContentID uuid.UUID `gorm:"not null"`
+	UserID    uuid.UUID `gorm:"not null"`
+	CreatedAt time.Time `gorm:"autoCreateTime"`
 }
 
 type Message struct {
-	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDExpediteur   uuid.UUID `gorm:"column:idexpéditeur;not null"`
-	IDDestinataire uuid.UUID `gorm:"column:iddestinataire;not null"`
-	Texte          string    `gorm:"not null"`
-	DateEnvoi      time.Time `gorm:"column:dateenvoi;autoCreateTime"`
+	ID         uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	SenderID   uuid.UUID `gorm:"not null"`
+	ReceiverID uuid.UUID `gorm:"not null"`
+	Text       string    `gorm:"not null"`
+	SentAt     time.Time `gorm:"autoCreateTime"`
 }
 
-type Rapport struct {
-	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDContenuCible uuid.UUID `gorm:"column:idcontenucible;not null"`
-	IDSignaliseur  uuid.UUID `gorm:"column:idsignaleur;not null"`
-	Raison         string    `gorm:"not null"`
-	DateCreation   time.Time `gorm:"column:datecréation;autoCreateTime"`
+type Report struct {
+	ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	TargetContentID uuid.UUID `gorm:"not null"`
+	ReporterID      uuid.UUID `gorm:"not null"`
+	Reason          string    `gorm:"not null"`
+	CreatedAt       time.Time `gorm:"autoCreateTime"`
 }
 
-type StatistiquesTableauDeBord struct {
-	ID                 uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	IDCreateur         uuid.UUID `gorm:"column:idcréateur;not null"`
-	RevenusTotaux      float64   `gorm:"column:revenustotaux;type:money;default:0"`
-	NombreAbonnes      int       `gorm:"column:nombreabonnés;default:0"`
-	NombreLikes        int       `gorm:"column:nombrelikes;default:0"`
-	NombreCommentaires int       `gorm:"column:nombrecommentaires;default:0"`
-}
-
-// ----- Main -----
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		log.Fatal("il faut définir la variable d'environnement DATABASE_URL")
+		log.Fatal("DATABASE_URL environment variable is required")
 	}
 
-	// Ouvre GORM avec nommage en table singulier
 	db, err := gorm.Open(
 		postgres.Open(dsn),
 		&gorm.Config{
@@ -108,38 +120,36 @@ func main() {
 		},
 	)
 	if err != nil {
-		log.Fatalf("connexion GORM échouée : %v", err)
+		log.Fatalf("GORM connection failed: %v", err)
 	}
 
-	// Extensions et enums
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
 	db.Exec(`
 	DO $$ BEGIN
-	  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role') THEN
-	    CREATE TYPE role AS ENUM ('CRÉATEUR','ABONNÉ','ADMIN');
-	  END IF;
+		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role') THEN
+			CREATE TYPE role AS ENUM ('creator','subscriber','admin');
+		END IF;
 	END$$;`)
 	db.Exec(`
 	DO $$ BEGIN
-	  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'statutpaiement') THEN
-	    CREATE TYPE statutpaiement AS ENUM ('EN_ATTENTE','RÉUSSI','ÉCHOUÉ');
-	  END IF;
+		IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+			CREATE TYPE payment_status AS ENUM ('pending','succeeded','failed');
+		END IF;
 	END$$;`)
 
-	// Auto-migrate de tous les modèles
+	// Auto-migrate
 	if err := db.AutoMigrate(
-		&Utilisateur{},
-		&Abonnement{},
-		&Paiement{},
-		&Contenu{},
-		&Commentaire{},
+		&User{},
+		&Subscription{},
+		&Payment{},
+		&Content{},
+		&Comment{},
 		&Like{},
 		&Message{},
-		&Rapport{},
-		&StatistiquesTableauDeBord{},
+		&Report{},
 	); err != nil {
-		log.Fatalf("AutoMigrate échoué : %v", err)
+		log.Fatalf("AutoMigrate failed: %v", err)
 	}
 
-	log.Println("Base de données initialisée avec succès ✅")
+	log.Println("✅ Database schema is up-to-date!")
 }
