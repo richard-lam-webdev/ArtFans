@@ -3,8 +3,8 @@ package repositories
 import (
 	"errors"
 
-	"your_module_path/backend/internal/database"
-	"your_module_path/backend/internal/models"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 
 	"gorm.io/gorm"
 )

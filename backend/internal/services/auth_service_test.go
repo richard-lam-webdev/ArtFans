@@ -7,9 +7,9 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"your_module_path/backend/internal/models"
-	"your_module_path/backend/internal/repositories"
-	"your_module_path/backend/internal/services"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
 func setupAuthService(t *testing.T) *services.AuthService {

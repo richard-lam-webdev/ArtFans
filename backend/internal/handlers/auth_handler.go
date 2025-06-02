@@ -4,17 +4,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"your_module_path/backend/internal/models"
-	"your_module_path/backend/internal/repositories"
-	"your_module_path/backend/internal/services"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
 var authService *services.AuthService
 
-func init() {
-	userRepo := repositories.NewUserRepository()
-	authService = services.NewAuthService(userRepo)
+// SetAuthService permet d’injecter l’instance d’AuthService depuis main()
+func SetAuthService(s *services.AuthService) {
+	authService = s
 }
 
 // RegisterHandler gère POST /api/auth/register
@@ -37,6 +35,7 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	// Ici authService n’est plus nil car on l’aura injecté depuis main() après database.Init()
 	user, err := authService.Register(payload.Username, payload.Email, payload.Password, role)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

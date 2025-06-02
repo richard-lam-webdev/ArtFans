@@ -7,9 +7,9 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 
-	"your_module_path/backend/internal/config"
-	"your_module_path/backend/internal/models"
-	"your_module_path/backend/internal/repositories"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
 
 type AuthService struct {

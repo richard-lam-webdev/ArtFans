@@ -1,14 +1,14 @@
-version: "3.8"
 services:
   db:
     image: postgres:15-alpine
-    env_file: .env
+    env_file:
+      - ./backend/.env
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
-      test: ["CMD-SHELL","pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -16,20 +16,27 @@ services:
 
   api:
     build: ./backend
-    env_file: .env
+    env_file:
+      - ./backend/.env
     depends_on:
-      db: { condition: service_healthy }
-    ports: ["8080:8080"]
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
     healthcheck:
-      test: ["CMD","curl","-f","http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
       retries: 5
     restart: always
 
   app:
     build: ./frontend
-    depends_on: [api]
-    ports: ["3000:80"]
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
     restart: always
 
 volumes:

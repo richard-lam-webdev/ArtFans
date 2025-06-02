@@ -4,37 +4,40 @@ import (
 	"fmt"
 	"log"
 
-	"your_module_path/backend/internal/config"
-	"your_module_path/backend/internal/database"
-	"your_module_path/backend/internal/handlers"
-
 	"github.com/gin-gonic/gin"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/handlers"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
 func main() {
-	// 1. Charger la config
+	// 1. Charger la config (variables d’environnement)
 	config.LoadEnv()
 
-	// 2. Initialiser la base
+	// 2. Initialiser la base de données (GORM + AutoMigrate)
 	database.Init()
 
-	// 3. Créer le router
+	// 3. Créer le AuthService *après* que database.DB soit initialisé
+	userRepo := repositories.NewUserRepository()
+	authSvc := services.NewAuthService(userRepo)
+	handlers.SetAuthService(authSvc) // injection dans les handlers
+
+	// 4. Créer le router Gin
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// 4. Healthcheck
+	// 5. Endpoint healthcheck
 	r.GET("/health", handlers.HealthCheck)
 
-	// 5. Groupe Auth (public)
+	// 6. Routes Auth (public)
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
-
-	// 6. À venir : groupe /api protégé par un middleware JWT
-
-	// 7. Lancer le serveur
+	// 7. Démarrer le serveur sur le port configuré
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
 	if err := r.Run(addr); err != nil {
