@@ -153,11 +153,17 @@ func main() {
 		&Payment{},
 		&Content{},
 		&Comment{},
+		&User{},
+		&Subscription{},
+		&Payment{},
+		&Content{},
+		&Comment{},
 		&Like{},
 		&Message{},
 		&Report{},
 		&DashboardStats{},
 	); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
 		log.Fatalf("AutoMigrate failed: %v", err)
 	}
 
