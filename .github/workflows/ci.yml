@@ -20,13 +20,10 @@ jobs:
         with:
           go-version: '1.21'
 
-      - name: Cache Go modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-mod-${{ hashFiles('backend/go.sum') }}
+      # → Télécharger les modules Go avant tout
+      - name: Go modules
+        working-directory: backend
+        run: go mod download
 
       - name: Go fmt & vet
         working-directory: backend
@@ -36,7 +33,16 @@ jobs:
 
       - name: Go unit tests
         working-directory: backend
-        run: go test ./... -coverprofile=coverage.out
+        run: |
+          go test ./... -coverprofile=coverage.out
+
+      # → (Optionnel) Publier le fichier coverage.out comme artifact
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage-report
+          path: backend/coverage.out
 
   # 2) Analyse Flutter (pas de tests)
   flutter-analyze:
@@ -108,6 +114,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.21'
+
+      - name: Go modules (pour le build)
+        working-directory: backend
+        run: go mod download
 
       - name: Build Go binary
         working-directory: backend

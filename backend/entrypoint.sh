@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
-echo "▶ Lancement des migrations…"
+
+echo "▶ Exécution des migrations (initdb)…"
 ./initdb
-echo "▶ Démarrage de l’API…"
-exec ./onlyart-api
+
+echo "▶ Démarrage de l’API (artfans-api)…"
+exec ./artfans-api
