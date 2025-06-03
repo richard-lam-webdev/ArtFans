@@ -1,11 +1,17 @@
+// chemin : backend/internal/models/user.go
+
 package models
 
 import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
+// Role représente les rôles d'un utilisateur.
+// Sous Postgres, on souhaite un ENUM "role", sous SQLite on se rabat sur TEXT.
 type Role string
 
 const (
@@ -13,6 +19,21 @@ const (
 	RoleSubscriber Role = "subscriber"
 	RoleAdmin      Role = "admin"
 )
+
+// GormDataType renvoie le type abstrait pour GORM.
+func (Role) GormDataType() string {
+	return "string"
+}
+
+// GormDBDataType indique à GORM quel type SQL utiliser selon le dialecte.
+func (r Role) GormDBDataType(db *gorm.DB, field *schema.Field) string {
+	switch db.Dialector.Name() {
+	case "sqlite":
+		return "TEXT"
+	default:
+		return "role"
+	}
+}
 
 type User struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
