@@ -35,11 +35,22 @@ func (r Role) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 	}
 }
 
+// User représente un utilisateur de l’application.
+// Pour Postgres, on laisse le type "uuid" (sans DEFAULT) et on gère l'UUID côté Go.
 type User struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Username  string    `gorm:"column:username;unique;not null"`
 	Email     string    `gorm:"unique;not null"`
 	Password  string    `gorm:"column:hashed_password;not null"`
 	Role      Role      `gorm:"type:role;not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+}
+
+// BeforeCreate est un hook GORM qui génère un UUID pour l'utilisateur si nécessaire,
+// valable à la fois pour Postgres et SQLite.
+func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
+	if u.ID == uuid.Nil {
+		u.ID = uuid.New()
+	}
+	return nil
 }
