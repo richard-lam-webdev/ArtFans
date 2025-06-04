@@ -1,19 +1,29 @@
+// lib/src/services/auth_service.dart
+
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthService {
-  // On lit l'URL de l'API depuis .env (ou localhost:8080 par défaut).
-  final String _baseUrl = dotenv.env['API_URL'] ?? "http://localhost:8080";
+  // On ne lit pas directement dotenv.env ici, mais dans le constructeur (avec try/catch)
+  final String _baseUrl;
+  final FlutterSecureStorage _secureStorage;
 
-  // Stockage sécurisé du JWT (Keychain/Keystore sur mobile, localStorage sur Web)
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  AuthService()
+    : _secureStorage = const FlutterSecureStorage(),
+      _baseUrl =
+          (() {
+            try {
+              // Si dotenv a été chargé (mobile/desktop), on prend API_URL.
+              // Si dotenv n'a pas été initialisé (cas Web), on retombe sur localhost:8080.
+              return dotenv.env['API_URL'] ?? "http://localhost:8080";
+            } catch (_) {
+              return "http://localhost:8080";
+            }
+          })();
 
   /// Inscription : POST /api/auth/register
-  /// - Ne tente pas de lire un token (l'API ne le renvoie pas).
-  /// - Si statusCode == 201 → succès, on retourne simplement (void).
-  /// - Sinon, on tente de décoder { "error": "..." } et on jette une Exception.
   Future<void> register({
     required String username,
     required String email,
@@ -33,24 +43,20 @@ class AuthService {
     );
 
     if (response.statusCode == 201) {
-      // Succès : l'API renvoie 201 et un JSON { user: { … } }, sans token.
       return;
     } else {
-      // En cas d’erreur (400, 409, etc.), on tente d'extraire le champ "error".
       try {
         final errorBody = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(
           errorBody['error'] ?? "Erreur inconnue lors de l'inscription",
         );
       } catch (_) {
-        // Si le body n’est pas un JSON valide
         throw Exception("Erreur inattendue : code HTTP ${response.statusCode}");
       }
     }
   }
 
   /// Connexion : POST /api/auth/login
-  /// L'API renvoie cette fois-ci un champ "token" qu'on stocke.
   Future<String> login({
     required String email,
     required String password,
@@ -75,12 +81,10 @@ class AuthService {
     }
   }
 
-  /// Récupérer le token JWT stocké (ou null si non connecté)
   Future<String?> getToken() async {
     return _secureStorage.read(key: 'jwt_token');
   }
 
-  /// Déconnexion : suppression du token
   Future<void> logout() async {
     await _secureStorage.delete(key: 'jwt_token');
   }
