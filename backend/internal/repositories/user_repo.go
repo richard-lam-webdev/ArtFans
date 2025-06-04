@@ -3,9 +3,9 @@ package repositories
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
-
 	"gorm.io/gorm"
 )
 
@@ -33,4 +33,15 @@ func (r *UserRepository) Create(u *models.User) error {
 
 func SetTestDB(db *gorm.DB) {
 	database.DB = db
+}
+
+func (r *UserRepository) FindByID(id uuid.UUID) (*models.User, error) {
+	var user models.User
+	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &user, nil
 }

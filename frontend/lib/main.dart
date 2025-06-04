@@ -1,18 +1,16 @@
-// lib/main.dart
+// frontend/lib/main.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
-import 'src/screens/login_screen.dart';
 import 'src/services/auth_service.dart';
+import 'src/services/user_service.dart';
+import 'src/screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 1. Charger le fichier .env
-  await dotenv.load(fileName: ".env");
-
+  await dotenv.load(fileName: "assets/.env");
   runApp(const MyApp());
 }
 
@@ -23,8 +21,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // 2. Fournir AuthService à toute l'application
         Provider<AuthService>(create: (_) => AuthService()),
+        // UserService dépend d'AuthService pour le token
+        ProxyProvider<AuthService, UserService>(
+          update: (_, authService, __) => UserService(authService),
+        ),
       ],
       child: MaterialApp(
         title: 'ArtFans App',
@@ -32,7 +33,6 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
-        // 3. L'écran de démarrage est la page de login
         home: const LoginScreen(),
       ),
     );

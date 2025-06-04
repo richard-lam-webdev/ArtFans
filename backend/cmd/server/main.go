@@ -1,4 +1,4 @@
-// chemin : backend/cmd/server/main.go
+// backend/cmd/server/main.go
 
 package main
 
@@ -13,30 +13,28 @@ import (
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/handlers"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/middleware"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
 func main() {
-	// 1. Charger la config (variables d’environnement)
+	// Charger la config
 	config.LoadEnv()
 
-	// 2. Initialiser la base de données (GORM + AutoMigrate)
+	// Initialiser la DB
 	database.Init()
 
-	// 3. Créer le AuthService *après* que database.DB soit initialisé
+	// Créer AuthService et l’injecter dans les handlers d’auth
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
-	handlers.SetAuthService(authSvc) // injection dans les handlers
+	handlers.SetAuthService(authSvc)
 
-	// 4. Créer le router Gin (mode Release par défaut)
+	// Créer le router Gin
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// 5. Configurer le middleware CORS
-	//
-	// Ici, pour le développement local, on autorise toutes les origines ("*").
-	// En production, remplacez "*" par vos domaines front (ex. "https://votre-front.com").
+	// Configurer CORS (exemple en dev en autorisant toutes origines)
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -46,25 +44,24 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// 6. Endpoint healthcheck (public)
+	// Healthcheck
 	r.GET("/health", handlers.HealthCheck)
 
-	// 7. Routes Auth (public)
+	// Routes publiques d’authentification
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
-	// 8. (Exemple) Routes protégées après JWT, si vous en avez
-	//    protected := r.Group("/api")
-	//    protected.Use(middleware.JWTAuth())
-	//    {
-	//        protected.GET("/user/me", handlers.GetCurrentUser)
-	//        // ... etc.
-	//    }
+	// Groupe protégé par JWT
+	protected := r.Group("/api")
+	protected.Use(middleware.JWTAuth())
+	{
+		protected.GET("/users/me", handlers.CurrentUserHandler)
+	}
 
-	// 9. Démarrer le serveur sur le port configuré
+	// Démarrage
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
 	if err := r.Run(addr); err != nil {

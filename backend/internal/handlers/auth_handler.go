@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -60,5 +61,6 @@ func LoginHandler(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+	log.Printf("Généré token JWT pour %s : %s\n", payload.Email, token)
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }

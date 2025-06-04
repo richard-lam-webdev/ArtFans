@@ -50,18 +50,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final authService = context.read<AuthService>();
     try {
+      // Appel à register() : ne renvoie pas de token et lève une Exception en cas d'échec
       await authService.register(
         username: _usernameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
         role: _selectedRole,
       );
+
+      // Si on arrive ici, inscription réussie → rediriger vers l'écran de login
       if (!mounted) return;
       Navigator.of(
         context,
       ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
     } catch (e) {
       setState(() {
+        // Affiche en rouge le message d'erreur renvoyé (par ex. "utilisateur déjà existant")
         _errorMessage = e.toString().replaceAll("Exception: ", "");
       });
     } finally {
@@ -101,6 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Nom d'utilisateur
                           TextFormField(
                             controller: _usernameCtrl,
                             decoration: const InputDecoration(
@@ -115,6 +120,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
+
+                          // Email
                           TextFormField(
                             controller: _emailCtrl,
                             decoration: const InputDecoration(
@@ -136,6 +143,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
+
+                          // Mot de passe
                           TextFormField(
                             controller: _passwordCtrl,
                             decoration: const InputDecoration(
@@ -151,6 +160,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
+
+                          // Confirmer mot de passe
                           TextFormField(
                             controller: _confirmPasswordCtrl,
                             decoration: const InputDecoration(
@@ -166,6 +177,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                           const SizedBox(height: 12),
+
+                          // Rôle
                           DropdownButtonFormField<String>(
                             value: _selectedRole,
                             decoration: const InputDecoration(
@@ -191,12 +204,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             },
                           ),
                           const SizedBox(height: 20),
+
+                          // Message d’erreur
                           if (_errorMessage != null)
                             Text(
                               _errorMessage!,
                               style: const TextStyle(color: Colors.red),
                             ),
+
                           const SizedBox(height: 8),
+
+                          // Bouton S’inscrire
                           ElevatedButton(
                             onPressed: _isLoading ? null : _submit,
                             style: ElevatedButton.styleFrom(
@@ -210,6 +228,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     : const Text('S’inscrire'),
                           ),
                           const SizedBox(height: 12),
+
+                          // Lien vers Connexion
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).pushReplacement(
