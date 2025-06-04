@@ -1,7 +1,6 @@
 // frontend/lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // pour kIsWeb
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
@@ -32,7 +31,7 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
