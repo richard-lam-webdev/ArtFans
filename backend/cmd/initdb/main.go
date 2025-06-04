@@ -16,15 +16,21 @@ import (
 
 // User corresponds to a user account
 type User struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	Username  string    `gorm:"column:username;unique;not null"`
-	Email     string    `gorm:"unique;not null"`
-	Password  string    `gorm:"column:hashed_password;not null"`
-	Role      string    `gorm:"type:role;not null"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	Username    string    `gorm:"column:username;unique;not null"`
+	Email       string    `gorm:"unique;not null"`
+	Password    string    `gorm:"column:hashed_password;not null"`
+	Role        string    `gorm:"type:role;not null"`
+	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime"`
+	SIRET       string    `gorm:"size:14"`
+	LegalStatus string
+	LegalName   string
+	Address     string
+	Country     string
+	VATNumber   string
+	BirthDate   *time.Time
 }
 
-// Subscription corresponds to a creator/subscriber relationship
 type Subscription struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	CreatorID    uuid.UUID `gorm:"column:creator_id;not null"`
@@ -90,16 +96,6 @@ type Report struct {
 	CreatedAt       time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
-// DashboardStats corresponds to aggregated stats per creator
-type DashboardStats struct {
-	ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CreatorID       uuid.UUID `gorm:"column:creator_id;not null"`
-	TotalRevenue    int64     `gorm:"column:total_revenue;default:0"`
-	SubscriberCount int       `gorm:"column:subscriber_count;default:0"`
-	LikeCount       int       `gorm:"column:like_count;default:0"`
-	CommentCount    int       `gorm:"column:comment_count;default:0"`
-}
-
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
@@ -122,7 +118,6 @@ func main() {
 	// 1) Ensure uuid-ossp extension is enabled
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
 
-	// 2) Create ENUM "role" if not exists
 	db.Exec(`
 		DO $$ BEGIN
 		  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role') THEN
@@ -130,7 +125,6 @@ func main() {
 		  END IF;
 		END$$;`)
 
-	// 3) Create ENUM "payment_status" if not exists
 	db.Exec(`
 		DO $$ BEGIN
 		  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
@@ -138,15 +132,12 @@ func main() {
 		  END IF;
 		END$$;`)
 
-	// 4) Drop the tables that need re-creating to avoid FK/type errors
 	db.Migrator().DropTable(
 		&Subscription{},
 		&Payment{},
 		&Content{},
-		// add any other tables that were using money type
 	)
 
-	// 5) Auto-migrate all models with updated field types
 	if err := db.AutoMigrate(
 		&User{},
 		&Subscription{},
