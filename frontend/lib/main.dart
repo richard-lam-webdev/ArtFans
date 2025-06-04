@@ -10,7 +10,7 @@ import 'src/screens/login_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env");
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
