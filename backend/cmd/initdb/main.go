@@ -12,9 +12,6 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// ----- GORM Models (all in English) -----
-
-// User corresponds to a user account
 type User struct {
 	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	Username    string    `gorm:"column:username;unique;not null"`
@@ -40,7 +37,6 @@ type Subscription struct {
 	PaymentID    uuid.UUID `gorm:"column:payment_id;not null"`
 }
 
-// Payment corresponds to a payment record
 type Payment struct {
 	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	SubscriptionID uuid.UUID `gorm:"column:subscription_id;not null"`
@@ -49,7 +45,6 @@ type Payment struct {
 	Status         string    `gorm:"column:status;type:payment_status;not null"`
 }
 
-// Content corresponds to published content items
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	CreatorID uuid.UUID `gorm:"column:creator_id;not null"`
@@ -61,7 +56,6 @@ type Content struct {
 	FilePath  string    `gorm:"column:file_path;not null"`
 }
 
-// Comment corresponds to user comments
 type Comment struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	ContentID uuid.UUID `gorm:"column:content_id;not null"`
@@ -70,7 +64,6 @@ type Comment struct {
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
-// Like corresponds to a “like” on a content item
 type Like struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	ContentID uuid.UUID `gorm:"column:content_id;not null"`
@@ -78,7 +71,6 @@ type Like struct {
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
-// Message corresponds to a private message between users
 type Message struct {
 	ID         uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	SenderID   uuid.UUID `gorm:"column:sender_id;not null"`
@@ -87,7 +79,6 @@ type Message struct {
 	SentAt     time.Time `gorm:"column:sent_at;autoCreateTime"`
 }
 
-// Report corresponds to a content report/flag
 type Report struct {
 	ID              uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	TargetContentID uuid.UUID `gorm:"column:target_content_id;not null"`
@@ -106,7 +97,7 @@ func main() {
 		postgres.Open(dsn),
 		&gorm.Config{
 			NamingStrategy: schema.NamingStrategy{
-				SingularTable: true, // keep singular table names
+				SingularTable: true,
 			},
 			Logger: logger.Default.LogMode(logger.Info),
 		},
@@ -115,7 +106,6 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	// 1) Ensure uuid-ossp extension is enabled
 	db.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`)
 
 	db.Exec(`
@@ -152,7 +142,6 @@ func main() {
 		&Like{},
 		&Message{},
 		&Report{},
-		&DashboardStats{},
 	); err != nil {
 		log.Fatalf("AutoMigrate failed: %v", err)
 		log.Fatalf("AutoMigrate failed: %v", err)
