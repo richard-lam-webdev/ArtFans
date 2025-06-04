@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../services/auth_service.dart';
 import 'register_screen.dart';
@@ -45,9 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Connexion réussie')));
-      // TODO : Naviguer vers l'écran principal après connexion
-    } catch (e) {
+      ).showSnackBar(const SnackBar(content: Text('Connexion Réussie')));
+      GoRouter.of(context).go('/home');    
+      } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll("Exception: ", "");
       });

@@ -1,20 +1,31 @@
-// frontend/lib/main.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // pour kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
 import 'src/screens/login_screen.dart';
+import 'src/screens/home_screen.dart'; 
+
+final _router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => const HomeScreen(),
+    ),
+  ],
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // NE PLUS CHARGER AUCUN .env EN WEB
   if (!kIsWeb) {
-    // Sur mobile/desktop : on peut charger un .env local (à placer à la racine)
     try {
       await dotenv.load(fileName: ".env");
       debugPrint("✅ .env local chargé");
@@ -22,7 +33,6 @@ Future<void> main() async {
       debugPrint("⚠️ Pas de fichier .env local : $e");
     }
   } else {
-    // Sur Web : on ne charge rien (évite l'erreur 404)
     debugPrint("ℹ️ Mode Web détecté : pas de chargement de .env");
   }
 
@@ -41,13 +51,13 @@ class MyApp extends StatelessWidget {
           update: (_, authService, __) => UserService(authService),
         ),
       ],
-      child: MaterialApp(
+      child: MaterialApp.router(
         title: 'ArtFans App',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
-        home: const LoginScreen(),
+        routerConfig: _router, // ← ici la config go_router !
       ),
     );
   }
