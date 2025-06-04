@@ -32,7 +32,7 @@ services:
   app:
     build: ./frontend
     env_file:
-      - ./frontend/.env
+      - ./frontend/assets/.env
     depends_on:
       - api
     ports:
