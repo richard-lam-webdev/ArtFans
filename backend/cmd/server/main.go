@@ -1,43 +1,67 @@
+// backend/cmd/server/main.go
+
 package main
 
 import (
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/handlers"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/middleware"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
 func main() {
-	// 1. Charger la config (variables d’environnement)
+	// Charger la config
 	config.LoadEnv()
 
-	// 2. Initialiser la base de données (GORM + AutoMigrate)
+	// Initialiser la DB
 	database.Init()
 
-	// 3. Créer le AuthService *après* que database.DB soit initialisé
+	// Créer AuthService et l’injecter dans les handlers d’auth
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
-	handlers.SetAuthService(authSvc) // injection dans les handlers
+	handlers.SetAuthService(authSvc)
 
-	// 4. Créer le router Gin
+	// Créer le router Gin
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// 5. Endpoint healthcheck
+	// Configurer CORS (exemple en dev en autorisant toutes origines)
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Healthcheck
 	r.GET("/health", handlers.HealthCheck)
 
-	// 6. Routes Auth (public)
+	// Routes publiques d’authentification
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
-	// 7. Démarrer le serveur sur le port configuré
+
+	// Groupe protégé par JWT
+	protected := r.Group("/api")
+	protected.Use(middleware.JWTAuth())
+	{
+		protected.GET("/users/me", handlers.CurrentUserHandler)
+	}
+
+	// Démarrage
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
 	if err := r.Run(addr); err != nil {
