@@ -7,6 +7,7 @@
 -keep class java.security.KeyStore { *; }
 -keep class javax.crypto.** { *; }
 -keep class com.it_nomads.fluttersecurestorage.* { *; }
-
-# Si vous utilisez flutter_dotenv (optionnel)
 -keep class io.flutter.plugins.flutter_dotenv.** { *; }
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+-dontwarn com.google.crypto.tink.**
