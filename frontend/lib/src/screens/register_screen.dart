@@ -19,7 +19,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
   final TextEditingController _confirmCtrl = TextEditingController();
-  String _role = 'subscriber';
   bool _isLoading = false;
 
   @override
@@ -46,19 +45,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
+    // On envoie systématiquement 'subscriber' au back-end
     final success = await authProvider.register(
       username: _usernameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       password: _passwordCtrl.text,
-      role: _role,
+      role: 'subscriber',
     );
 
     setState(() {
       _isLoading = false;
     });
 
-    if (!mounted) return; // Vérifier mounted avant d’utiliser context
-
+    if (!mounted) return;
     if (success) {
       context.go('/login');
       ScaffoldMessenger.of(
@@ -83,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Champ Username
+                  // Champ Nom d'utilisateur
                   TextFormField(
                     controller: _usernameCtrl,
                     decoration: const InputDecoration(
@@ -148,32 +147,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }
                       return null;
                     },
-                  ),
-                  const SizedBox(height: 12),
-                  // Dropdown pour le rôle
-                  DropdownButtonFormField<String>(
-                    value: _role,
-                    items: const [
-                      DropdownMenuItem(
-                        value: 'subscriber',
-                        child: Text('Abonné'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'creator',
-                        child: Text('Créateur'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _role = value;
-                        });
-                      }
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Rôle',
-                      prefixIcon: Icon(Icons.shield),
-                    ),
                   ),
                   const SizedBox(height: 24),
                   // Loader ou bouton
