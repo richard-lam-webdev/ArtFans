@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:frontend/src/services/auth_service.dart';
 import 'package:universal_platform/universal_platform.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 
@@ -19,7 +17,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
   final _bodyCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
 
-
   PlatformFile? _selectedFile;
   Uint8List? _selectedFileBytes; // Pour web
   String? _error;
@@ -30,7 +27,7 @@ class _AddContentScreenState extends State<AddContentScreen> {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'pdf'],
-      withData: true, // Nécessaire pour web !
+      withData: true, // Pour web
     );
     if (result != null && result.files.isNotEmpty) {
       setState(() {
@@ -42,7 +39,7 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _selectedFile == null) {
-      setState(() => _error = "Tous les champs sont requis.");
+      setState(() => _error = "Tous les champs sont requis et un fichier doit être sélectionné.");
       return;
     }
     setState(() {
@@ -50,9 +47,8 @@ class _AddContentScreenState extends State<AddContentScreen> {
       _error = null;
     });
 
-
     try {
-      var uri = Uri.parse('http://localhost:8080/api/contents'); // Change l'URL si besoin
+      var uri = Uri.parse('http://localhost:8080/api/contents');
       var request = http.MultipartRequest('POST', uri)
         ..fields['title'] = _titleCtrl.text.trim()
         ..fields['body'] = _bodyCtrl.text.trim()
@@ -60,7 +56,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
       // --- Gestion du fichier ---
       if (UniversalPlatform.isWeb) {
-        // Pour le web, utiliser bytes
         if (_selectedFileBytes == null) throw Exception("Fichier corrompu.");
         request.files.add(
           http.MultipartFile.fromBytes(
@@ -70,7 +65,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
           ),
         );
       } else {
-        // Mobile/Desktop : utiliser le chemin
         if (_selectedFile!.path == null) throw Exception("Fichier invalide.");
         request.files.add(
           await http.MultipartFile.fromPath(
@@ -85,7 +79,10 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
       if (response.statusCode == 201) {
         if (!mounted) return;
-        Navigator.of(context).pop(); // ou affiche un message de succès
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Contenu ajouté !")),
+        );
+        Navigator.of(context).pop(); // Retour après succès
       } else {
         final respStr = await response.stream.bytesToString();
         setState(() => _error = "Erreur : $respStr");
@@ -107,49 +104,84 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final maxWidth = MediaQuery.of(context).size.width > 600 ? 400.0 : MediaQuery.of(context).size.width * 0.9;
     return Scaffold(
-      appBar: AppBar(title: const Text('Ajouter du contenu')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _titleCtrl,
-                decoration: const InputDecoration(labelText: 'Titre'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
+      appBar: AppBar(title: const Text('Ajout de tamere')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 16.0),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: _titleCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'caca',
+                          prefixIcon: Icon(Icons.title),
+                        ),
+                        validator: (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _bodyCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                          prefixIcon: Icon(Icons.description),
+                        ),
+                        maxLines: 3,
+                        validator: (v) => (v == null || v.isEmpty) ? 'Description requise' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _priceCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Prix (€)',
+                          prefixIcon: Icon(Icons.euro),
+                        ),
+                        keyboardType: TextInputType.number,
+                        validator: (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.attach_file),
+                        label: Text(_selectedFile == null ? "Choisir un fichier" : _selectedFile!.name),
+                        onPressed: _isLoading ? null : _pickFile,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_error != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("Publier"),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              TextFormField(
-                controller: _bodyCtrl,
-                decoration: const InputDecoration(labelText: 'Description'),
-                maxLines: 3,
-                validator: (v) => (v == null || v.isEmpty) ? 'Description requise' : null,
-              ),
-              TextFormField(
-                controller: _priceCtrl,
-                decoration: const InputDecoration(labelText: 'Prix (€)'),
-                keyboardType: TextInputType.number,
-                validator: (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.attach_file),
-                label: Text(_selectedFile == null ? "Choisir un fichier" : _selectedFile!.name),
-                onPressed: _isLoading ? null : _pickFile,
-              ),
-              const SizedBox(height: 16),
-              if (_error != null) ...[
-                Text(_error!, style: const TextStyle(color: Colors.red)),
-                const SizedBox(height: 8),
-              ],
-              ElevatedButton(
-                onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text("Publier"),
-              ),
-            ],
+            ),
           ),
         ),
       ),
