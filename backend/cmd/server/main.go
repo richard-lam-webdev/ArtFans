@@ -1,5 +1,3 @@
-// backend/cmd/server/main.go
-
 package main
 
 import (
@@ -19,22 +17,27 @@ import (
 )
 
 func main() {
-	// Charger la config
+	// Charger la config (.env)
 	config.LoadEnv()
 
-	// Initialiser la DB
+	// Initialiser la base de données
 	database.Init()
 
-	// Créer AuthService et l’injecter dans les handlers d’auth
+	// Services et handlers pour les users/auth
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
-	// Créer le router Gin
+	// Services et handlers pour le contenu
+	contentRepo := repositories.NewContentRepository()
+	contentService := services.NewContentService(contentRepo, config.C.UploadPath)
+	contentHandler := handlers.NewHandler(contentService)
+
+	// Création du routeur Gin
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// Configurer CORS (exemple en dev en autorisant toutes origines)
+	// Configurer CORS (en dev : open bar)
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -47,21 +50,22 @@ func main() {
 	// Healthcheck
 	r.GET("/health", handlers.HealthCheck)
 
-	// Routes publiques d’authentification
+	// Routes publiques (auth)
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
-	// Groupe protégé par JWT
+	// Routes protégées (auth JWT)
 	protected := r.Group("/api")
 	protected.Use(middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
+		protected.POST("/contents", contentHandler.CreateContent)
 	}
 
-	// Démarrage
+	// Démarrage du serveur
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
 	if err := r.Run(addr); err != nil {

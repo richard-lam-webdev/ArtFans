@@ -12,6 +12,7 @@ type Config struct {
 	JwtSecret   string
 	StripeKey   string
 	Port        string
+	UploadPath  string
 }
 
 var C Config
