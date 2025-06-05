@@ -19,7 +19,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
   final TextEditingController _confirmCtrl = TextEditingController();
-  String _role = 'subscriber'; // ou 'creator'
+  String _role = 'subscriber';
   bool _isLoading = false;
 
   @override
@@ -57,15 +57,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = false;
     });
 
+    if (!mounted) return; // Vérifier mounted avant d’utiliser context
+
     if (success) {
-      // Si inscription OK, rediriger vers /login
       context.go('/login');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Inscription réussie")));
     }
-    // Si échec, AuthProvider aura déjà stocké errorMessage et status = error,
-    // on peut l'afficher ci-dessous :
   }
 
   @override
@@ -177,7 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Afficher loader ou bouton
+                  // Loader ou bouton
                   if (_isLoading || authProvider.status == AuthStatus.loading)
                     const CircularProgressIndicator()
                   else
@@ -189,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: const Text('S’inscrire'),
                     ),
                   const SizedBox(height: 12),
-                  // Message d’erreur si présent
+                  // Message d’erreur
                   if (authProvider.status == AuthStatus.error &&
                       authProvider.errorMessage != null)
                     Text(
@@ -197,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   const SizedBox(height: 16),
-                  // Lien vers login
+                  // Lien vers Connexion
                   TextButton(
                     onPressed: () => context.go('/login'),
                     child: const Text('J’ai déjà un compte ? Connexion'),

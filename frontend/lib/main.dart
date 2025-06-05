@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,14 +11,9 @@ import 'src/providers/user_provider.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
 import 'src/routes/app_router.dart';
+import 'src/screens/login_screen.dart';
+import 'src/screens/register_screen.dart';
 import 'src/screens/home_screen.dart';
-
-final _router = GoRouter(
-  routes: [
-    GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
-    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-  ],
-);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,22 +21,21 @@ Future<void> main() async {
   if (!kIsWeb) {
     try {
       await dotenv.load(fileName: ".env");
+      debugPrint("✅ .env local chargé");
     } catch (e) {
       debugPrint("⚠️ Pas de fichier .env local : $e");
     }
-  } else {
-    debugPrint("ℹ️ Mode Web détecté : pas de chargement de .env");
   }
 
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Créez les services
+    // Instanciation des services
     final authService = AuthService();
     final userService = UserService(authService);
 
@@ -54,6 +50,7 @@ class MyApp extends StatelessWidget {
       ],
       child: Builder(
         builder: (context) {
+          // Récupérer la configuration du router à partir de AuthProvider
           final router = AppRouter.router(context);
           return MaterialApp.router(
             title: 'ArtFans App',

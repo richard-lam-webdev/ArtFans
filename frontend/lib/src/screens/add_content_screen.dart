@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:frontend/src/services/auth_service.dart';
 import 'package:universal_platform/universal_platform.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 
@@ -18,7 +16,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-
 
   PlatformFile? _selectedFile;
   Uint8List? _selectedFileBytes; // Pour web
@@ -50,13 +47,15 @@ class _AddContentScreenState extends State<AddContentScreen> {
       _error = null;
     });
 
-
     try {
-      var uri = Uri.parse('http://localhost:8080/api/contents'); // Change l'URL si besoin
-      var request = http.MultipartRequest('POST', uri)
-        ..fields['title'] = _titleCtrl.text.trim()
-        ..fields['body'] = _bodyCtrl.text.trim()
-        ..fields['price'] = _priceCtrl.text.trim();
+      var uri = Uri.parse(
+        'http://localhost:8080/api/contents',
+      ); // Change l'URL si besoin
+      var request =
+          http.MultipartRequest('POST', uri)
+            ..fields['title'] = _titleCtrl.text.trim()
+            ..fields['body'] = _bodyCtrl.text.trim()
+            ..fields['price'] = _priceCtrl.text.trim();
 
       // --- Gestion du fichier ---
       if (UniversalPlatform.isWeb) {
@@ -118,24 +117,32 @@ class _AddContentScreenState extends State<AddContentScreen> {
               TextFormField(
                 controller: _titleCtrl,
                 decoration: const InputDecoration(labelText: 'Titre'),
-                validator: (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
               ),
               TextFormField(
                 controller: _bodyCtrl,
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
-                validator: (v) => (v == null || v.isEmpty) ? 'Description requise' : null,
+                validator:
+                    (v) =>
+                        (v == null || v.isEmpty) ? 'Description requise' : null,
               ),
               TextFormField(
                 controller: _priceCtrl,
                 decoration: const InputDecoration(labelText: 'Prix (€)'),
                 keyboardType: TextInputType.number,
-                validator: (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 icon: const Icon(Icons.attach_file),
-                label: Text(_selectedFile == null ? "Choisir un fichier" : _selectedFile!.name),
+                label: Text(
+                  _selectedFile == null
+                      ? "Choisir un fichier"
+                      : _selectedFile!.name,
+                ),
                 onPressed: _isLoading ? null : _pickFile,
               ),
               const SizedBox(height: 16),
@@ -145,9 +152,10 @@ class _AddContentScreenState extends State<AddContentScreen> {
               ],
               ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text("Publier"),
+                child:
+                    _isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text("Publier"),
               ),
             ],
           ),

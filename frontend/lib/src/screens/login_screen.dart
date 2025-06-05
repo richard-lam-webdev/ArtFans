@@ -3,13 +3,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import '../providers/user_provider.dart';
+
 import '../providers/auth_provider.dart';
-import 'register_screen.dart';
+import '../providers/user_provider.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
-
+  const LoginScreen({super.key});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -44,11 +43,14 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = false;
     });
 
-    // Si authentifié, go vers /home
+    if (!mounted) {
+      return;
+    }
+
     if (authProvider.status == AuthStatus.authenticated) {
-      // Avant d’aller sur /home, on peut déclencher le chargement du profil :
-      context.read<UserProvider>().fetchUserProfile();
-      // Puis on redirige :
+      // Charger le profil puis rediriger
+      await context.read<UserProvider>().fetchUserProfile();
+      if (!mounted) return;
       context.go('/home');
     }
   }
@@ -105,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  // Afficher loader ou bouton
+                  // Loader ou bouton
                   if (_isLoading || authProvider.status == AuthStatus.loading)
                     const CircularProgressIndicator()
                   else
@@ -117,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Se connecter'),
                     ),
                   const SizedBox(height: 12),
-                  // Afficher message d’erreur si besoin
+                  // Message d’erreur si besoin
                   if (authProvider.status == AuthStatus.error &&
                       authProvider.errorMessage != null)
                     Text(
@@ -125,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   const SizedBox(height: 16),
-                  // Lien vers inscription
+                  // Lien vers Inscription
                   TextButton(
                     onPressed: () => context.go('/register'),
                     child: const Text('Pas de compte ? Inscription'),
