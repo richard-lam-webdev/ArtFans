@@ -8,6 +8,7 @@ import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
 import 'src/screens/login_screen.dart';
 import 'src/screens/home_screen.dart'; 
+import 'src/screens/add_content_screen.dart';
 
 final _router = GoRouter(
   routes: [
@@ -18,6 +19,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/home',
       builder: (context, state) => const HomeScreen(),
+    ),
+    GoRoute(
+      path: '/add-content',
+      builder: (context, state) => const AddContentScreen(),
     ),
   ],
 );
