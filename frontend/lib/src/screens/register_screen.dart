@@ -1,10 +1,10 @@
-// lib/screens/register_screen.dart
+// lib/src/screens/register_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
-import '../services/auth_service.dart';
-import 'login_screen.dart';
+import '../providers/auth_provider.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,239 +18,195 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _usernameCtrl = TextEditingController();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
-  final TextEditingController _confirmPasswordCtrl = TextEditingController();
-  String _selectedRole = 'subscriber'; // Valeur par défaut
-
+  final TextEditingController _confirmCtrl = TextEditingController();
+  String _role = 'subscriber'; // ou 'creator'
   bool _isLoading = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
-    _confirmPasswordCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_passwordCtrl.text != _confirmPasswordCtrl.text) {
-      setState(() {
-        _errorMessage = "Les mots de passe ne correspondent pas";
-      });
+    if (_passwordCtrl.text != _confirmCtrl.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Les mots de passe ne correspondent pas")),
+      );
       return;
     }
 
+    final authProvider = context.read<AuthProvider>();
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
     });
 
-    final authService = context.read<AuthService>();
-    try {
-      // Appel à register() : ne renvoie pas de token et lève une Exception en cas d'échec
-      await authService.register(
-        username: _usernameCtrl.text.trim(),
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
-        role: _selectedRole,
-      );
+    final success = await authProvider.register(
+      username: _usernameCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      password: _passwordCtrl.text,
+      role: _role,
+    );
 
-      // Si on arrive ici, inscription réussie → rediriger vers l'écran de login
-      if (!mounted) return;
-      Navigator.of(
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (success) {
+      // Si inscription OK, rediriger vers /login
+      context.go('/login');
+      ScaffoldMessenger.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
-    } catch (e) {
-      setState(() {
-        // Affiche en rouge le message d'erreur renvoyé (par ex. "utilisateur déjà existant")
-        _errorMessage = e.toString().replaceAll("Exception: ", "");
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      ).showSnackBar(const SnackBar(content: Text("Inscription réussie")));
     }
+    // Si échec, AuthProvider aura déjà stocké errorMessage et status = error,
+    // on peut l'afficher ci-dessous :
   }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<AuthProvider>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Inscription')),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final maxWidth =
-              constraints.maxWidth > 600 ? 500.0 : constraints.maxWidth * 0.9;
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                vertical: 24.0,
-                horizontal: 16.0,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: Card(
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+          child: Form(
+            key: _formKey,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Champ Username
+                  TextFormField(
+                    controller: _usernameCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nom d\'utilisateur',
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Le nom est requis';
+                      }
+                      return null;
+                    },
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Nom d'utilisateur
-                          TextFormField(
-                            controller: _usernameCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Nom d\'utilisateur',
-                              prefixIcon: Icon(Icons.person),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Le nom d\'utilisateur est requis';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Email
-                          TextFormField(
-                            controller: _emailCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Email',
-                              prefixIcon: Icon(Icons.email),
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'L\'email est requis';
-                              }
-                              final emailRegex = RegExp(
-                                r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                              );
-                              if (!emailRegex.hasMatch(value.trim())) {
-                                return 'Format d\'email invalide';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Mot de passe
-                          TextFormField(
-                            controller: _passwordCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Mot de passe',
-                              prefixIcon: Icon(Icons.lock),
-                            ),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.length < 6) {
-                                return 'Minimum 6 caractères';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Confirmer mot de passe
-                          TextFormField(
-                            controller: _confirmPasswordCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Confirmer mot de passe',
-                              prefixIcon: Icon(Icons.lock_outline),
-                            ),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.length < 6) {
-                                return 'Minimum 6 caractères';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Rôle
-                          DropdownButtonFormField<String>(
-                            value: _selectedRole,
-                            decoration: const InputDecoration(
-                              labelText: 'Rôle',
-                              prefixIcon: Icon(Icons.verified_user),
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'creator',
-                                child: Text('Créateur'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'subscriber',
-                                child: Text('Abonné'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _selectedRole = value;
-                                });
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Message d’erreur
-                          if (_errorMessage != null)
-                            Text(
-                              _errorMessage!,
-                              style: const TextStyle(color: Colors.red),
-                            ),
-
-                          const SizedBox(height: 8),
-
-                          // Bouton S’inscrire
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
-                            ),
-                            child:
-                                _isLoading
-                                    ? const CircularProgressIndicator(
-                                      color: Colors.white,
-                                    )
-                                    : const Text('S’inscrire'),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Lien vers Connexion
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) => const LoginScreen(),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'J’ai déjà un compte ? Connexion',
-                            ),
-                          ),
-                        ],
+                  const SizedBox(height: 12),
+                  // Champ Email
+                  TextFormField(
+                    controller: _emailCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'L\'email est requis';
+                      }
+                      final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                      if (!emailRegex.hasMatch(value.trim())) {
+                        return 'Format d\'email invalide';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Champ Mot de passe
+                  TextFormField(
+                    controller: _passwordCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Mot de passe',
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.length < 6) {
+                        return 'Minimum 6 caractères';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Champ Confirmer mot de passe
+                  TextFormField(
+                    controller: _confirmCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirmer mot de passe',
+                      prefixIcon: Icon(Icons.lock),
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value == null || value.length < 6) {
+                        return 'Minimum 6 caractères';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Dropdown pour le rôle
+                  DropdownButtonFormField<String>(
+                    value: _role,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'subscriber',
+                        child: Text('Abonné'),
                       ),
+                      DropdownMenuItem(
+                        value: 'creator',
+                        child: Text('Créateur'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _role = value;
+                        });
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Rôle',
+                      prefixIcon: Icon(Icons.shield),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  // Afficher loader ou bouton
+                  if (_isLoading || authProvider.status == AuthStatus.loading)
+                    const CircularProgressIndicator()
+                  else
+                    ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: const Text('S’inscrire'),
+                    ),
+                  const SizedBox(height: 12),
+                  // Message d’erreur si présent
+                  if (authProvider.status == AuthStatus.error &&
+                      authProvider.errorMessage != null)
+                    Text(
+                      authProvider.errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  const SizedBox(height: 16),
+                  // Lien vers login
+                  TextButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('J’ai déjà un compte ? Connexion'),
+                  ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
