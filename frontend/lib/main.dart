@@ -4,16 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 import 'src/providers/auth_provider.dart';
 import 'src/providers/user_provider.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
 import 'src/routes/app_router.dart';
-import 'src/screens/login_screen.dart';
-import 'src/screens/register_screen.dart';
-import 'src/screens/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
