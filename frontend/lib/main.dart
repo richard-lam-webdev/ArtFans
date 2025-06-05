@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:go_router/go_router.dart';
 
 import 'src/services/auth_service.dart';
@@ -59,14 +57,12 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp.router(
-      child: MaterialApp.router(
         title: 'ArtFans App',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           useMaterial3: true,
         ),
-        routerConfig: _router, // ← ici la config go_router !
-        routerConfig: _router, // ← ici la config go_router !
+        routerConfig: _router, 
       ),
     );
   }
