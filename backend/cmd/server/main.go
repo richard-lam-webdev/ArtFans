@@ -35,6 +35,7 @@ func main() {
 
 	// Création du routeur Gin
 	r := gin.New()
+	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
 	// Configurer CORS (en dev : open bar)

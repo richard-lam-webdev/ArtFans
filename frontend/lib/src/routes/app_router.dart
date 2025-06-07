@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/add_content_screen.dart';
 
 class AppRouter {
   /// Retourne une instance unique de GoRouter
@@ -56,6 +57,10 @@ class AppRouter {
           name: 'home',
           builder: (context, state) => const HomeScreen(),
         ),
+        GoRoute(
+        path: '/add-content',
+        builder: (context, state) => const AddContentScreen(),
+      ),
         // Vous pouvez ajouter d'autres routes protégées ici (ex. /profile, /settings, etc.)
       ],
     );
