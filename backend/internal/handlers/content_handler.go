@@ -1,59 +1,89 @@
+// backend/internal/handlers/content.go
 package handlers
 
 import (
+	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
+	"github.com/google/uuid"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
-type Handler struct {
-	contentService *services.ContentService
+// ContentHandler regroupe les routes liées au contenu
+type ContentHandler struct {
+	service *services.ContentService
 }
 
-func NewHandler(contentService *services.ContentService) *Handler {
-	return &Handler{
-		contentService: contentService,
+func NewHandler(s *services.ContentService) *ContentHandler {
+	return &ContentHandler{service: s}
+}
+
+// CreateContent POST /api/contents (protégé par JWTAuth)
+func (h *ContentHandler) CreateContent(c *gin.Context) {
+	/* -------- RÉCUP USER ID MIDDLEWARE -------- */
+	userIDRaw, ok := c.Get("userID") // middleware JWTAuth stocke "userID"
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
 	}
-}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
 
-func (h *Handler) CreateContent(c *gin.Context) {
-	user := c.MustGet("user").(*models.User)
+	/* -------- FORM-DATA -------- */
+	username := c.PostForm("username") // envoyé par le client
+	role := c.PostForm("role")         // ex: "creator"
 
 	title := c.PostForm("title")
 	body := c.PostForm("body")
 	priceStr := c.PostForm("price")
+
 	if title == "" || body == "" || priceStr == "" {
+		log.Print("[CreateContent] champs manquants")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Champs requis manquants"})
 		return
 	}
 	price, err := strconv.Atoi(priceStr)
 	if err != nil {
+		log.Printf("[CreateContent] prix invalide: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Prix invalide"})
 		return
 	}
 
-	file, err := c.FormFile("file")
+	fileHeader, err := c.FormFile("file")
 	if err != nil {
+		log.Printf("[CreateContent] fichier manquant: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Fichier requis"})
 		return
 	}
 
-	content, err := h.contentService.CreateContent(
-		user.ID,
-		user.Username,
+	/* -------- SERVICE -------- */
+	content, err := h.service.CreateContent(
+		userID,
+		username,
 		title,
 		body,
 		price,
-		file,
-		string(user.Role),
+		fileHeader,
+		role,
 	)
 	if err != nil {
+		log.Printf("[CreateContent] service error: %v", err)
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, content)
+	/* -------- OK -------- */
+	c.JSON(http.StatusCreated, gin.H{
+		"id":        content.ID,
+		"title":     content.Title,
+		"body":      content.Body,
+		"price":     content.Price,
+		"file_path": filepath.Base(content.FilePath),
+	})
 }

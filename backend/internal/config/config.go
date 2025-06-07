@@ -24,6 +24,8 @@ func LoadEnv() {
 	C.DatabaseURL = os.Getenv("DATABASE_URL")
 	C.JwtSecret = os.Getenv("JWT_SECRET")
 	C.StripeKey = os.Getenv("STRIPE_KEY")
+	C.UploadPath = os.Getenv("UPLOAD_PATH")
+
 	if os.Getenv("PORT") == "" {
 		C.Port = "8080"
 	} else {

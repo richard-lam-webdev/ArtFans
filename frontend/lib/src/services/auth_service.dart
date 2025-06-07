@@ -1,5 +1,4 @@
 // lib/src/services/auth_service.dart
-
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,103 +9,126 @@ class AuthService {
   final FlutterSecureStorage _secureStorage;
 
   AuthService()
-    : _secureStorage = const FlutterSecureStorage(),
-      _baseUrl =
-          (() {
-            try {
-              // Si dotenv a été chargé (mobile/desktop), on récupère API_URL.
-              // En Web, dotenv n’est pas initialisé et cela lèvera NotInitializedError.
-              return dotenv.env['API_URL'] ?? "http://localhost:8080";
-            } catch (_) {
-              // Fallback si dotenv n’est pas chargé
-              return "http://localhost:8080";
-            }
-          })();
+      : _secureStorage = const FlutterSecureStorage(),
+        _baseUrl = (() {
+          try {
+            return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+          } catch (_) {
+            return 'http://localhost:8080';
+          }
+        })();
 
-  /// Inscription : envoie POST /api/auth/register
-  /// - Si HTTP 201, succès → on retourne simplement `void`.
-  /// - Sinon, on tente d’extraire le champ `error` du JSON et on jette une Exception.
   Future<void> register({
     required String username,
     required String email,
     required String password,
     required String role,
   }) async {
-    final uri = Uri.parse("$_baseUrl/api/auth/register");
-    final Map<String, dynamic> payload = {
+    final uri = Uri.parse('$_baseUrl/api/auth/register');
+    final payload = jsonEncode({
       'username': username,
       'email': email,
       'password': password,
       'role': role,
-    };
+    });
 
-    final response = await http.post(
+    final res = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
+      body: payload,
     );
 
-    if (response.statusCode == 201) {
-      // Succès : l’API a renvoyé 201 et un JSON { user: {...} } sans token
-      return;
-    } else {
-      // En cas d’erreur (400, 409, etc.), on tente de récupérer le message depuis { error: "..." }
-      try {
-        final errorBody = jsonDecode(response.body) as Map<String, dynamic>;
-        final msg = errorBody['error'] as String?;
-        throw Exception(msg ?? "Erreur inconnue lors de l'inscription");
-      } catch (_) {
-        // Si le corps n’est pas un JSON valide ou qu’il n’y a pas de champ error
-        throw Exception("Erreur inattendue : code HTTP ${response.statusCode}");
-      }
+    if (res.statusCode != 201) {
+      throw Exception(
+        _extractError(res.body) ??
+            'Erreur HTTP ${res.statusCode} à l’inscription',
+      );
     }
   }
 
-  /// Connexion : envoie POST /api/auth/login
-  /// - Si HTTP 200, l’API renvoie { token: "..." } → on stocke et retourne ce token.
-  /// - Sinon, on jette une Exception avec le message d'erreur.
   Future<String> login({
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse("$_baseUrl/api/auth/login");
-    final Map<String, dynamic> payload = {'email': email, 'password': password};
-
-    final response = await http.post(
+    final uri = Uri.parse('$_baseUrl/api/auth/login');
+    final res = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
+      body: jsonEncode({'email': email, 'password': password}),
     );
 
-    if (response.statusCode == 200) {
-      // Le corps doit contenir { token: "..." }
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final token = body['token'] as String?;
-      if (token == null) {
-        throw Exception("Réponse invalide du serveur : pas de token");
+    if (res.statusCode != 200) {
+      throw Exception(
+        _extractError(res.body) ?? 'Erreur HTTP ${res.statusCode} au login',
+      );
+    }
+
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    final token = map['token'] as String?;
+    if (token == null) throw Exception('Réponse sans token');
+
+    await _secureStorage.write(key: 'jwt_token', value: token);
+    return token;
+  }
+
+  Future<String?> getToken() => _secureStorage.read(key: 'jwt_token');
+
+  Future<String?> getUsername() async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    try {
+      final parts = token.split('.');
+      if (parts.length == 3) {
+        final payload = jsonDecode(
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+        ) as Map<String, dynamic>;
+        if (payload.containsKey('username')) {
+          return payload['username'] as String;
+        }
       }
-      // Stockage sécurisé du token
-      await _secureStorage.write(key: 'jwt_token', value: token);
-      return token;
-    } else {
-      // Tentative de récupérer le champ `error` du JSON de réponse
-      try {
-        final errorBody = jsonDecode(response.body) as Map<String, dynamic>;
-        final msg = errorBody['error'] as String?;
-        throw Exception(msg ?? "Erreur inconnue lors de la connexion");
-      } catch (_) {
-        throw Exception("Erreur inattendue : code HTTP ${response.statusCode}");
-      }
+    } catch (_) {}
+    try {
+      final profile = await fetchProfile();
+      return (profile['username'] ?? profile['Username']) as String?;
+    } catch (_) {
+      return null;
     }
   }
 
-  /// Récupère le token JWT stocké (ou `null` si aucun)
-  Future<String?> getToken() async {
-    return _secureStorage.read(key: 'jwt_token');
+  Future<Map<String, dynamic>> fetchProfile() async {
+    final token = await getToken();
+    if (token == null) throw Exception('Pas de token');
+
+    final uri = Uri.parse('$_baseUrl/api/users/me');
+    final res = await http.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (res.statusCode != 200) {
+      throw Exception(
+        _extractError(res.body) ?? 'Erreur HTTP ${res.statusCode} profil',
+      );
+    }
+
+    final map = jsonDecode(res.body) as Map<String, dynamic>;
+    return map['user'] as Map<String, dynamic>;
   }
 
-  /// Supprime le token en mémoire → déconnexion
   Future<void> logout() async {
     await _secureStorage.delete(key: 'jwt_token');
+  }
+
+  String? _extractError(String body) {
+    try {
+      final map = jsonDecode(body) as Map<String, dynamic>;
+      return map['error'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 }
