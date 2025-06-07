@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
 
+import '../widgets/bottom_nav.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -79,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }(),
       ),
+      bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }
 }
