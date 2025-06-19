@@ -1,5 +1,3 @@
-// chemin : backend/internal/handlers/auth_handler_test.go
-
 package handlers_test
 
 import (
@@ -23,72 +21,86 @@ import (
 )
 
 // setupRouterWithMemoryDB crée un router Gin et une DB SQLite en mémoire.
-// Les migrations et le service d'authentification sont initialisés.
 func setupRouterWithMemoryDB(t *testing.T) (*gin.Engine, *gorm.DB) {
-	// Ouvre une base SQLite en mémoire (pure Go)
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("❌ Échec ouverture DB en mémoire : %v", err)
 	}
-
-	// AutoMigrate sur le modèle User uniquement
 	if err := db.AutoMigrate(&models.User{}); err != nil {
 		t.Fatalf("❌ Échec AutoMigrate en mémoire : %v", err)
 	}
-
-	// Remplace la DB globale de notre package database
 	database.DB = db
 
-	// Instancier UserRepository et AuthService, puis injecter dans le handler
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
-	// Configurer Gin en mode test
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	// Routes à tester
 	router.POST("/api/auth/register", handlers.RegisterHandler)
 	router.POST("/api/auth/login", handlers.LoginHandler)
-
 	return router, db
 }
 
-// TestRegister_IgnoreRoleField vérifie qu'envoyer "role":"creator" n'affecte pas le rôle final.
-func TestRegister_IgnoreRoleField(t *testing.T) {
+// 1) TestRegister_BlockOnRoleField : toute requête avec "role" doit renvoyer 400
+func TestRegister_BlockOnRoleField(t *testing.T) {
+	router, _ := setupRouterWithMemoryDB(t)
+
+	payload := map[string]interface{}{
+		"username": "eviluser",
+		"email":    "evil@example.com",
+		"password": "password123",
+		"role":     "creator", // champ interdit
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]string
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t,
+		"le champ 'role' n'est pas autorisé lors de l'inscription",
+		resp["error"],
+	)
+}
+
+// 2) TestRegister_ValidWithoutRole : inscription sans "role" doit réussir en 201
+func TestRegister_ValidWithoutRole(t *testing.T) {
 	router, db := setupRouterWithMemoryDB(t)
 
 	payload := map[string]interface{}{
-		"username": "charlie",
-		"email":    "charlie@example.com",
+		"username": "david",
+		"email":    "david@example.com",
 		"password": "password123",
-		"role":     "creator", // Tentative de forcer le rôle
 	}
-	bodyBytes, _ := json.Marshal(payload)
+	body, _ := json.Marshal(payload)
 
-	req, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(bodyBytes))
+	req, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-
 	router.ServeHTTP(w, req)
+
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	var user models.User
-	err := db.Where("email = ?", "charlie@example.com").First(&user).Error
+	err := db.Where("email = ?", "david@example.com").First(&user).Error
 	assert.NoError(t, err)
 	assert.Equal(t, models.RoleSubscriber, user.Role)
 }
 
-// TestRegister_DuplicateEmail vérifie qu'on ne peut pas s'inscrire deux fois avec le même email.
+// 3) TestRegister_DuplicateEmail : deux inscriptions sans "role" avec même email -> 400 sur la 2e
 func TestRegister_DuplicateEmail(t *testing.T) {
 	router, _ := setupRouterWithMemoryDB(t)
 
-	// Première inscription
+	// 1re inscription
 	payload1 := map[string]interface{}{
 		"username": "alice",
 		"email":    "alice@example.com",
 		"password": "password123",
-		"role":     "subscriber",
 	}
 	body1, _ := json.Marshal(payload1)
 	req1, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(body1))
@@ -97,12 +109,11 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	router.ServeHTTP(w1, req1)
 	assert.Equal(t, http.StatusCreated, w1.Code)
 
-	// Seconde inscription avec le même email
+	// 2e inscription avec même email
 	payload2 := map[string]interface{}{
 		"username": "alice2",
 		"email":    "alice@example.com",
 		"password": "anotherPass",
-		"role":     "subscriber",
 	}
 	body2, _ := json.Marshal(payload2)
 	req2, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(body2))
@@ -113,11 +124,11 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w2.Code)
 }
 
-// TestLogin_SuccessAndFailure couvre un login valide puis un login invalide.
+// 4) TestLogin_SuccessAndFailure couvre un login valide puis une erreur pour mot de passe invalide.
 func TestLogin_SuccessAndFailure(t *testing.T) {
 	router, db := setupRouterWithMemoryDB(t)
 
-	// Créer l'utilisateur en mémoire avec mot de passe hashé "password123"
+	// Préparer un utilisateur en mémoire
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	user := models.User{
 		ID:       uuid.New(),
@@ -131,33 +142,25 @@ func TestLogin_SuccessAndFailure(t *testing.T) {
 	}
 
 	// Login valide
-	loginPayload := map[string]string{
-		"email":    "bob@example.com",
-		"password": "password123",
-	}
-	bodyOk, _ := json.Marshal(loginPayload)
-	reqOk, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer(bodyOk))
-	reqOk.Header.Set("Content-Type", "application/json")
-	wOk := httptest.NewRecorder()
-	router.ServeHTTP(wOk, reqOk)
+	loginOK := map[string]string{"email": "bob@example.com", "password": "password123"}
+	bodyOK, _ := json.Marshal(loginOK)
+	reqOK, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer(bodyOK))
+	reqOK.Header.Set("Content-Type", "application/json")
+	wOK := httptest.NewRecorder()
+	router.ServeHTTP(wOK, reqOK)
+	assert.Equal(t, http.StatusOK, wOK.Code)
 
-	assert.Equal(t, http.StatusOK, wOk.Code)
-	var respOk map[string]string
-	err := json.Unmarshal(wOk.Body.Bytes(), &respOk)
-	assert.NoError(t, err)
-	_, exists := respOk["token"]
+	var respOK map[string]string
+	assert.NoError(t, json.Unmarshal(wOK.Body.Bytes(), &respOK))
+	_, exists := respOK["token"]
 	assert.True(t, exists)
 
-	// Login invalide (mauvais mot de passe)
-	loginPayloadBad := map[string]string{
-		"email":    "bob@example.com",
-		"password": "wrongpass",
-	}
-	bodyBad, _ := json.Marshal(loginPayloadBad)
+	// Login invalide
+	loginBad := map[string]string{"email": "bob@example.com", "password": "wrongpass"}
+	bodyBad, _ := json.Marshal(loginBad)
 	reqBad, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer(bodyBad))
 	reqBad.Header.Set("Content-Type", "application/json")
 	wBad := httptest.NewRecorder()
 	router.ServeHTTP(wBad, reqBad)
-
 	assert.Equal(t, http.StatusUnauthorized, wBad.Code)
 }
