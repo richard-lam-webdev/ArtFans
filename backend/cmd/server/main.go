@@ -66,6 +66,12 @@ func main() {
 		protected.POST("/contents", contentHandler.CreateContent)
 	}
 
+	admin := r.Group("/api/admin")
+	admin.Use(handlers.AdminMiddleware())
+	{
+		admin.PUT("/users/:id/role", handlers.PromoteUserHandler)
+	}
+
 	// Démarrage du serveur
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
