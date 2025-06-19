@@ -37,11 +37,26 @@ func SetTestDB(db *gorm.DB) {
 
 func (r *UserRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	var user models.User
-	if err := r.db.First(&user, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+	err := r.db.First(&user, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, err
 	}
 	return &user, nil
+}
+
+// UpdateRole met à jour le rôle d’un utilisateur donné
+func (r *UserRepository) UpdateRole(userID uuid.UUID, newRole models.Role) error {
+	res := r.db.Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("role", newRole)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
