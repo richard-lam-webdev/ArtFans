@@ -29,6 +29,7 @@ class AuthService {
       'username': username,
       'email': email,
       'password': password,
+      'confirmPassword': password,
     });
 
     final res = await http.post(
