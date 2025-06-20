@@ -50,7 +50,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       username: _usernameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
       password: _passwordCtrl.text,
-      role: 'subscriber',
     );
 
     setState(() {
