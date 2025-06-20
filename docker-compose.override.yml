@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  initdb:
+    build:
+      context: ./backend
+    command: go run ./cmd/initdb/main.go
+    env_file:
+      - ./backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"

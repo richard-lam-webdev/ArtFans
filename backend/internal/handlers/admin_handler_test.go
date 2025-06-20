@@ -43,18 +43,18 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 	hashedPass, _ := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 
 	admin := models.User{
-		ID:       uuid.New(),
-		Username: "admin",
-		Email:    "admin@example.com",
-		Password: string(hashedPass),
-		Role:     models.RoleAdmin,
+		ID:             uuid.New(),
+		Username:       "admin",
+		Email:          "admin@example.com",
+		HashedPassword: string(hashedPass),
+		Role:           models.RoleAdmin,
 	}
 	sub := models.User{
-		ID:       uuid.New(),
-		Username: "subscriber",
-		Email:    "sub@example.com",
-		Password: string(hashedPass),
-		Role:     models.RoleSubscriber,
+		ID:             uuid.New(),
+		Username:       "subscriber",
+		Email:          "sub@example.com",
+		HashedPassword: string(hashedPass),
+		Role:           models.RoleSubscriber,
 	}
 	if err := d.Create(&admin).Error; err != nil {
 		t.Fatalf("échec création admin: %v", err)

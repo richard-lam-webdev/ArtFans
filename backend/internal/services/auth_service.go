@@ -42,10 +42,10 @@ func (s *AuthService) Register(username, email, plainPassword string, role model
 	}
 
 	user := &models.User{
-		Username: username,
-		Email:    email,
-		Password: string(hashed),
-		Role:     role,
+		Username:       username,
+		Email:          email,
+		HashedPassword: string(hashed),
+		Role:           role,
 	}
 	// 3. Insérer en base
 	if err := s.userRepo.Create(user); err != nil {
@@ -53,7 +53,7 @@ func (s *AuthService) Register(username, email, plainPassword string, role model
 	}
 
 	// 4. Ne jamais renvoyer le hash au client
-	user.Password = ""
+	user.HashedPassword = ""
 	return user, nil
 }
 
@@ -68,7 +68,7 @@ func (s *AuthService) Login(email, plainPassword string) (string, error) {
 	}
 
 	// Comparer le mot de passe
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(plainPassword)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(plainPassword)); err != nil {
 		return "", errors.New("identifiants invalides")
 	}
 

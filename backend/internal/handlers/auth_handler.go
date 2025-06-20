@@ -19,10 +19,10 @@ func SetAuthService(s *services.AuthService) {
 func RegisterHandler(c *gin.Context) {
 	// Struct de binding incluant "Role" uniquement pour détecter sa présence
 	var payload struct {
-		Username string `json:"username" binding:"required"`
-		Email    string `json:"email"    binding:"required,email"`
-		Password string `json:"password" binding:"required,min=6"`
-		Role     string `json:"role"     binding:"omitempty,oneof=creator subscriber"`
+		Username       string `json:"username" binding:"required"`
+		Email          string `json:"email"    binding:"required,email"`
+		HashedPassword string `json:"hashedpassword" binding:"required,min=6"`
+		Role           string `json:"role"     binding:"omitempty,oneof=creator subscriber"`
 	}
 
 	// 1. Liaison JSON → payload
@@ -44,7 +44,7 @@ func RegisterHandler(c *gin.Context) {
 	user, err := authService.Register(
 		payload.Username,
 		payload.Email,
-		payload.Password,
+		payload.HashedPassword,
 		role,
 	)
 	if err != nil {
@@ -59,15 +59,15 @@ func RegisterHandler(c *gin.Context) {
 // LoginHandler gère POST /api/auth/login
 func LoginHandler(c *gin.Context) {
 	var payload struct {
-		Email    string `json:"email"    binding:"required,email"`
-		Password string `json:"password" binding:"required"`
+		Email          string `json:"email"    binding:"required,email"`
+		HashedPassword string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	token, err := authService.Login(payload.Email, payload.Password)
+	token, err := authService.Login(payload.Email, payload.HashedPassword)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

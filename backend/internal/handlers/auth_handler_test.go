@@ -131,11 +131,11 @@ func TestLogin_SuccessAndFailure(t *testing.T) {
 	// Préparer un utilisateur en mémoire
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
 	user := models.User{
-		ID:       uuid.New(),
-		Username: "bob",
-		Email:    "bob@example.com",
-		Password: string(hashed),
-		Role:     models.RoleSubscriber,
+		ID:             uuid.New(),
+		Username:       "bob",
+		Email:          "bob@example.com",
+		HashedPassword: string(hashed),
+		Role:           models.RoleSubscriber,
 	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("❌ Échec création user en mémoire : %v", err)
