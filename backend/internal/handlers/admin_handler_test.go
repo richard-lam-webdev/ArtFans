@@ -43,18 +43,18 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 	hashedPass, _ := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 
 	admin := models.User{
-		ID:       uuid.New(),
-		Username: "admin",
-		Email:    "admin@example.com",
-		Password: string(hashedPass),
-		Role:     models.RoleAdmin,
+		ID:             uuid.New(),
+		Username:       "admin",
+		Email:          "admin@example.com",
+		HashedPassword: string(hashedPass),
+		Role:           models.RoleAdmin,
 	}
 	sub := models.User{
-		ID:       uuid.New(),
-		Username: "subscriber",
-		Email:    "sub@example.com",
-		Password: string(hashedPass),
-		Role:     models.RoleSubscriber,
+		ID:             uuid.New(),
+		Username:       "subscriber",
+		Email:          "sub@example.com",
+		HashedPassword: string(hashedPass),
+		Role:           models.RoleSubscriber,
 	}
 	if err := d.Create(&admin).Error; err != nil {
 		t.Fatalf("échec création admin: %v", err)
@@ -80,7 +80,7 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 	r.Use(gin.Recovery())
 	adminGroup := r.Group("/api/admin")
 	adminGroup.Use(handlers.AdminMiddleware())
-	adminGroup.PUT("/users/:id/role", handlers.PromoteUserHandler)
+	adminGroup.PUT("/users/:id/role", handlers.ChangeUserRoleHandler)
 
 	return r, d, adminToken, subToken, sub.ID
 }
@@ -131,10 +131,10 @@ func TestPromote_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-func TestPromote_BadPayload(t *testing.T) {
-	router, _, adminToken, _, subID := setupAdminTest(t)
+func TestPromote_DowngradeToSubscriber(t *testing.T) {
+	router, db, adminToken, _, subID := setupAdminTest(t)
 
-	// role ≠ "creator"
+	// Demande explicite de rétrogradation
 	reqBody := []byte(`{"role":"subscriber"}`)
 	req, _ := http.NewRequest("PUT", "/api/admin/users/"+subID.String()+"/role", bytes.NewBuffer(reqBody))
 	req.Header.Set("Authorization", "Bearer "+adminToken)
@@ -142,5 +142,11 @@ func TestPromote_BadPayload(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// On vérifie que le rôle a bien été rétrogradé
+	var u models.User
+	err := db.First(&u, "id = ?", subID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, models.RoleSubscriber, u.Role)
 }

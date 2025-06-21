@@ -9,27 +9,27 @@ class AuthService {
   final FlutterSecureStorage _secureStorage;
 
   AuthService()
-      : _secureStorage = const FlutterSecureStorage(),
-        _baseUrl = (() {
-          try {
-            return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-          } catch (_) {
-            return 'http://localhost:8080';
-          }
-        })();
+    : _secureStorage = const FlutterSecureStorage(),
+      _baseUrl =
+          (() {
+            try {
+              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+            } catch (_) {
+              return 'http://localhost:8080';
+            }
+          })();
 
   Future<void> register({
     required String username,
     required String email,
     required String password,
-    required String role,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/auth/register');
     final payload = jsonEncode({
       'username': username,
       'email': email,
       'password': password,
-      'role': role,
+      'confirmPassword': password,
     });
 
     final res = await http.post(
@@ -80,9 +80,11 @@ class AuthService {
     try {
       final parts = token.split('.');
       if (parts.length == 3) {
-        final payload = jsonDecode(
-          utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-        ) as Map<String, dynamic>;
+        final payload =
+            jsonDecode(
+                  utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+                )
+                as Map<String, dynamic>;
         if (payload.containsKey('username')) {
           return payload['username'] as String;
         }

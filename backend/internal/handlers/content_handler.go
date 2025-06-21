@@ -87,3 +87,15 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 		"file_path": filepath.Base(content.FilePath),
 	})
 }
+
+// GetAllContents GET /api/contents
+func (h *ContentHandler) GetAllContents(c *gin.Context) {
+	contents, err := h.service.GetAllContents()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur serveur"})
+		return
+	}
+
+	// ✅ Toujours renvoyer un tableau, même vide
+	c.JSON(http.StatusOK, gin.H{"contents": contents})
+}

@@ -41,7 +41,6 @@ class AuthProvider extends ChangeNotifier {
     required String username,
     required String email,
     required String password,
-    required String role,
   }) async {
     _status = AuthStatus.loading;
     notifyListeners();
@@ -51,7 +50,6 @@ class AuthProvider extends ChangeNotifier {
         username: username,
         email: email,
         password: password,
-        role: role,
       );
       _status = AuthStatus.unauthenticated;
       // L'inscription réussie redirigera vers login

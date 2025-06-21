@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -13,19 +14,19 @@ import (
 )
 
 type User struct {
-	ID          uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	Username    string    `gorm:"column:username;unique;not null"`
-	Email       string    `gorm:"unique;not null"`
-	Password    string    `gorm:"column:password;not null"`
-	Role        string    `gorm:"type:role;not null"`
-	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime"`
-	SIRET       string    `gorm:"size:14"`
-	LegalStatus string
-	LegalName   string
-	Address     string
-	Country     string
-	VATNumber   string
-	BirthDate   *time.Time
+	ID             uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	Username       string    `gorm:"column:username;unique;not null"`
+	Email          string    `gorm:"unique;not null"`
+	HashedPassword string    `gorm:"column:hashed_password;not null"`
+	Role           string    `gorm:"type:role;not null"`
+	CreatedAt      time.Time `gorm:"column:created_at;autoCreateTime"`
+	SIRET          string    `gorm:"size:14"`
+	LegalStatus    string
+	LegalName      string
+	Address        string
+	Country        string
+	VATNumber      string
+	BirthDate      *time.Time
 }
 
 type Subscription struct {
@@ -122,18 +123,7 @@ func main() {
 		  END IF;
 		END$$;`)
 
-	db.Migrator().DropTable(
-		&Subscription{},
-		&Payment{},
-		&Content{},
-	)
-
 	if err := db.AutoMigrate(
-		&User{},
-		&Subscription{},
-		&Payment{},
-		&Content{},
-		&Comment{},
 		&User{},
 		&Subscription{},
 		&Payment{},
@@ -144,7 +134,35 @@ func main() {
 		&Report{},
 	); err != nil {
 		log.Fatalf("AutoMigrate failed: %v", err)
-		log.Fatalf("AutoMigrate failed: %v", err)
+	}
+
+	// 🔑 Seed admin
+	var count int64
+	if err := db.Model(&User{}).Where("role = ?", "admin").Count(&count).Error; err != nil {
+		log.Fatalf("❌ Erreur lors du comptage des admins : %v", err)
+	}
+
+	if count == 0 {
+		log.Println("⏳ Aucun admin trouvé, création du compte admin…")
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin1234"), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatalf("❌ Échec du hash du mot de passe admin : %v", err)
+		}
+
+		admin := User{
+			Username:       "admin",
+			Email:          "admin@example.com",
+			HashedPassword: string(hashedPassword),
+			Role:           "admin",
+		}
+
+		if err := db.Create(&admin).Error; err != nil {
+			log.Fatalf("❌ Échec de la création du compte admin : %v", err)
+		}
+
+		log.Printf("🔑 Admin seedé avec succès : %s\n", admin.Email)
+	} else {
+		log.Println("ℹ️ Un compte admin existe déjà, pas de seed nécessaire.")
 	}
 
 	log.Println("Database initialized successfully ✅")
