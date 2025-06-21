@@ -80,7 +80,7 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 	r.Use(gin.Recovery())
 	adminGroup := r.Group("/api/admin")
 	adminGroup.Use(handlers.AdminMiddleware())
-	adminGroup.PUT("/users/:id/role", handlers.PromoteUserHandler)
+	adminGroup.PUT("/users/:id/role", handlers.ChangeUserRoleHandler)
 
 	return r, d, adminToken, subToken, sub.ID
 }

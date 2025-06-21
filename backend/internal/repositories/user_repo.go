@@ -60,3 +60,12 @@ func (r *UserRepository) UpdateRole(userID uuid.UUID, newRole models.Role) error
 	}
 	return nil
 }
+
+// FindAll récupère tous les utilisateurs
+func (r *UserRepository) FindAll() ([]models.User, error) {
+	var users []models.User
+	if err := r.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}

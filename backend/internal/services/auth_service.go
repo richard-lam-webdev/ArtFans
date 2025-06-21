@@ -24,41 +24,43 @@ func NewAuthService(repo *repositories.UserRepository) *AuthService {
 	}
 }
 
-// Register crée un nouvel utilisateur ou renvoie une erreur si l'email existe.
-func (s *AuthService) Register(username, email, plainPassword string, role models.Role) (*models.User, error) {
-	// 1. Vérifier email unique
+// Register crée un nouvel utilisateur avec un mot de passe hashé
+func (s *AuthService) Register(username, email, password string, role models.Role) (*models.User, error) {
+	// 1. Vérifier si l'utilisateur existe déjà
 	existing, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, err
 	}
 	if existing != nil {
-		return nil, errors.New("utilisateur déjà existant")
+		return nil, errors.New("un utilisateur avec cet email existe déjà")
 	}
 
 	// 2. Hasher le mot de passe
-	hashed, err := bcrypt.GenerateFromPassword([]byte(plainPassword), bcrypt.DefaultCost)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("échec du hash du mot de passe")
 	}
 
+	// 3. Créer le nouvel utilisateur
 	user := &models.User{
 		Username:       username,
 		Email:          email,
 		HashedPassword: string(hashed),
 		Role:           role,
 	}
-	// 3. Insérer en base
+
+	// 4. Sauvegarde en base
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
 
-	// 4. Ne jamais renvoyer le hash au client
+	// 5. Ne pas renvoyer le hash au client
 	user.HashedPassword = ""
 	return user, nil
 }
 
-// Login vérifie les identifiants et retourne un token JWT.
-func (s *AuthService) Login(email, plainPassword string) (string, error) {
+// Login vérifie les identifiants et retourne un token JWT
+func (s *AuthService) Login(email, password string) (string, error) {
 	user, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return "", err
@@ -67,12 +69,12 @@ func (s *AuthService) Login(email, plainPassword string) (string, error) {
 		return "", errors.New("identifiants invalides")
 	}
 
-	// Comparer le mot de passe
-	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(plainPassword)); err != nil {
+	// 1. Vérification du mot de passe hashé
+	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
 		return "", errors.New("identifiants invalides")
 	}
 
-	// Générer le JWT
+	// 2. Génération du token JWT
 	expirationTime := time.Now().Add(72 * time.Hour)
 	claims := &jwt.StandardClaims{
 		Subject:   user.ID.String(),
@@ -83,5 +85,6 @@ func (s *AuthService) Login(email, plainPassword string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return signedToken, nil
 }

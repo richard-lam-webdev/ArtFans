@@ -17,28 +17,23 @@ import (
 )
 
 func main() {
-	// Charger la config (.env)
+	// 1) Config + DB
 	config.LoadEnv()
-
-	// Initialiser la base de données
 	database.Init()
 
-	// Services et handlers pour les users/auth
+	// 2) AuthService
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
-	// Services et handlers pour le contenu
+	// 3) ContentService (si déjà en place)
 	contentRepo := repositories.NewContentRepository()
-	contentService := services.NewContentService(contentRepo, config.C.UploadPath)
-	contentHandler := handlers.NewHandler(contentService)
+	contentSvc := services.NewContentService(contentRepo, config.C.UploadPath)
+	contentHandler := handlers.NewHandler(contentSvc)
 
-	// Création du routeur Gin
+	// 4) Gin + CORS + middlewares globaux
 	r := gin.New()
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
-
-	// Configurer CORS (en dev : open bar)
+	r.Use(gin.Logger(), gin.Recovery())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -48,31 +43,39 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Healthcheck
+	// 5) Healthcheck
 	r.GET("/health", handlers.HealthCheck)
 
-	// Routes publiques (auth)
+	// 6) Auth public
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
-	// Routes protégées (auth JWT)
-	protected := r.Group("/api")
-	protected.Use(middleware.JWTAuth())
+	r.GET("/api/contents", contentHandler.GetAllContents)
+
+	// 7) Routes protégées par JWT
+	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
 	}
 
-	admin := r.Group("/api/admin")
-	admin.Use(handlers.AdminMiddleware())
+	// 8) Back-office Admin : **TOUTES** les routes /api/admin, avec JWT + AdminMiddleware
+	admin := r.Group("/api/admin",
+		middleware.JWTAuth(),
+		handlers.AdminMiddleware(),
+	)
 	{
-		admin.PUT("/users/:id/role", handlers.PromoteUserHandler)
+		admin.GET("/contents", handlers.ListContentsHandler)
+		admin.GET("/users", handlers.ListUsersHandler)
+		admin.PUT("/users/:id/role", handlers.ChangeUserRoleHandler)
+		admin.DELETE("/contents/:id", handlers.DeleteContentHandler)
+
 	}
 
-	// Démarrage du serveur
+	// 9) Lancement
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
 	if err := r.Run(addr); err != nil {

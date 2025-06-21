@@ -69,3 +69,7 @@ func (s *ContentService) CreateContent(creatorID uuid.UUID, username, title, bod
 	}
 	return content, nil
 }
+
+func (s *ContentService) GetAllContents() ([]models.Content, error) {
+	return s.repo.FindAll()
+}

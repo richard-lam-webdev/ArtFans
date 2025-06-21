@@ -15,15 +15,17 @@ func SetAuthService(s *services.AuthService) {
 	authService = s
 }
 
+// Struct de binding dédié à l’inscription
+type RegisterPayload struct {
+	Username        string `json:"username" binding:"required"`
+	Email           string `json:"email" binding:"required,email"`
+	Password        string `json:"password" binding:"required,min=6"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required,eqfield=Password"`
+}
+
 // RegisterHandler gère POST /api/auth/register
 func RegisterHandler(c *gin.Context) {
-	// Struct de binding incluant "Role" uniquement pour détecter sa présence
-	var payload struct {
-		Username       string `json:"username" binding:"required"`
-		Email          string `json:"email"    binding:"required,email"`
-		HashedPassword string `json:"hashedpassword" binding:"required,min=6"`
-		Role           string `json:"role"     binding:"omitempty,oneof=creator subscriber"`
-	}
+	var payload RegisterPayload
 
 	// 1. Liaison JSON → payload
 	if err := c.ShouldBindJSON(&payload); err != nil {
@@ -31,20 +33,14 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// 2. Refuser si le champ "role" est présent dans le JSON
-	if payload.Role != "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "le champ 'role' n'est pas autorisé lors de l'inscription"})
-		return
-	}
-
-	// 3. On force toujours le rôle à subscriber
+	// 2. Forcer toujours le rôle à "subscriber"
 	role := models.RoleSubscriber
 
-	// 4. Appel au service d'inscription
+	// 3. Appel au service d'inscription
 	user, err := authService.Register(
 		payload.Username,
 		payload.Email,
-		payload.HashedPassword,
+		payload.Password,
 		role,
 	)
 	if err != nil {
@@ -52,22 +48,26 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// 5. Succès → 201 Created
+	// 4. Succès → 201 Created
 	c.JSON(http.StatusCreated, gin.H{"user": user})
+}
+
+// Struct de binding dédié au login
+type LoginPayload struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
 }
 
 // LoginHandler gère POST /api/auth/login
 func LoginHandler(c *gin.Context) {
-	var payload struct {
-		Email          string `json:"email"    binding:"required,email"`
-		HashedPassword string `json:"password" binding:"required"`
-	}
+	var payload LoginPayload
+
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	token, err := authService.Login(payload.Email, payload.HashedPassword)
+	token, err := authService.Login(payload.Email, payload.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

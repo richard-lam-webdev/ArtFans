@@ -1,8 +1,10 @@
+// chemin : backend/internal/handlers/admin_handler.go
 package handlers
 
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -62,19 +64,44 @@ func AdminMiddleware() gin.HandlerFunc {
 	}
 }
 
-// PromoteUserHandler gère PUT /api/admin/users/:id/role
-// Corps attendu : { "role": "creator" }
-func PromoteUserHandler(c *gin.Context) {
-	// Valide le JSON
-	var payload struct {
-		Role string `json:"role" binding:"required,eq=creator"`
-	}
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide (seul rôle=creator autorisé)"})
+// ListUsersHandler gère GET /api/admin/users
+// Renvoie { "users": [ {ID, Username, Email, Role, CreatedAt}, … ] }
+func ListUsersHandler(c *gin.Context) {
+	userRepo := repositories.NewUserRepository()
+	users, err := userRepo.FindAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de récupérer les utilisateurs"})
 		return
 	}
 
-	// Paramètre : ID de l'utilisateur à promouvoir
+	// Préparer une version "safe" sans hashed_password
+	var out []gin.H
+	for _, u := range users {
+		out = append(out, gin.H{
+			"ID":        u.ID,
+			"Username":  u.Username,
+			"Email":     u.Email,
+			"Role":      u.Role,
+			"CreatedAt": u.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"users": out})
+}
+
+// ChangeUserRoleHandler gère PUT /api/admin/users/:id/role
+// Accepte { "role": "creator" } ou { "role": "subscriber" }
+func ChangeUserRoleHandler(c *gin.Context) {
+	// 1. Liaison du JSON
+	var payload struct {
+		Role string `json:"role" binding:"required,oneof=creator subscriber"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide (rôle must be creator or subscriber)"})
+		return
+	}
+
+	// 2. ID de l'utilisateur
 	idStr := c.Param("id")
 	userID, err := uuid.Parse(idStr)
 	if err != nil {
@@ -82,16 +109,74 @@ func PromoteUserHandler(c *gin.Context) {
 		return
 	}
 
-	// Mets à jour le rôle
+	// 3. Choix du nouveau rôle
+	var newRole models.Role
+	if payload.Role == "creator" {
+		newRole = models.RoleCreator
+	} else {
+		newRole = models.RoleSubscriber
+	}
+
+	// 4. Mise à jour en base
 	userRepo := repositories.NewUserRepository()
-	if err := userRepo.UpdateRole(userID, models.RoleCreator); err != nil {
+	if err := userRepo.UpdateRole(userID, newRole); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Utilisateur non trouvé"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de promouvoir l'utilisateur"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de changer le rôle de l'utilisateur"})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Utilisateur promu en creator"})
+	// 5. Réponse
+	action := "promu"
+	if newRole == models.RoleSubscriber {
+		action = "rétrogradé"
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Utilisateur " + action + " en " + payload.Role})
+}
+
+// ListContentsHandler gère GET /api/admin/contents
+// Renvoie { "contents": [ {ID, Title, AuthorID, CreatedAt}, … ] }
+func ListContentsHandler(c *gin.Context) {
+	repo := repositories.NewContentRepository()
+	contents, err := repo.FindAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de récupérer les contenus"})
+		return
+	}
+
+	// On prépare une version "safe"
+	var out []gin.H
+	for _, ct := range contents {
+		out = append(out, gin.H{
+			"ID":        ct.ID,
+			"Title":     ct.Title,
+			"AuthorID":  ct.CreatorID,
+			"CreatedAt": ct.CreatedAt.Format(time.RFC3339),
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"contents": out})
+}
+
+// DeleteContentHandler gère DELETE /api/admin/contents/:id
+func DeleteContentHandler(c *gin.Context) {
+	idStr := c.Param("id")
+	contentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
+		return
+	}
+
+	repo := repositories.NewContentRepository()
+	if err := repo.Delete(contentID); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de supprimer le contenu"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Contenu supprimé"})
 }
