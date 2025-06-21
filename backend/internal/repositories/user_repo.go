@@ -40,7 +40,8 @@ func (r *UserRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	err := r.db.First(&user, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-	err := r.db.First(&user, "id = ?", id).Error
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil
