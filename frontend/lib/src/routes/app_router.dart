@@ -11,7 +11,6 @@ import '../screens/register_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/add_content_screen.dart';
 import '../screens/admin_home_screen.dart';
-import '../screens/admin_content_screen.dart';
 
 class AppRouter {
   /// Retourne une instance unique de GoRouter

@@ -46,7 +46,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             ),
           ],
         ),
-        body: TabBarView(children: [const _UsersTab(), const _ContentsTab()]),
+        body: const TabBarView(children: [_UsersTab(), _ContentsTab()]),
         bottomNavigationBar: const BottomNav(currentIndex: 4),
       ),
     );
@@ -98,7 +98,6 @@ class _UsersTab extends StatelessWidget {
                   DataCell(Text(role)),
                   DataCell(Text(createdAt)),
                   DataCell(
-                    // si subscriber → bouton « Promouvoir »
                     isSub
                         ? ElevatedButton(
                           onPressed: () async {
@@ -107,12 +106,14 @@ class _UsersTab extends StatelessWidget {
                                 id,
                                 'creator',
                               );
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Promu en creator !'),
                                 ),
                               );
                             } catch (e) {
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Erreur : $e')),
                               );
@@ -120,7 +121,6 @@ class _UsersTab extends StatelessWidget {
                           },
                           child: const Text('Promouvoir'),
                         )
-                        // sinon (creator ou admin) → bouton « Rétrograder »
                         : ElevatedButton(
                           onPressed: () async {
                             try {
@@ -128,12 +128,14 @@ class _UsersTab extends StatelessWidget {
                                 id,
                                 'subscriber',
                               );
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Rétrogradé en subscriber !'),
                                 ),
                               );
                             } catch (e) {
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Erreur : $e')),
                               );
@@ -194,7 +196,7 @@ class _ContentsTab extends StatelessWidget {
                       icon: const Icon(Icons.delete, color: Colors.redAccent),
                       onPressed: () async {
                         await prov.deleteContent(id);
-                        // Tu peux aussi afficher un SnackBar si tu veux :
+                        if (!context.mounted) return;
                         final msg =
                             prov.status == AdminContentStatus.error
                                 ? prov.errorMessage
