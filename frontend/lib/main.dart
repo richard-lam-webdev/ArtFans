@@ -8,8 +8,10 @@ import 'package:provider/provider.dart';
 import 'src/providers/auth_provider.dart';
 import 'src/providers/user_provider.dart';
 import 'src/providers/admin_provider.dart';
+import 'src/providers/admin_content_provider.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
+import 'src/services/admin_content_service.dart';
 import 'src/services/admin_service.dart';
 import 'src/routes/app_router.dart';
 
@@ -48,6 +50,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AdminProvider>(
           create: (_) => AdminProvider(adminService: adminService),
+        ),
+        ChangeNotifierProvider<AdminContentProvider>(
+          create: (_) => AdminContentProvider(service: AdminContentService()),
         ),
       ],
       child: Builder(

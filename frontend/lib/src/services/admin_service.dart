@@ -45,7 +45,6 @@ class AdminService {
   Future<void> updateUserRole(String userId, String newRole) async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
-
     final uri = Uri.parse('$_baseUrl/api/admin/users/$userId/role');
     final res = await http.put(
       uri,

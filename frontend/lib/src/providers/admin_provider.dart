@@ -1,5 +1,3 @@
-// lib/src/providers/admin_provider.dart
-
 import 'package:flutter/foundation.dart';
 import '../services/admin_service.dart';
 
@@ -26,6 +24,7 @@ class AdminProvider extends ChangeNotifier {
     try {
       _users = await _adminService.fetchUsers();
       _status = AdminStatus.loaded;
+      _errorMessage = null;
     } catch (e) {
       _status = AdminStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -35,27 +34,23 @@ class AdminProvider extends ChangeNotifier {
 
   /// Met à jour le rôle d’un utilisateur (creator <-> subscriber).
   ///
-  /// [newRole] doit être soit "creator" soit "subscriber".
+  /// newRole doit être soit "creator" soit "subscriber".
   Future<void> updateRole(String userId, String newRole) async {
     _status = AdminStatus.loading;
     notifyListeners();
-
     try {
-      // Appel réseau
       await _adminService.updateUserRole(userId, newRole);
-
-      // Met à jour localement la liste pour UX instantanée
+      // Mise à jour locale pour UX instantanée
       final idx = _users.indexWhere((u) => u['ID'] == userId);
       if (idx != -1) {
         _users[idx]['Role'] = newRole;
       }
-
       _status = AdminStatus.loaded;
       _errorMessage = null;
     } catch (e) {
       _status = AdminStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      rethrow; // pour permettre au UI de catcher et afficher un SnackBar
+      rethrow; // pour que l’UI puisse catcher et afficher un SnackBar
     } finally {
       notifyListeners();
     }
