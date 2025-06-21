@@ -131,10 +131,10 @@ func TestPromote_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
-func TestPromote_BadPayload(t *testing.T) {
-	router, _, adminToken, _, subID := setupAdminTest(t)
+func TestPromote_DowngradeToSubscriber(t *testing.T) {
+	router, db, adminToken, _, subID := setupAdminTest(t)
 
-	// role ≠ "creator"
+	// Demande explicite de rétrogradation
 	reqBody := []byte(`{"role":"subscriber"}`)
 	req, _ := http.NewRequest("PUT", "/api/admin/users/"+subID.String()+"/role", bytes.NewBuffer(reqBody))
 	req.Header.Set("Authorization", "Bearer "+adminToken)
@@ -142,5 +142,11 @@ func TestPromote_BadPayload(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// On vérifie que le rôle a bien été rétrogradé
+	var u models.User
+	err := db.First(&u, "id = ?", subID).Error
+	assert.NoError(t, err)
+	assert.Equal(t, models.RoleSubscriber, u.Role)
 }

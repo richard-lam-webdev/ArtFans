@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -28,8 +29,10 @@ func RegisterHandler(c *gin.Context) {
 	var payload RegisterPayload
 
 	// 1. Liaison JSON → payload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Champ non autorisé : " + err.Error()})
 		return
 	}
 
