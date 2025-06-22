@@ -35,3 +35,10 @@ func (r *ContentRepository) Delete(id uuid.UUID) error {
 		Delete(&models.Content{}).
 		Error
 }
+
+func (r *ContentRepository) UpdateStatus(id uuid.UUID, status string) error {
+	return r.db.Model(&models.Content{}).
+		Where("id = ?", id).
+		Update("status", status).
+		Error
+}

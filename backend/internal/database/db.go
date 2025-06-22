@@ -51,6 +51,14 @@ func Init() {
       END$$;`).Error; err != nil {
 		log.Fatalf("❌ Impossible de créer enum payment_status : %v", err)
 	}
+	if err := DB.Exec(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'content_status') THEN
+          CREATE TYPE content_status AS ENUM ('pending','approved','rejected');
+        END IF;
+      END$$;`).Error; err != nil {
+		log.Fatalf("❌ Impossible de créer enum content_status : %v", err)
+	}
 
 	// AutoMigrate sur tous les modèles présents dans internal/models
 	if err := DB.AutoMigrate(
