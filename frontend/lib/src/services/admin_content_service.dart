@@ -22,43 +22,60 @@ class AdminContentService {
   Future<List<Map<String, dynamic>>> fetchContents() async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
-
     final uri = Uri.parse('$_baseUrl/api/admin/contents');
     final res = await http.get(
       uri,
       headers: {'Authorization': 'Bearer $token'},
     );
-
     if (res.statusCode != 200) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       throw Exception(body['error'] ?? 'Erreur HTTP ${res.statusCode}');
     }
-
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-
-    // 🔒 Sécurité ici
     final contents = body['contents'];
-    if (contents is! List) {
-      return []; // ou throw Exception("Données inattendues")
-    }
-
+    if (contents is! List) return [];
     return List<Map<String, dynamic>>.from(contents);
   }
 
-  Future<void> deleteContent(String contentId) async {
+  Future<void> deleteContent(String id) async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
-
+    final uri = Uri.parse('$_baseUrl/api/admin/contents/$id');
     final res = await http.delete(
-      Uri.parse('$_baseUrl/api/admin/contents/$contentId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
     );
     if (res.statusCode != 200) {
-      final err = jsonDecode(res.body)['error'];
-      throw Exception(err ?? 'Échec de la suppression');
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      throw Exception(body['error'] ?? 'Erreur suppression');
+    }
+  }
+
+  Future<void> approveContent(String id) async {
+    final token = await _secureStorage.read(key: 'jwt_token');
+    if (token == null) throw Exception('Pas de token');
+    final uri = Uri.parse('$_baseUrl/api/admin/contents/$id/approve');
+    final res = await http.put(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      throw Exception(body['error'] ?? 'Erreur approve');
+    }
+  }
+
+  Future<void> rejectContent(String id) async {
+    final token = await _secureStorage.read(key: 'jwt_token');
+    if (token == null) throw Exception('Pas de token');
+    final uri = Uri.parse('$_baseUrl/api/admin/contents/$id/reject');
+    final res = await http.put(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode != 200) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      throw Exception(body['error'] ?? 'Erreur reject');
     }
   }
 }

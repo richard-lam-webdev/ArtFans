@@ -1,3 +1,5 @@
+// lib/src/screens/admin_home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -42,6 +44,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               icon: const Icon(Icons.logout),
               onPressed: () {
                 auth.logout();
+                // GoRouter redirigera vers /login
               },
             ),
           ],
@@ -53,6 +56,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 }
 
+// ----------------------------
+// Onglet Utilisateurs
+// ----------------------------
 class _UsersTab extends StatelessWidget {
   const _UsersTab();
 
@@ -60,7 +66,8 @@ class _UsersTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final prov = context.watch<AdminProvider>();
 
-    if (prov.status == AdminStatus.loading) {
+    if (prov.status == AdminStatus.loading ||
+        prov.status == AdminStatus.initial) {
       return const Center(child: CircularProgressIndicator());
     }
     if (prov.status == AdminStatus.error) {
@@ -89,7 +96,7 @@ class _UsersTab extends StatelessWidget {
               final id = u['ID'] as String;
               final role = u['Role'] as String;
               final createdAt = u['CreatedAt'] as String;
-              final isSub = role == 'subscriber';
+              final isSubscriber = role == 'subscriber';
 
               return DataRow(
                 cells: [
@@ -98,7 +105,8 @@ class _UsersTab extends StatelessWidget {
                   DataCell(Text(role)),
                   DataCell(Text(createdAt)),
                   DataCell(
-                    isSub
+                    isSubscriber
+                        // Si subscriber → bouton Promouvoir
                         ? ElevatedButton(
                           onPressed: () async {
                             try {
@@ -121,6 +129,7 @@ class _UsersTab extends StatelessWidget {
                           },
                           child: const Text('Promouvoir'),
                         )
+                        // Sinon (creator/admin) → bouton Rétrograder
                         : ElevatedButton(
                           onPressed: () async {
                             try {
@@ -152,6 +161,9 @@ class _UsersTab extends StatelessWidget {
   }
 }
 
+// ----------------------------
+// Onglet Contenus
+// ----------------------------
 class _ContentsTab extends StatelessWidget {
   const _ContentsTab();
 
@@ -159,8 +171,8 @@ class _ContentsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final prov = context.watch<AdminContentProvider>();
 
-    if (prov.status == AdminContentStatus.initial ||
-        prov.status == AdminContentStatus.loading) {
+    if (prov.status == AdminContentStatus.loading ||
+        prov.status == AdminContentStatus.initial) {
       return const Center(child: CircularProgressIndicator());
     }
     if (prov.status == AdminContentStatus.error) {
@@ -181,32 +193,56 @@ class _ContentsTab extends StatelessWidget {
           DataColumn(label: Text('Titre')),
           DataColumn(label: Text('Auteur')),
           DataColumn(label: Text('Publié le')),
-          DataColumn(label: Text('Action')),
+          DataColumn(label: Text('Statut')),
+          DataColumn(label: Text('Actions')),
         ],
         rows:
             contents.map((c) {
               final id = c['ID'] as String? ?? '';
-              return DataRow(
-                cells: [
-                  DataCell(Text(c['Title'] as String? ?? '')),
-                  DataCell(Text(c['AuthorID'] as String? ?? '')),
-                  DataCell(Text(c['CreatedAt'] as String? ?? '')),
-                  DataCell(
+              final title = c['Title'] as String? ?? '';
+              final author = c['AuthorID'] as String? ?? '';
+              final createdAt = c['CreatedAt'] as String? ?? '';
+              final status = c['Status'] as String? ?? 'pending';
+
+              Widget actionCell;
+              if (status == 'pending') {
+                actionCell = Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.check, color: Colors.green),
+                      tooltip: 'Approuver',
+                      onPressed: () => prov.approveContent(id),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      tooltip: 'Rejeter',
+                      onPressed: () => prov.rejectContent(id),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.redAccent),
-                      onPressed: () async {
-                        await prov.deleteContent(id);
-                        if (!context.mounted) return;
-                        final msg =
-                            prov.status == AdminContentStatus.error
-                                ? prov.errorMessage
-                                : 'Contenu supprimé !';
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(msg ?? '')));
-                      },
+                      tooltip: 'Supprimer',
+                      onPressed: () => prov.deleteContent(id),
                     ),
+                  ],
+                );
+              } else {
+                final approved = status == 'approved';
+                actionCell = Text(
+                  approved ? '✅ Approuvé' : '🚫 Rejeté',
+                  style: TextStyle(
+                    color: approved ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
                   ),
+                );
+              }
+
+              return DataRow(
+                cells: [
+                  DataCell(Text(title)),
+                  DataCell(Text(author)),
+                  DataCell(Text(createdAt)),
+                  DataCell(Text(status)),
+                  DataCell(actionCell),
                 ],
               );
             }).toList(),
