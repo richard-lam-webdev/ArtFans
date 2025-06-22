@@ -72,7 +72,8 @@ func main() {
 		admin.GET("/users", handlers.ListUsersHandler)
 		admin.PUT("/users/:id/role", handlers.ChangeUserRoleHandler)
 		admin.DELETE("/contents/:id", handlers.DeleteContentHandler)
-
+		admin.PUT("/contents/:id/approve", handlers.ApproveContentHandler)
+		admin.PUT("/contents/:id/reject", handlers.RejectContentHandler)
 	}
 
 	// 9) Lancement

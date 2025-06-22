@@ -10,7 +10,7 @@ class AdminContentProvider extends ChangeNotifier {
     : _service = service;
 
   AdminContentStatus _status = AdminContentStatus.initial;
-  List<Map<String, dynamic>> _contents = []; // ← on initialise vide
+  List<Map<String, dynamic>> _contents = [];
   String? _errorMessage;
 
   AdminContentStatus get status => _status;
@@ -37,15 +37,37 @@ class AdminContentProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _service.deleteContent(id);
-      // on recharge la liste
-      final list = await _service.fetchContents();
-      _contents = list;
-      _status = AdminContentStatus.loaded;
-      _errorMessage = null;
+      await fetchContents();
     } catch (e) {
       _status = AdminContentStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
     }
+  }
+
+  Future<void> approveContent(String id) async {
+    _status = AdminContentStatus.loading;
     notifyListeners();
+    try {
+      await _service.approveContent(id);
+      await fetchContents();
+    } catch (e) {
+      _status = AdminContentStatus.error;
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+    }
+  }
+
+  Future<void> rejectContent(String id) async {
+    _status = AdminContentStatus.loading;
+    notifyListeners();
+    try {
+      await _service.rejectContent(id);
+      await fetchContents();
+    } catch (e) {
+      _status = AdminContentStatus.error;
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+    }
   }
 }

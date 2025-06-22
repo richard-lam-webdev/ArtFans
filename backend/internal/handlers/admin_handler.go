@@ -1,4 +1,3 @@
-// chemin : backend/internal/handlers/admin_handler.go
 package handlers
 
 import (
@@ -16,7 +15,9 @@ import (
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
 
-// AdminMiddleware vérifie que le JWT appartient à un utilisateur de rôle "admin"
+// =======================
+// Middleware Admin
+// =======================
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
@@ -27,7 +28,6 @@ func AdminMiddleware() gin.HandlerFunc {
 		}
 		tokenString := strings.TrimPrefix(auth, "Bearer ")
 
-		// Parse le token
 		claims := &jwt.StandardClaims{}
 		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(config.C.JwtSecret), nil
@@ -38,7 +38,6 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Récupère l'utilisateur depuis la DB
 		userID, err := uuid.Parse(claims.Subject)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token invalide"})
@@ -58,14 +57,16 @@ func AdminMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Tout est ok, on stocke l'user dans le contexte si besoin
 		c.Set("currentUser", user)
 		c.Next()
 	}
 }
 
-// ListUsersHandler gère GET /api/admin/users
-// Renvoie { "users": [ {ID, Username, Email, Role, CreatedAt}, … ] }
+// =======================
+// Utilisateurs
+// =======================
+
+// ListUsersHandler GET /api/admin/users
 func ListUsersHandler(c *gin.Context) {
 	userRepo := repositories.NewUserRepository()
 	users, err := userRepo.FindAll()
@@ -74,7 +75,6 @@ func ListUsersHandler(c *gin.Context) {
 		return
 	}
 
-	// Préparer une version "safe" sans hashed_password
 	var out []gin.H
 	for _, u := range users {
 		out = append(out, gin.H{
@@ -85,59 +85,51 @@ func ListUsersHandler(c *gin.Context) {
 			"CreatedAt": u.CreatedAt.Format(time.RFC3339),
 		})
 	}
-
 	c.JSON(http.StatusOK, gin.H{"users": out})
 }
 
-// ChangeUserRoleHandler gère PUT /api/admin/users/:id/role
-// Accepte { "role": "creator" } ou { "role": "subscriber" }
+// ChangeUserRoleHandler PUT /api/admin/users/:id/role
 func ChangeUserRoleHandler(c *gin.Context) {
-	// 1. Liaison du JSON
 	var payload struct {
 		Role string `json:"role" binding:"required,oneof=creator subscriber"`
 	}
 	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide (rôle must be creator or subscriber)"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide (must be creator or subscriber)"})
 		return
 	}
-
-	// 2. ID de l'utilisateur
 	idStr := c.Param("id")
 	userID, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
 		return
 	}
-
-	// 3. Choix du nouveau rôle
 	var newRole models.Role
 	if payload.Role == "creator" {
 		newRole = models.RoleCreator
 	} else {
 		newRole = models.RoleSubscriber
 	}
-
-	// 4. Mise à jour en base
 	userRepo := repositories.NewUserRepository()
 	if err := userRepo.UpdateRole(userID, newRole); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Utilisateur non trouvé"})
 		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de changer le rôle de l'utilisateur"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de changer le rôle"})
 		}
 		return
 	}
-
-	// 5. Réponse
 	action := "promu"
 	if newRole == models.RoleSubscriber {
 		action = "rétrogradé"
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Utilisateur " + action + " en " + payload.Role})
+	c.JSON(http.StatusOK, gin.H{"message": "Utilisateur " + action})
 }
 
-// ListContentsHandler gère GET /api/admin/contents
-// Renvoie { "contents": [ {ID, Title, AuthorID, CreatedAt}, … ] }
+// =======================
+// Contenus
+// =======================
+
+// ListContentsHandler GET /api/admin/contents
 func ListContentsHandler(c *gin.Context) {
 	repo := repositories.NewContentRepository()
 	contents, err := repo.FindAll()
@@ -146,20 +138,20 @@ func ListContentsHandler(c *gin.Context) {
 		return
 	}
 
-	// On prépare une version "safe"
 	var out []gin.H
 	for _, ct := range contents {
 		out = append(out, gin.H{
 			"ID":        ct.ID,
 			"Title":     ct.Title,
 			"AuthorID":  ct.CreatorID,
+			"Status":    ct.Status,
 			"CreatedAt": ct.CreatedAt.Format(time.RFC3339),
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"contents": out})
 }
 
-// DeleteContentHandler gère DELETE /api/admin/contents/:id
+// DeleteContentHandler DELETE /api/admin/contents/:id
 func DeleteContentHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	contentID, err := uuid.Parse(idStr)
@@ -167,7 +159,6 @@ func DeleteContentHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
 		return
 	}
-
 	repo := repositories.NewContentRepository()
 	if err := repo.Delete(contentID); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -177,6 +168,45 @@ func DeleteContentHandler(c *gin.Context) {
 		}
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "Contenu supprimé"})
+}
+
+// ApproveContentHandler PUT /api/admin/contents/:id/approve
+func ApproveContentHandler(c *gin.Context) {
+	idStr := c.Param("id")
+	contentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
+		return
+	}
+	repo := repositories.NewContentRepository()
+	if err := repo.UpdateStatus(contentID, models.ContentStatusApproved); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible d’approuver le contenu"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Contenu approuvé"})
+}
+
+// RejectContentHandler PUT /api/admin/contents/:id/reject
+func RejectContentHandler(c *gin.Context) {
+	idStr := c.Param("id")
+	contentID, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
+		return
+	}
+	repo := repositories.NewContentRepository()
+	if err := repo.UpdateStatus(contentID, models.ContentStatusRejected); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de rejeter le contenu"})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Contenu rejeté"})
 }
