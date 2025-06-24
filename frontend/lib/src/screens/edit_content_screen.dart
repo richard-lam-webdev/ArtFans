@@ -24,6 +24,7 @@ class _EditContentScreenState extends State<EditContentScreen> {
   final _priceCtrl = TextEditingController();
 
   bool _loading = true;
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -34,10 +35,11 @@ class _EditContentScreenState extends State<EditContentScreen> {
   Future<void> _loadContent() async {
     try {
       final data = await _contentService.getContentById(widget.contentId);
-      final content = data ?? {};
-      _titleCtrl.text = content['title'] ?? '';
-      _bodyCtrl.text = content['body'] ?? '';
-      _priceCtrl.text = (content['price'] ?? '').toString();
+      if (data != null) {
+        _titleCtrl.text = data['title'] ?? '';
+        _bodyCtrl.text = data['body'] ?? '';
+        _priceCtrl.text = (data['price'] ?? '').toString();
+      }
     } catch (e) {
       showCustomSnackBar(
         context,
@@ -45,7 +47,12 @@ class _EditContentScreenState extends State<EditContentScreen> {
         type: SnackBarType.error,
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loaded = true;
+        });
+      }
     }
   }
 
@@ -65,7 +72,7 @@ class _EditContentScreenState extends State<EditContentScreen> {
         "Contenu mis à jour.",
         type: SnackBarType.success,
       );
-      context.pop();
+      context.go('/my-contents');
     } catch (e) {
       showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
     }
@@ -104,7 +111,7 @@ class _EditContentScreenState extends State<EditContentScreen> {
         ],
       ),
       body:
-          _loading
+          _loading || !_loaded
               ? const Center(child: CircularProgressIndicator())
               : LayoutBuilder(
                 builder: (context, constraints) {

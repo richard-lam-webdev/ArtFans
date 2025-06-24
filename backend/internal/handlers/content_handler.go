@@ -96,6 +96,111 @@ func (h *ContentHandler) GetAllContents(c *gin.Context) {
 		return
 	}
 
-	// ✅ Toujours renvoyer un tableau, même vide
-	c.JSON(http.StatusOK, gin.H{"contents": contents})
+	var response []gin.H
+	for _, content := range contents {
+		response = append(response, gin.H{
+			"id":         content.ID,
+			"title":      content.Title,
+			"body":       content.Body,
+			"price":      content.Price,
+			"status":     content.Status,
+			"created_at": content.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"contents": response})
+}
+
+// GET /api/contents/:id
+func (h *ContentHandler) GetContentByID(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
+		return
+	}
+
+	content, err := h.service.GetContentByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		return
+	}
+
+	userID := c.GetString("userID")
+	if userID != content.CreatorID.String() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Accès interdit"})
+		return
+	}
+
+	c.JSON(http.StatusOK, content)
+}
+
+// PUT /api/contents/:id
+func (h *ContentHandler) UpdateContent(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
+		return
+	}
+
+	existing, err := h.service.GetContentByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		return
+	}
+
+	userID := c.GetString("userID")
+	if userID != existing.CreatorID.String() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Interdit"})
+		return
+	}
+
+	var payload struct {
+		Title string `json:"title"`
+		Body  string `json:"body"`
+		Price int    `json:"price"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide"})
+		return
+	}
+
+	existing.Title = payload.Title
+	existing.Body = payload.Body
+	existing.Price = payload.Price
+
+	if err := h.service.UpdateContent(existing); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur update"})
+		return
+	}
+
+	c.JSON(http.StatusOK, existing)
+}
+
+// DELETE /api/contents/:id
+func (h *ContentHandler) DeleteContent(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
+		return
+	}
+
+	content, err := h.service.GetContentByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		return
+	}
+
+	userID := c.GetString("userID")
+	if userID != content.CreatorID.String() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Interdit"})
+		return
+	}
+
+	if err := h.service.DeleteContent(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur suppression"})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

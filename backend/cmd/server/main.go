@@ -60,6 +60,10 @@ func main() {
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
+		// CRUD du créateur
+		protected.GET("/contents/:id", contentHandler.GetContentByID)
+		protected.PUT("/contents/:id", contentHandler.UpdateContent)
+		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
 	}
 
 	// 8) Back-office Admin : **TOUTES** les routes /api/admin, avec JWT + AdminMiddleware

@@ -73,3 +73,15 @@ func (s *ContentService) CreateContent(creatorID uuid.UUID, username, title, bod
 func (s *ContentService) GetAllContents() ([]models.Content, error) {
 	return s.repo.FindAll()
 }
+
+func (s *ContentService) GetContentByID(id uuid.UUID) (*models.Content, error) {
+	return s.repo.FindByID(id)
+}
+
+func (s *ContentService) UpdateContent(content *models.Content) error {
+	return s.repo.Update(content)
+}
+
+func (s *ContentService) DeleteContent(id uuid.UUID) error {
+	return s.repo.Delete(id)
+}
