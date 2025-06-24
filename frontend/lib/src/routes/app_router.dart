@@ -11,6 +11,8 @@ import '../screens/register_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/add_content_screen.dart';
 import '../screens/admin_home_screen.dart';
+import '../screens/my_contents_screen.dart';
+import '../screens/edit_content_screen.dart';
 
 class AppRouter {
   /// Retourne une instance unique de GoRouter
@@ -73,6 +75,17 @@ class AppRouter {
           path: '/admin',
           name: 'admin',
           builder: (context, state) => const AdminHomeScreen(),
+        ),
+        GoRoute(
+          path: "/my-contents",
+          builder: (context, state) => const MyContentsScreen(),
+        ),
+        GoRoute(
+          path: '/edit-content/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return EditContentScreen(contentId: id);
+          },
         ),
       ],
     );

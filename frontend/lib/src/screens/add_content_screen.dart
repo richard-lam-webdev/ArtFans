@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:http/http.dart' as http;
+import 'package:go_router/go_router.dart';
 
-import '../services/auth_service.dart';   
+import '../services/auth_service.dart';
+import '../utils/snackbar_util.dart';
 
 class AddContentScreen extends StatefulWidget {
   const AddContentScreen({super.key});
@@ -35,14 +37,14 @@ class _AddContentScreenState extends State<AddContentScreen> {
     );
 
     if (result != null && result.files.isNotEmpty) {
-      _selectedFile      = result.files.first;
+      _selectedFile = result.files.first;
       _selectedFileBytes = result.files.first.bytes;
     } else {
-      _selectedFile      = null;
+      _selectedFile = null;
       _selectedFileBytes = null;
     }
 
-    setState(() {});   
+    setState(() {});
   }
 
   Future<void> _submit() async {
@@ -54,27 +56,28 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
     setState(() {
       _isLoading = true;
-      _error     = null;
+      _error = null;
     });
 
     try {
-      final token    = await AuthService().getToken();
+      final token = await AuthService().getToken();
       final username = await AuthService().getUsername();
-      const role     = 'creator';
+      const role = 'creator';
 
       if (token == null || username == null) {
         setState(() => _error = 'Session expirée ; reconnecte-toi.');
         return;
       }
 
-      final uri     = Uri.parse('http://localhost:8080/api/contents');
-      final request = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token'
-        ..fields['username']       = username
-        ..fields['role']           = role
-        ..fields['title']          = _titleCtrl.text.trim()
-        ..fields['body']           = _bodyCtrl.text.trim()
-        ..fields['price']          = _priceCtrl.text.trim();
+      final uri = Uri.parse('http://localhost:8080/api/contents');
+      final request =
+          http.MultipartRequest('POST', uri)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields['username'] = username
+            ..fields['role'] = role
+            ..fields['title'] = _titleCtrl.text.trim()
+            ..fields['body'] = _bodyCtrl.text.trim()
+            ..fields['price'] = _priceCtrl.text.trim();
 
       final fileName = _selectedFile?.name ?? 'file';
       if (UniversalPlatform.isWeb || _selectedFile?.path == null) {
@@ -104,13 +107,20 @@ class _AddContentScreenState extends State<AddContentScreen> {
       if (!mounted) return;
 
       if (streamed.statusCode == 201) {
-        Navigator.of(context).pop();
+        showCustomSnackBar(
+          context,
+          "Contenu publié avec succès !",
+          type: SnackBarType.success,
+        );
+        context.go('/my-contents');
       } else {
         final respBody = await streamed.stream.bytesToString();
         setState(() => _error = 'Erreur ${streamed.statusCode} : $respBody');
+        showCustomSnackBar(context, _error!, type: SnackBarType.error);
       }
     } catch (e) {
       setState(() => _error = e.toString());
+      showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -139,22 +149,23 @@ class _AddContentScreenState extends State<AddContentScreen> {
               TextFormField(
                 controller: _titleCtrl,
                 decoration: const InputDecoration(labelText: 'Titre'),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Titre requis' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
               ),
               TextFormField(
                 controller: _bodyCtrl,
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Description requise' : null,
+                validator:
+                    (v) =>
+                        (v == null || v.isEmpty) ? 'Description requise' : null,
               ),
               TextFormField(
                 controller: _priceCtrl,
                 decoration: const InputDecoration(labelText: 'Prix (€)'),
                 keyboardType: TextInputType.number,
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Prix requis' : null,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -169,9 +180,10 @@ class _AddContentScreenState extends State<AddContentScreen> {
               ],
               ElevatedButton(
                 onPressed: _isLoading ? null : _submit,
-                child: _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text('Publier'),
+                child:
+                    _isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('Publier'),
               ),
             ],
           ),

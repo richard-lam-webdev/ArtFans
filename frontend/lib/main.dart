@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,11 +7,13 @@ import 'src/providers/auth_provider.dart';
 import 'src/providers/user_provider.dart';
 import 'src/providers/admin_provider.dart';
 import 'src/providers/admin_content_provider.dart';
+import 'src/providers/theme_provider.dart';
 import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
 import 'src/services/admin_content_service.dart';
 import 'src/services/admin_service.dart';
 import 'src/routes/app_router.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,36 +35,34 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Instanciation des services
     final authService = AuthService();
     final userService = UserService(authService);
     final adminService = AdminService();
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>(
+        ChangeNotifierProvider(
           create: (_) => AuthProvider(authService: authService),
         ),
-        ChangeNotifierProvider<UserProvider>(
+        ChangeNotifierProvider(
           create: (_) => UserProvider(userService: userService),
         ),
-        ChangeNotifierProvider<AdminProvider>(
+        ChangeNotifierProvider(
           create: (_) => AdminProvider(adminService: adminService),
         ),
-        ChangeNotifierProvider<AdminContentProvider>(
+        ChangeNotifierProvider(
           create: (_) => AdminContentProvider(service: AdminContentService()),
         ),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: Builder(
-        builder: (context) {
-          // Récupérer la configuration du router à partir de AuthProvider
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
           final router = AppRouter.router(context);
           return MaterialApp.router(
             title: 'ArtFans App',
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-              useMaterial3: true,
-            ),
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeProvider.themeMode,
             routerConfig: router,
           );
         },
