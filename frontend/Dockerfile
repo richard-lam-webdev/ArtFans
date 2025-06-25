@@ -5,6 +5,8 @@ WORKDIR /app
 COPY pubspec.* ./
 RUN flutter pub get
 COPY . .
+RUN ls -l .env    
+RUN cat .env      
 RUN flutter build web --release
 
 # ---- Stage 2 : Nginx ----
