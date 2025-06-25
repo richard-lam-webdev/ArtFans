@@ -1,11 +1,12 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:universal_platform/universal_platform.dart';
+import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
-
 import '../services/auth_service.dart';
-import '../services/content_service.dart';
 import '../widgets/bottom_nav.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AddContentScreen extends StatefulWidget {
   const AddContentScreen({super.key});
@@ -19,8 +20,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
   final _titleCtrl = TextEditingController();
   final _bodyCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-
-  final ContentService _contentService = ContentService();
 
   PlatformFile? _selectedFile;
   Uint8List? _selectedFileBytes;
@@ -68,19 +67,58 @@ class _AddContentScreenState extends State<AddContentScreen> {
         return;
       }
 
-      await _contentService.addContent(
-        token: token,
-        username: username,
-        title: _titleCtrl.text,
-        body: _bodyCtrl.text,
-        price: _priceCtrl.text,
-        role: role,
-        fileName: _selectedFile?.name ?? 'file',
-        fileBytes: _selectedFileBytes,
-        filePath: _selectedFile?.path,
-      );
+      final String _baseUrl = (() {
+        try {
+          return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+        } catch (_) {
+          return 'http://localhost:8080';
+        }
+      })();
 
-      if (context.mounted) context.go('/home');
+      final uri = Uri.parse('$_baseUrl/api/contents');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Authorization'] = 'Bearer $token'
+        ..fields['username'] = username
+        ..fields['role'] = role
+        ..fields['title'] = _titleCtrl.text.trim()
+        ..fields['body'] = _bodyCtrl.text.trim()
+        ..fields['price'] = _priceCtrl.text.trim();
+
+      final fileName = _selectedFile?.name ?? 'file';
+      if (UniversalPlatform.isWeb || _selectedFile?.path == null) {
+        if (_selectedFileBytes == null) {
+          setState(() => _error = 'Impossible de lire le fichier.');
+          return;
+        }
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            _selectedFileBytes!,
+            filename: fileName,
+          ),
+        );
+      } else {
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            _selectedFile!.path!,
+            filename: fileName,
+          ),
+        );
+      }
+
+      final streamed = await request.send();
+
+      // --- CORRECTION use_build_context_synchronously ---
+      if (!mounted) return;
+
+      if (streamed.statusCode == 201) {
+        if (!mounted) return;
+        context.go('/home');
+      } else {
+        final respBody = await streamed.stream.bytesToString();
+        setState(() => _error = 'Erreur ${streamed.statusCode} : $respBody');
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -164,10 +202,10 @@ class _AddContentScreenState extends State<AddContentScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withOpacity(0.07),
+                            color: theme.colorScheme.secondary.withAlpha((0.07 * 255).round()), // Correction deprecation
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: theme.dividerColor.withOpacity(0.6),
+                              color: theme.dividerColor.withAlpha((0.6 * 255).round()), // Correction deprecation
                               width: 1,
                             ),
                           ),
