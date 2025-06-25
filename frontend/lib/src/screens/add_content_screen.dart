@@ -67,7 +67,7 @@ class _AddContentScreenState extends State<AddContentScreen> {
         return;
       }
 
-      final String _baseUrl = (() {
+      final String baseUrl = (() {
         try {
           return dotenv.env['API_URL'] ?? 'http://localhost:8080';
         } catch (_) {
@@ -75,7 +75,7 @@ class _AddContentScreenState extends State<AddContentScreen> {
         }
       })();
 
-      final uri = Uri.parse('$_baseUrl/api/contents');
+      final uri = Uri.parse('$baseUrl/api/contents');
       final request = http.MultipartRequest('POST', uri)
         ..headers['Authorization'] = 'Bearer $token'
         ..fields['username'] = username
