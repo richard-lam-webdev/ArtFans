@@ -77,16 +77,19 @@ class BottomNav extends StatelessWidget {
     // Ajout conditionnel
     if (isCreator) {
       items.add(
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.folder_copy),
-          label: 'Contenus',
+        SalomonBottomBarItem(
+          icon: const Icon(Icons.folder_copy),
+          title:
+              isWideScreen ? const Text('Contenus') : const SizedBox.shrink(),
+          selectedColor: Colors.orange[700]!,
         ),
       );
     } else if (isAdmin) {
       items.add(
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.admin_panel_settings),
-          label: 'Admin',
+        SalomonBottomBarItem(
+          icon: const Icon(Icons.admin_panel_settings),
+          title: isWideScreen ? const Text('Admin') : const SizedBox.shrink(),
+          selectedColor: Colors.red[700]!,
         ),
       );
     }
@@ -102,8 +105,6 @@ class BottomNav extends StatelessWidget {
       itemShape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(30),
       ),
-      selectedItemColor: Colors.white,
-      unselectedItemColor: Colors.grey[500],
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutQuint,
     );
