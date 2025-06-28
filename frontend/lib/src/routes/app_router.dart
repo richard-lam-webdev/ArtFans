@@ -11,9 +11,12 @@ import '../screens/register_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/add_content_screen.dart';
 import '../screens/admin_home_screen.dart';
+import '../screens/my_contents_screen.dart';
+import '../screens/edit_content_screen.dart';
+
+import '../../main.dart';
 
 class AppRouter {
-  /// Retourne une instance unique de GoRouter
   static GoRouter router(BuildContext context) {
     final auth = context.read<AuthProvider>();
     final userProv = context.read<UserProvider>();
@@ -21,6 +24,7 @@ class AppRouter {
     return GoRouter(
       initialLocation: '/login',
       refreshListenable: Listenable.merge([auth, userProv]),
+      observers: [routeObserver],
 
       redirect: (BuildContext _, GoRouterState state) {
         final loggedIn = auth.status == AuthStatus.authenticated;
@@ -28,23 +32,16 @@ class AppRouter {
         final registering = state.uri.toString() == '/register';
         final goingToAdmin = state.uri.toString() == '/admin';
 
-        // 1) Non connecté → on force /login (sauf routes login/register)
         if (!loggedIn && !loggingIn && !registering) {
           return '/login';
         }
-
-        // 2) Connecté et sur /login ou /register → on va /home
         if (loggedIn && (loggingIn || registering)) {
           return '/home';
         }
-
-        // 3) Protection de /admin : si on y va sans être admin → /home
         final role = userProv.user?['Role'] as String?;
         if (goingToAdmin && role != 'admin') {
           return '/home';
         }
-
-        // sinon on reste où on est
         return null;
       },
 
@@ -73,6 +70,17 @@ class AppRouter {
           path: '/admin',
           name: 'admin',
           builder: (context, state) => const AdminHomeScreen(),
+        ),
+        GoRoute(
+          path: "/my-contents",
+          builder: (context, state) => const MyContentsScreen(),
+        ),
+        GoRoute(
+          path: '/edit-content/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return EditContentScreen(contentId: id);
+          },
         ),
       ],
     );

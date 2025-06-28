@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:http/http.dart' as http;
-import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
 import '../widgets/bottom_nav.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/snackbar_util.dart';
 
 class AddContentScreen extends StatefulWidget {
   const AddContentScreen({super.key});
@@ -37,11 +36,14 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
     if (result != null && result.files.isNotEmpty) {
       _selectedFile = result.files.first;
+      _selectedFile = result.files.first;
       _selectedFileBytes = result.files.first.bytes;
     } else {
       _selectedFile = null;
+      _selectedFile = null;
       _selectedFileBytes = null;
     }
+
     setState(() {});
   }
 
@@ -55,6 +57,7 @@ class _AddContentScreenState extends State<AddContentScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _error = null;
     });
 
     try {
@@ -67,22 +70,15 @@ class _AddContentScreenState extends State<AddContentScreen> {
         return;
       }
 
-      final String baseUrl = (() {
-        try {
-          return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-        } catch (_) {
-          return 'http://localhost:8080';
-        }
-      })();
-
-      final uri = Uri.parse('$baseUrl/api/contents');
-      final request = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token'
-        ..fields['username'] = username
-        ..fields['role'] = role
-        ..fields['title'] = _titleCtrl.text.trim()
-        ..fields['body'] = _bodyCtrl.text.trim()
-        ..fields['price'] = _priceCtrl.text.trim();
+      final uri = Uri.parse('http://localhost:8080/api/contents');
+      final request =
+          http.MultipartRequest('POST', uri)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields['username'] = username
+            ..fields['role'] = role
+            ..fields['title'] = _titleCtrl.text.trim()
+            ..fields['body'] = _bodyCtrl.text.trim()
+            ..fields['price'] = _priceCtrl.text.trim();
 
       final fileName = _selectedFile?.name ?? 'file';
       if (UniversalPlatform.isWeb || _selectedFile?.path == null) {
@@ -109,18 +105,20 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
       final streamed = await request.send();
 
-      // --- CORRECTION use_build_context_synchronously ---
       if (!mounted) return;
 
       if (streamed.statusCode == 201) {
         if (!mounted) return;
-        context.go('/home');
+        Navigator.of(context).pop();
       } else {
         final respBody = await streamed.stream.bytesToString();
-        setState(() => _error = 'Erreur ${streamed.statusCode} : $respBody');
+        if (!mounted) return;
+        setState(() => _error = 'Erreur streamed.statusCode : $respBody');
+        showCustomSnackBar(context, _error!, type: SnackBarType.error);
       }
     } catch (e) {
       setState(() => _error = e.toString());
+      showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -137,150 +135,55 @@ class _AddContentScreenState extends State<AddContentScreen> {
   @override
   Widget build(BuildContext context) {
     final fileName = _selectedFile?.name ?? 'Choisir une image';
-    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Publier un contenu'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.ease,
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-            elevation: 8,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Titre
-                      TextFormField(
-                        controller: _titleCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Titre',
-                          prefixIcon: Icon(Icons.title_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      // Description
-                      TextFormField(
-                        controller: _bodyCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          prefixIcon: Icon(Icons.description_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 3,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Description requise' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      // Prix
-                      TextFormField(
-                        controller: _priceCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Prix (€)',
-                          prefixIcon: Icon(Icons.euro_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
-                      ),
-                      const SizedBox(height: 18),
-                      // Sélecteur de fichier & preview
-                      GestureDetector(
-                        onTap: _isLoading ? null : _pickFile,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withAlpha((0.07 * 255).round()), // Correction deprecation
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: theme.dividerColor.withAlpha((0.6 * 255).round()), // Correction deprecation
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              const Icon(Icons.image_outlined, size: 24),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  fileName,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              if (_selectedFileBytes != null)
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.memory(
-                                    _selectedFileBytes!,
-                                    width: 48,
-                                    height: 48,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              if (_selectedFileBytes == null)
-                                const Icon(Icons.add_photo_alternate, color: Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      // Message d'erreur stylisé
-                      if (_error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            _error!,
-                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      // Bouton Publier
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _submit,
-                          icon: const Icon(Icons.cloud_upload_outlined),
-                          label: _isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Publier'),
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            textStyle: const TextStyle(fontSize: 17),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      appBar: AppBar(title: const Text('Ajouter du contenu')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _titleCtrl,
+                decoration: const InputDecoration(labelText: 'Titre'),
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
               ),
-            ),
+              TextFormField(
+                controller: _bodyCtrl,
+                decoration: const InputDecoration(labelText: 'Description'),
+                maxLines: 3,
+                validator:
+                    (v) =>
+                        (v == null || v.isEmpty) ? 'Description requise' : null,
+              ),
+              TextFormField(
+                controller: _priceCtrl,
+                decoration: const InputDecoration(labelText: 'Prix (€)'),
+                keyboardType: TextInputType.number,
+                validator:
+                    (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.attach_file),
+                label: Text(fileName),
+                onPressed: _isLoading ? null : _pickFile,
+              ),
+              const SizedBox(height: 16),
+              if (_error != null) ...[
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 8),
+              ],
+              ElevatedButton(
+                onPressed: _isLoading ? null : _submit,
+                child:
+                    _isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('Publier'),
+              ),
+            ],
           ),
         ),
       ),
