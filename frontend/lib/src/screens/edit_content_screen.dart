@@ -36,28 +36,26 @@ class _EditContentScreenState extends State<EditContentScreen> {
   Future<void> _loadContent() async {
     try {
       final data = await _contentService.getContentById(widget.contentId);
-      if (mounted) {
-        setState(() {
-          _titleCtrl.text = data?['title'] ?? '';
-          _bodyCtrl.text = data?['body'] ?? '';
-          _priceCtrl.text = (data?['price'] ?? '').toString();
-          _filePath = data?['file_path'];
-          _loading = false;
-          _loaded = true;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _titleCtrl.text = data?['title'] ?? '';
+        _bodyCtrl.text = data?['body'] ?? '';
+        _priceCtrl.text = (data?['price'] ?? '').toString();
+        _filePath = data?['file_path'];
+        _loading = false;
+        _loaded = true;
+      });
     } catch (e) {
+      if (!mounted) return;
       showCustomSnackBar(
         context,
         "Erreur chargement : $e",
         type: SnackBarType.error,
       );
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          _loaded = true;
-        });
-      }
+      setState(() {
+        _loading = false;
+        _loaded = true;
+      });
     }
   }
 
@@ -79,6 +77,7 @@ class _EditContentScreenState extends State<EditContentScreen> {
       );
       context.go('/my-contents');
     } catch (e) {
+      if (!mounted) return;
       showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
     }
   }

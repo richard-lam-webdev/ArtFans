@@ -48,11 +48,13 @@ class _MyContentsScreenState extends State<MyContentsScreen> with RouteAware {
     setState(() => _loading = true);
     try {
       final all = await _contentService.fetchMyContents();
+      if (!mounted) return;
       setState(() {
         _contents = all;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loading = false);
       showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
     }
@@ -82,12 +84,14 @@ class _MyContentsScreenState extends State<MyContentsScreen> with RouteAware {
       try {
         await _contentService.deleteContent(id);
         await _fetchContents();
+        if (!mounted) return;
         showCustomSnackBar(
           context,
           "Contenu supprimé.",
           type: SnackBarType.success,
         );
       } catch (e) {
+        if (!mounted) return;
         showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
       }
     }
