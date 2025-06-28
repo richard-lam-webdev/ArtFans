@@ -7,6 +7,8 @@ import '../services/content_service.dart';
 import '../utils/snackbar_util.dart';
 import '../providers/theme_provider.dart';
 
+import '../../main.dart';
+
 class MyContentsScreen extends StatefulWidget {
   const MyContentsScreen({super.key});
 
@@ -14,7 +16,7 @@ class MyContentsScreen extends StatefulWidget {
   State<MyContentsScreen> createState() => _MyContentsScreenState();
 }
 
-class _MyContentsScreenState extends State<MyContentsScreen> {
+class _MyContentsScreenState extends State<MyContentsScreen> with RouteAware {
   final ContentService _contentService = ContentService();
   List<Map<String, dynamic>> _contents = [];
   bool _loading = true;
@@ -23,6 +25,23 @@ class _MyContentsScreenState extends State<MyContentsScreen> {
   void initState() {
     super.initState();
     _fetchContents();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _fetchContents(); // Rafraîchit les données quand on revient sur cet écran
   }
 
   Future<void> _fetchContents() async {
@@ -62,9 +81,7 @@ class _MyContentsScreenState extends State<MyContentsScreen> {
     if (confirm == true) {
       try {
         await _contentService.deleteContent(id);
-        setState(() {
-          _contents.removeWhere((c) => c['id'] == id);
-        });
+        await _fetchContents();
         showCustomSnackBar(
           context,
           "Contenu supprimé.",

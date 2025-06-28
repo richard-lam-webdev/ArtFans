@@ -25,6 +25,7 @@ class _EditContentScreenState extends State<EditContentScreen> {
 
   bool _loading = true;
   bool _loaded = false;
+  String? _filePath;
 
   @override
   void initState() {
@@ -35,10 +36,15 @@ class _EditContentScreenState extends State<EditContentScreen> {
   Future<void> _loadContent() async {
     try {
       final data = await _contentService.getContentById(widget.contentId);
-      if (data != null) {
-        _titleCtrl.text = data['title'] ?? '';
-        _bodyCtrl.text = data['body'] ?? '';
-        _priceCtrl.text = (data['price'] ?? '').toString();
+      if (mounted) {
+        setState(() {
+          _titleCtrl.text = data?['title'] ?? '';
+          _bodyCtrl.text = data?['body'] ?? '';
+          _priceCtrl.text = (data?['price'] ?? '').toString();
+          _filePath = data?['file_path'];
+          _loading = false;
+          _loaded = true;
+        });
       }
     } catch (e) {
       showCustomSnackBar(
@@ -46,7 +52,6 @@ class _EditContentScreenState extends State<EditContentScreen> {
         "Erreur chargement : $e",
         type: SnackBarType.error,
       );
-    } finally {
       if (mounted) {
         setState(() {
           _loading = false;
@@ -128,6 +133,23 @@ class _EditContentScreenState extends State<EditContentScreen> {
                           child: ListView(
                             shrinkWrap: true,
                             children: [
+                              if (_filePath != null && _filePath!.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      "http://localhost:8080/uploads/$_filePath",
+                                      height: 200,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (_, __, ___) => const Text(
+                                            "Image introuvable",
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                    ),
+                                  ),
+                                ),
                               TextFormField(
                                 controller: _titleCtrl,
                                 decoration: const InputDecoration(
@@ -161,8 +183,9 @@ class _EditContentScreenState extends State<EditContentScreen> {
                                 keyboardType: TextInputType.number,
                                 validator: (v) {
                                   if (v == null || v.isEmpty) return "Requis";
-                                  if (int.tryParse(v) == null)
+                                  if (int.tryParse(v) == null) {
                                     return "Nombre invalide";
+                                  }
                                   return null;
                                 },
                               ),

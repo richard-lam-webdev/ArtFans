@@ -22,8 +22,10 @@ class ContentService {
         'Content-Type': 'application/json',
       },
     );
+
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      return Map<String, dynamic>.from(data);
     } else {
       throw Exception("Erreur ${response.statusCode} : ${response.body}");
     }

@@ -15,6 +15,9 @@ import 'src/services/admin_service.dart';
 import 'src/routes/app_router.dart';
 import 'theme/app_theme.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
