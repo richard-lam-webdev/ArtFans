@@ -12,6 +12,12 @@ const (
 	ContentStatusRejected = "rejected"
 )
 
+const (
+	ContentStatusPending  = "pending"
+	ContentStatusApproved = "approved"
+	ContentStatusRejected = "rejected"
+)
+
 // Content représente un contenu qu’un créateur met en vente
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`

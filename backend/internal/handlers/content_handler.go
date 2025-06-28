@@ -1,10 +1,8 @@
-// backend/internal/handlers/content.go
 package handlers
 
 import (
 	"log"
 	"net/http"
-	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +10,6 @@ import (
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
-// ContentHandler regroupe les routes liées au contenu
 type ContentHandler struct {
 	service *services.ContentService
 }
@@ -35,9 +32,8 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 		return
 	}
 
-	/* -------- FORM-DATA -------- */
-	username := c.PostForm("username") // envoyé par le client
-	role := c.PostForm("role")         // ex: "creator"
+	username := c.PostForm("username")
+	role := c.PostForm("role")
 
 	title := c.PostForm("title")
 	body := c.PostForm("body")
@@ -62,7 +58,6 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 		return
 	}
 
-	/* -------- SERVICE -------- */
 	content, err := h.service.CreateContent(
 		userID,
 		username,
@@ -78,17 +73,15 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 		return
 	}
 
-	/* -------- OK -------- */
 	c.JSON(http.StatusCreated, gin.H{
 		"id":        content.ID,
 		"title":     content.Title,
 		"body":      content.Body,
 		"price":     content.Price,
-		"file_path": filepath.Base(content.FilePath),
+		"file_path": content.FilePath,
 	})
 }
 
-// GetAllContents GET /api/contents
 func (h *ContentHandler) GetAllContents(c *gin.Context) {
 	contents, err := h.service.GetAllContents()
 	if err != nil {

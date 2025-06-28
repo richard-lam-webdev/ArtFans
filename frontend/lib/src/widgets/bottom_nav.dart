@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
@@ -23,7 +24,9 @@ class BottomNav extends StatelessWidget {
         ).showSnackBar(const SnackBar(content: Text('Recherche à venir !')));
         break;
       case 3:
-        context.go('/profile');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profil à venir !')));
         break;
       case 4:
         if (isCreator) {
@@ -46,17 +49,29 @@ class BottomNav extends StatelessWidget {
     final isCreator =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
 
-    final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Accueil'),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.add_box),
-        label: 'Ajouter',
+    final isWideScreen = MediaQuery.of(context).size.width > 480;
+
+    final items = <SalomonBottomBarItem>[
+      SalomonBottomBarItem(
+        icon: const Icon(Icons.home),
+        title: isWideScreen ? const Text('Accueil') : const SizedBox.shrink(),
+        selectedColor: Colors.deepPurple,
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.search),
-        label: 'Recherche',
+      SalomonBottomBarItem(
+        icon: const Icon(Icons.add_box),
+        title: isWideScreen ? const Text('Ajouter') : const SizedBox.shrink(),
+        selectedColor: Colors.green[700]!,
       ),
-      const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+      SalomonBottomBarItem(
+        icon: const Icon(Icons.search),
+        title: isWideScreen ? const Text('Recherche') : const SizedBox.shrink(),
+        selectedColor: Colors.blue[700]!,
+      ),
+      SalomonBottomBarItem(
+        icon: const Icon(Icons.person),
+        title: isWideScreen ? const Text('Profil') : const SizedBox.shrink(),
+        selectedColor: Colors.teal[700]!,
+      ),
     ];
 
     // Ajout conditionnel
@@ -76,13 +91,21 @@ class BottomNav extends StatelessWidget {
       );
     }
 
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
+    return SalomonBottomBar(
       currentIndex: currentIndex < items.length ? currentIndex : 0,
       onTap: (i) => _onTap(context, i, isAdmin, isCreator),
       selectedItemColor: Theme.of(context).colorScheme.primary,
       unselectedItemColor: Colors.grey,
       items: items,
+      backgroundColor: Colors.white,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      itemShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+      selectedItemColor: Colors.white,
+      unselectedItemColor: Colors.grey[500],
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutQuint,
     );
   }
 }

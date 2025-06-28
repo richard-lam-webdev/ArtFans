@@ -23,6 +23,8 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+    volumes:
+      - uploads_data:/uploads         
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
@@ -41,3 +43,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:                      

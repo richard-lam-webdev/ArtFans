@@ -1,8 +1,10 @@
+// backend/cmd/server/main.go
 package main
 
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -17,21 +19,25 @@ import (
 )
 
 func main() {
-	// 1) Config + DB
+	/* ---------- 1) Config + DB ---------- */
 	config.LoadEnv()
 	database.Init()
 
-	// 2) AuthService
+	/* ---------- 2) Auth ---------- */
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
-	// 3) ContentService (si déjà en place)
+	/* ---------- 3) ContentService ---------- */
 	contentRepo := repositories.NewContentRepository()
-	contentSvc := services.NewContentService(contentRepo, config.C.UploadPath)
+	uploadPath := config.C.UploadPath
+	if err := os.MkdirAll(uploadPath, 0o755); err != nil {
+		log.Fatalf("Impossible de créer UPLOAD_PATH %s: %v", uploadPath, err)
+	}
+	contentSvc := services.NewContentService(contentRepo, uploadPath)
 	contentHandler := handlers.NewHandler(contentSvc)
 
-	// 4) Gin + CORS + middlewares globaux
+	/* ---------- 4) Gin ---------- */
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.Use(cors.New(cors.Config{
@@ -43,19 +49,23 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// 5) Healthcheck
+	/* ---------- 5) Statique pour les uploads ---------- */
+	r.Static("/uploads", uploadPath)
+
+	/* ---------- 6) Health ---------- */
 	r.GET("/health", handlers.HealthCheck)
 
-	// 6) Auth public
+	/* ---------- 7) Auth public ---------- */
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
+	/* ---------- 8) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 
-	// 7) Routes protégées par JWT
+	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
@@ -66,7 +76,7 @@ func main() {
 		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
 	}
 
-	// 8) Back-office Admin : **TOUTES** les routes /api/admin, avec JWT + AdminMiddleware
+	/* ---------- 10) Admin ---------- */
 	admin := r.Group("/api/admin",
 		middleware.JWTAuth(),
 		handlers.AdminMiddleware(),
@@ -80,10 +90,10 @@ func main() {
 		admin.PUT("/contents/:id/reject", handlers.RejectContentHandler)
 	}
 
-	// 9) Lancement
+	/* ---------- 11) Start ---------- */
 	addr := fmt.Sprintf(":%s", config.C.Port)
-	log.Printf("🚀 Démarrage du serveur sur %s…\n", addr)
+	log.Printf("🚀 Serveur sur %s…", addr)
 	if err := r.Run(addr); err != nil {
-		log.Fatalf("❌ Erreur au lancement du serveur : %v", err)
+		log.Fatalf("❌ Erreur serveur : %v", err)
 	}
 }
