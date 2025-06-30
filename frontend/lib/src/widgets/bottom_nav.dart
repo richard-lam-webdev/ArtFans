@@ -19,14 +19,14 @@ class BottomNav extends StatelessWidget {
         context.go('/add-content');
         break;
       case 2:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Recherche à venir !')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recherche à venir !')),
+        );
         break;
       case 3:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profil à venir !')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil à venir !')),
+        );
         break;
       case 4:
         if (isCreator) {
@@ -42,13 +42,11 @@ class BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = context.watch<UserProvider>().user;
-
     final isAdmin =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'admin';
 
     final isCreator =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
-
     final isWideScreen = MediaQuery.of(context).size.width > 480;
 
     final items = <SalomonBottomBarItem>[
@@ -74,7 +72,8 @@ class BottomNav extends StatelessWidget {
       ),
     ];
 
-    // Ajout conditionnel
+
+
     if (isCreator) {
       items.add(
         SalomonBottomBarItem(
