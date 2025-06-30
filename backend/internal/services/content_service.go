@@ -100,6 +100,7 @@ func (s *ContentService) GetAllContents() ([]models.Content, error) {
 	return s.repo.FindAll()
 }
 
+// -------- Ajout : Protection d'accès à l'image (watermark ou original) ----------
 func (s *ContentService) ServeProtectedImage(
 	c *gin.Context,
 	contentID uuid.UUID,
@@ -167,12 +168,13 @@ func (s *ContentService) ServeProtectedImage(
 	return nil
 }
 
+// Watermark visible (répété sur toute la largeur)
 func addWatermark(img image.Image, watermark string) image.Image {
 	bounds := img.Bounds()
 	rgba := image.NewRGBA(bounds)
 	draw.Draw(rgba, bounds, img, image.Point{}, draw.Src)
 
-	col := color.RGBA{255, 0, 0, 255}
+	col := color.RGBA{255, 0, 0, 255} // Rouge vif
 
 	d := &font.Drawer{
 		Dst:  rgba,
@@ -190,4 +192,17 @@ func addWatermark(img image.Image, watermark string) image.Image {
 		}
 	}
 	return rgba
+}
+
+// ---------- CRUD pour les contenus (utilisé par tes handlers) -----------
+func (s *ContentService) GetContentByID(id uuid.UUID) (*models.Content, error) {
+	return s.repo.FindByID(id)
+}
+
+func (s *ContentService) UpdateContent(content *models.Content) error {
+	return s.repo.Update(content)
+}
+
+func (s *ContentService) DeleteContent(id uuid.UUID) error {
+	return s.repo.Delete(id)
 }

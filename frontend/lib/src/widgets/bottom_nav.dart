@@ -10,7 +10,7 @@ class BottomNav extends StatelessWidget {
   final int currentIndex;
   const BottomNav({super.key, required this.currentIndex});
 
-  void _onTap(BuildContext context, int index, bool isAdmin) {
+  void _onTap(BuildContext context, int index, bool isAdmin, bool isCreator) {
     switch (index) {
       case 0:
         context.go('/home');
@@ -29,7 +29,11 @@ class BottomNav extends StatelessWidget {
         );
         break;
       case 4:
-        context.go('/admin');
+        if (isCreator) {
+          context.go('/my-contents');
+        } else if (isAdmin) {
+          context.go('/admin');
+        }
         break;
     }
   }
@@ -41,6 +45,8 @@ class BottomNav extends StatelessWidget {
     final isAdmin =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'admin';
 
+    final isCreator =
+        auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
     final isWideScreen = MediaQuery.of(context).size.width > 480;
 
     final items = <SalomonBottomBarItem>[
@@ -66,25 +72,38 @@ class BottomNav extends StatelessWidget {
       ),
     ];
 
-    if (isAdmin) {
+
+
+    if (isCreator) {
+      items.add(
+        SalomonBottomBarItem(
+          icon: const Icon(Icons.folder_copy),
+          title:
+              isWideScreen ? const Text('Contenus') : const SizedBox.shrink(),
+          selectedColor: Colors.orange[700]!,
+        ),
+      );
+    } else if (isAdmin) {
       items.add(
         SalomonBottomBarItem(
           icon: const Icon(Icons.admin_panel_settings),
           title: isWideScreen ? const Text('Admin') : const SizedBox.shrink(),
-          selectedColor: Colors.deepOrange,
+          selectedColor: Colors.red[700]!,
         ),
       );
     }
 
     return SalomonBottomBar(
       currentIndex: currentIndex < items.length ? currentIndex : 0,
-      onTap: (i) => _onTap(context, i, isAdmin),
+      onTap: (i) => _onTap(context, i, isAdmin, isCreator),
+      selectedItemColor: Theme.of(context).colorScheme.primary,
+      unselectedItemColor: Colors.grey,
       items: items,
       backgroundColor: Colors.white,
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      itemShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-      selectedItemColor: Colors.white,
-      unselectedItemColor: Colors.grey[500],
+      itemShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutQuint,
     );

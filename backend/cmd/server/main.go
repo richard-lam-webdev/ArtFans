@@ -71,6 +71,9 @@ func main() {
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
+		protected.GET("/contents/:id", contentHandler.GetContentByID)
+		protected.PUT("/contents/:id", contentHandler.UpdateContent)
+		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
 	}
 
 	/* ---------- 10) Admin ---------- */

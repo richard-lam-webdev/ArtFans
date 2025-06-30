@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:go_router/go_router.dart';
 import '../services/auth_service.dart';
 import '../widgets/bottom_nav.dart';
+import '../utils/snackbar_util.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AddContentScreen extends StatefulWidget {
@@ -109,7 +110,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
 
       final streamed = await request.send();
 
-      // --- CORRECTION use_build_context_synchronously ---
       if (!mounted) return;
 
       if (streamed.statusCode == 201) {
@@ -117,10 +117,13 @@ class _AddContentScreenState extends State<AddContentScreen> {
         context.go('/home');
       } else {
         final respBody = await streamed.stream.bytesToString();
-        setState(() => _error = 'Erreur ${streamed.statusCode} : $respBody');
+        if (!mounted) return;
+        setState(() => _error = 'Erreur streamed.statusCode : $respBody');
+        showCustomSnackBar(context, _error!, type: SnackBarType.error);
       }
     } catch (e) {
       setState(() => _error = e.toString());
+      showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -52,9 +52,13 @@ func (r *ContentRepository) IsUserSubscribedToCreator(userID, creatorID uuid.UUI
 
 func (r *ContentRepository) FindByID(id uuid.UUID) (*models.Content, error) {
 	var content models.Content
-	err := r.db.First(&content, "id = ?", id).Error
-	if err != nil {
+	if err := r.db.First(&content, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &content, nil
+}
+
+
+func (r *ContentRepository) Update(content *models.Content) error {
+	return r.db.Save(content).Error
 }
