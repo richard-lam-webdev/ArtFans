@@ -70,6 +70,7 @@ func main() {
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
+		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 	}
 
 	/* ---------- 10) Admin ---------- */

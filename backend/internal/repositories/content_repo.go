@@ -19,7 +19,6 @@ func (r *ContentRepository) Create(content *models.Content) error {
 	return r.db.Create(content).Error
 }
 
-// FindAll renvoie tous les contenus.
 func (r *ContentRepository) FindAll() ([]models.Content, error) {
 	var list []models.Content
 	if err := database.DB.Find(&list).Error; err != nil {
@@ -28,7 +27,6 @@ func (r *ContentRepository) FindAll() ([]models.Content, error) {
 	return list, nil
 }
 
-// Delete supprime un contenu par son ID.
 func (r *ContentRepository) Delete(id uuid.UUID) error {
 	return database.DB.
 		Where("id = ?", id).
@@ -41,4 +39,22 @@ func (r *ContentRepository) UpdateStatus(id uuid.UUID, status string) error {
 		Where("id = ?", id).
 		Update("status", status).
 		Error
+}
+
+func (r *ContentRepository) IsUserSubscribedToCreator(userID, creatorID uuid.UUID) (bool, error) {
+	var count int64
+	err := r.db.
+		Model(&models.Subscription{}).
+		Where("subscriber_id = ? AND creator_id = ? AND end_date > now()", userID, creatorID).
+		Count(&count).Error
+	return count > 0, err
+}
+
+func (r *ContentRepository) FindByID(id uuid.UUID) (*models.Content, error) {
+	var content models.Content
+	err := r.db.First(&content, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &content, nil
 }
