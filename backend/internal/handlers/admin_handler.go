@@ -160,7 +160,9 @@ func DeleteContentHandler(c *gin.Context) {
 		return
 	}
 	repo := repositories.NewContentRepository()
-	if err := repo.Delete(contentID); err != nil {
+	uploadPath := config.C.UploadPath // récupère le chemin d’upload depuis la config centrale
+
+	if err := repo.Delete(contentID, uploadPath); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
 		} else {

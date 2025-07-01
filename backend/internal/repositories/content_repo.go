@@ -1,6 +1,10 @@
 package repositories
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/google/uuid"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
@@ -27,8 +31,22 @@ func (r *ContentRepository) FindAll() ([]models.Content, error) {
 	return list, nil
 }
 
-func (r *ContentRepository) Delete(id uuid.UUID) error {
-	return database.DB.
+func (r *ContentRepository) Delete(id uuid.UUID, uploadPath string) error {
+	var content models.Content
+	if err := r.db.First(&content, "id = ?", id).Error; err != nil {
+		return err // Content introuvable => rien à supprimer
+	}
+
+	// Supprime le fichier image du disque, si présent
+	if content.FilePath != "" {
+		fullPath := filepath.Join(uploadPath, content.FilePath)
+		if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("erreur suppression fichier : %v", err)
+		}
+	}
+
+	// Supprime la ligne de la base
+	return r.db.
 		Where("id = ?", id).
 		Delete(&models.Content{}).
 		Error

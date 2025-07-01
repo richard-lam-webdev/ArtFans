@@ -204,5 +204,5 @@ func (s *ContentService) UpdateContent(content *models.Content) error {
 }
 
 func (s *ContentService) DeleteContent(id uuid.UUID) error {
-	return s.repo.Delete(id)
+	return s.repo.Delete(id, s.uploadPath)
 }
