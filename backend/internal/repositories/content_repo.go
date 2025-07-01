@@ -37,6 +37,7 @@ func (r *ContentRepository) Delete(id uuid.UUID, uploadPath string) error {
 		return err // Content introuvable => rien à supprimer
 	}
 
+	// Supprime le fichier image du disque, si présent
 	if content.FilePath != "" {
 		fullPath := filepath.Join(uploadPath, content.FilePath)
 		if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
@@ -44,6 +45,7 @@ func (r *ContentRepository) Delete(id uuid.UUID, uploadPath string) error {
 		}
 	}
 
+	// Supprime la ligne de la base
 	return r.db.
 		Where("id = ?", id).
 		Delete(&models.Content{}).
@@ -73,6 +75,7 @@ func (r *ContentRepository) FindByID(id uuid.UUID) (*models.Content, error) {
 	}
 	return &content, nil
 }
+
 
 func (r *ContentRepository) Update(content *models.Content) error {
 	return r.db.Save(content).Error
