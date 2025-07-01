@@ -10,6 +10,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/handlers"
@@ -64,6 +65,8 @@ func main() {
 
 	/* ---------- 8) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
+
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
