@@ -26,7 +26,7 @@ class ContentService {
   Future<Map<String, dynamic>?> getContentById(String id) async {
     final token = await _getToken();
     final response = await http.get(
-      Uri.parse("$_baseUrl/contents/$id"),
+      Uri.parse("$_baseUrl/api/contents/$id"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ class ContentService {
   ) async {
     final token = await _getToken();
     final response = await http.put(
-      Uri.parse("$_baseUrl/contents/$id"),
+      Uri.parse("$_baseUrl/api/contents/$id"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ class ContentService {
   Future<void> deleteContent(String id) async {
     final token = await _getToken();
     final response = await http.delete(
-      Uri.parse("$_baseUrl/contents/$id"),
+      Uri.parse("$_baseUrl/api/contents/$id"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ class ContentService {
     if (token == null) throw Exception("Token JWT manquant");
 
     final response = await http.get(
-      Uri.parse("$_baseUrl/contents"),
+      Uri.parse("$_baseUrl/api/contents"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
