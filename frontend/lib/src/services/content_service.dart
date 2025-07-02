@@ -77,6 +77,8 @@ class ContentService {
 
   Future<List<Map<String, dynamic>>> fetchMyContents() async {
     final token = await _getToken();
+    print("🔐 Token utilisé pour fetchMyContents: $token");
+
     if (token == null) throw Exception("Token JWT manquant");
 
     final response = await http.get(
