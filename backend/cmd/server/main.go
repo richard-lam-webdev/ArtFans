@@ -69,7 +69,7 @@ func main() {
 		protected.POST("/contents", contentHandler.CreateContent)
 		protected.GET("/contents", contentHandler.GetAllContents)
 
-		// CRUD du créateur
+		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
 		protected.DELETE("/contents/:id", contentHandler.DeleteContent)

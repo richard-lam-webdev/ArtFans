@@ -199,3 +199,33 @@ func (h *ContentHandler) DeleteContent(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// GetContentImage GET /api/contents/:id/image (protégé par JWT)
+func (h *ContentHandler) GetContentImage(c *gin.Context) {
+	// Récupère l'ID du contenu
+	contentIDStr := c.Param("id")
+	contentID, err := uuid.Parse(contentIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de contenu invalide"})
+		return
+	}
+
+	// Récupère l'ID utilisateur via le middleware JWTAuth
+	userIDRaw, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Non autorisé"})
+		return
+	}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	// Utilise le service pour servir l'image avec les vérifs
+	err = h.service.ServeProtectedImage(c, contentID, userID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+}

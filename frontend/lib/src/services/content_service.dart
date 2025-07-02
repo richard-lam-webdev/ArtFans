@@ -7,17 +7,16 @@ import 'package:universal_platform/universal_platform.dart';
 
 class ContentService {
   final String _baseUrl;
+  final _storage = const FlutterSecureStorage();
 
   ContentService()
-    : _baseUrl =
-          (() {
-            try {
-              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-            } catch (_) {
-              return 'http://localhost:8080';
-            }
-          })();
-  final _storage = const FlutterSecureStorage();
+      : _baseUrl = (() {
+          try {
+            return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+          } catch (_) {
+            return 'http://localhost:8080';
+          }
+        })();
 
   Future<String?> _getToken() async {
     return await _storage.read(key: 'jwt_token');
@@ -112,14 +111,13 @@ class ContentService {
     String? filePath,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/contents');
-    final request =
-        http.MultipartRequest('POST', uri)
-          ..headers['Authorization'] = 'Bearer $token'
-          ..fields['username'] = username
-          ..fields['role'] = role
-          ..fields['title'] = title.trim()
-          ..fields['body'] = body.trim()
-          ..fields['price'] = price.trim();
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['username'] = username
+      ..fields['role'] = role
+      ..fields['title'] = title.trim()
+      ..fields['body'] = body.trim()
+      ..fields['price'] = price.trim();
 
     if (UniversalPlatform.isWeb || filePath == null) {
       if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
