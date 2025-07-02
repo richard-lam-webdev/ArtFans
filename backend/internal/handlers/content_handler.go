@@ -83,26 +83,28 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 }
 
 func (h *ContentHandler) GetAllContents(c *gin.Context) {
-	contents, err := h.service.GetAllContents()
+	log.Println("➡️ GetAllContents called")
+
+	userIDRaw, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	contents, err := h.service.GetContentsByUserID(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur serveur"})
 		return
 	}
 
-	var response []gin.H
-	for _, content := range contents {
-		response = append(response, gin.H{
-			"id":         content.ID,
-			"title":      content.Title,
-			"body":       content.Body,
-			"price":      content.Price,
-			"status":     content.Status,
-			"created_at": content.CreatedAt,
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"contents": response})
+	c.JSON(http.StatusOK, gin.H{"contents": contents})
 }
+
 
 // GET /api/contents/:id
 func (h *ContentHandler) GetContentByID(c *gin.Context) {

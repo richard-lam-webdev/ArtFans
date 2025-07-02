@@ -10,13 +10,14 @@ class ContentService {
   final _storage = const FlutterSecureStorage();
 
   ContentService()
-      : _baseUrl = (() {
-          try {
-            return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-          } catch (_) {
-            return 'http://localhost:8080';
-          }
-        })();
+    : _baseUrl =
+          (() {
+            try {
+              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+            } catch (_) {
+              return 'http://localhost:8080';
+            }
+          })();
 
   Future<String?> _getToken() async {
     return await _storage.read(key: 'jwt_token');
@@ -25,7 +26,7 @@ class ContentService {
   Future<Map<String, dynamic>?> getContentById(String id) async {
     final token = await _getToken();
     final response = await http.get(
-      Uri.parse("$_baseUrl/contents/$id"),
+      Uri.parse("$_baseUrl/api/contents/$id"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -48,7 +49,7 @@ class ContentService {
   ) async {
     final token = await _getToken();
     final response = await http.put(
-      Uri.parse("$_baseUrl/contents/$id"),
+      Uri.parse("$_baseUrl/api/contents/$id"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -63,7 +64,7 @@ class ContentService {
   Future<void> deleteContent(String id) async {
     final token = await _getToken();
     final response = await http.delete(
-      Uri.parse("$_baseUrl/contents/$id"),
+      Uri.parse("$_baseUrl/api/contents/$id"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ class ContentService {
     if (token == null) throw Exception("Token JWT manquant");
 
     final response = await http.get(
-      Uri.parse("$_baseUrl/contents"),
+      Uri.parse("$_baseUrl/api/contents"),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
@@ -109,13 +110,14 @@ class ContentService {
     String? filePath,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/contents');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['username'] = username
-      ..fields['role'] = role
-      ..fields['title'] = title.trim()
-      ..fields['body'] = body.trim()
-      ..fields['price'] = price.trim();
+    final request =
+        http.MultipartRequest('POST', uri)
+          ..headers['Authorization'] = 'Bearer $token'
+          ..fields['username'] = username
+          ..fields['role'] = role
+          ..fields['title'] = title.trim()
+          ..fields['body'] = body.trim()
+          ..fields['price'] = price.trim();
 
     if (UniversalPlatform.isWeb || filePath == null) {
       if (fileBytes == null) throw Exception('Impossible de lire le fichier.');

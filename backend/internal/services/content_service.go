@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -206,3 +207,11 @@ func (s *ContentService) UpdateContent(content *models.Content) error {
 func (s *ContentService) DeleteContent(id uuid.UUID) error {
 	return s.repo.Delete(id, s.uploadPath)
 }
+
+func (s *ContentService) GetContentsByUserID(userID uuid.UUID) ([]*models.Content, error) {
+	log.Printf("📦 Fetching contents for userID: %s\n", userID.String())
+
+	return s.repo.GetContentsByUser(userID)
+
+}
+
