@@ -62,14 +62,13 @@ func main() {
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
-	/* ---------- 8) Contenus publics ---------- */
-	r.GET("/api/contents", contentHandler.GetAllContents)
-
 	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
+		protected.GET("/contents", contentHandler.GetAllContents)
+
 		// CRUD du créateur
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
