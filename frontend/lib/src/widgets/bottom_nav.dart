@@ -19,14 +19,14 @@ class BottomNav extends StatelessWidget {
         context.go('/add-content');
         break;
       case 2:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Recherche à venir !')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Recherche à venir !')));
         break;
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profil à venir !')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profil à venir !')));
         break;
       case 4:
         if (isCreator) {
@@ -61,6 +61,11 @@ class BottomNav extends StatelessWidget {
         selectedColor: Colors.green[700]!,
       ),
       SalomonBottomBarItem(
+        icon: const Icon(Icons.dynamic_feed),
+        title: isWideScreen ? const Text('Feed') : const SizedBox.shrink(),
+        selectedColor: Colors.indigo[700]!,
+      ),
+      SalomonBottomBarItem(
         icon: const Icon(Icons.search),
         title: isWideScreen ? const Text('Recherche') : const SizedBox.shrink(),
         selectedColor: Colors.blue[700]!,
@@ -71,8 +76,6 @@ class BottomNav extends StatelessWidget {
         selectedColor: Colors.teal[700]!,
       ),
     ];
-
-
 
     if (isCreator) {
       items.add(
