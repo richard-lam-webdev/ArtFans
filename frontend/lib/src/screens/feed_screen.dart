@@ -37,6 +37,7 @@ class _FeedScreenState extends State<FeedScreen> {
     } catch (e) {
       if (!mounted) return;
       showCustomSnackBar(context, "Erreur : $e", type: SnackBarType.error);
+      if (!mounted) return;
       setState(() => _loading = false);
     }
   }
@@ -79,79 +80,82 @@ class _FeedScreenState extends State<FeedScreen> {
                   bool isSubscribed = item['is_subscribed'] ?? false;
 
                   return StatefulBuilder(
-                    builder:
-                        (context, setInnerState) => Card(
-                          margin: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ProtectedImage(
-                                contentId: contentId,
-                                isSubscribed: item['is_subscribed'] as bool,
-                                key: ValueKey(
-                                  '$contentId-${item['is_subscribed']}',
-                                ),
+                    builder: (BuildContext innerContext, StateSetter setInner) {
+                      return Card(
+                        margin: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ProtectedImage(
+                              contentId: contentId,
+                              isSubscribed: item['is_subscribed'] as bool,
+                              key: ValueKey(
+                                '$contentId-${item['is_subscribed']}',
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['title'] ?? '',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                      ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['title'] ?? '',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(item['body'] ?? ''),
-                                    const SizedBox(height: 6),
-                                    if (!isSubscribed)
-                                      const Text(
-                                        "🔒 Abonne-toi pour voir sans watermark",
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    const SizedBox(height: 8),
-                                    ElevatedButton(
-                                      onPressed: () async {
-                                        try {
-                                          if (item['is_subscribed'] == true) {
-                                            await _contentService.unsubscribe(
-                                              creatorId,
-                                            );
-                                          } else {
-                                            await _contentService.subscribe(
-                                              creatorId,
-                                            );
-                                          }
-                                          if (!mounted) return;
-                                          setState(() {
-                                            // on met à jour l’état global
-                                            item['is_subscribed'] =
-                                                !item['is_subscribed'];
-                                          });
-                                        } catch (e) {
-                                          if (!mounted) return;
-                                          showCustomSnackBar(
-                                            context,
-                                            "Erreur : $e",
-                                            type: SnackBarType.error,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(item['body'] ?? ''),
+                                  const SizedBox(height: 6),
+                                  if (!isSubscribed)
+                                    const Text(
+                                      "🔒 Abonne-toi pour voir sans watermark",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      final messenger = ScaffoldMessenger.of(
+                                        innerContext,
+                                      );
+                                      try {
+                                        if (isSubscribed) {
+                                          await _contentService.unsubscribe(
+                                            creatorId,
+                                          );
+                                        } else {
+                                          await _contentService.subscribe(
+                                            creatorId,
                                           );
                                         }
-                                      },
-                                      child: Text(
-                                        item['is_subscribed']
-                                            ? 'Se désabonner'
-                                            : 'S’abonner',
-                                      ),
+                                        if (!mounted) return;
+                                        setState(() {
+                                          item['is_subscribed'] = !isSubscribed;
+                                        });
+                                      } catch (e) {
+                                        if (!innerContext.mounted) return;
+                                        messenger.showSnackBar(
+                                          SnackBar(
+                                            content: Text("Erreur : $e"),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Text(
+                                      isSubscribed
+                                          ? 'Se désabonner'
+                                          : 'S’abonner',
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      );
+                    },
                   );
                 },
               ),

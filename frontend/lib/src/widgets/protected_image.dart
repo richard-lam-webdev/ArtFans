@@ -9,10 +9,10 @@ class ProtectedImage extends StatefulWidget {
   final bool isSubscribed;
 
   const ProtectedImage({
-    Key? key,
+    super.key,
     required this.contentId,
     required this.isSubscribed,
-  }) : super(key: key);
+  });
 
   @override
   State<ProtectedImage> createState() => _ProtectedImageState();
