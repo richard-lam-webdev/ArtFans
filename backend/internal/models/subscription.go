@@ -12,6 +12,6 @@ type Subscription struct {
 	CreatorID    uuid.UUID `gorm:"not null"`
 	SubscriberID uuid.UUID `gorm:"not null"`
 	StartDate    time.Time `gorm:"not null"`
-	EndDate      time.Time
-	PaymentID    uuid.UUID
+	EndDate      time.Time `gorm:"not null"`
+	PaymentID    uuid.UUID `gorm:"type:uuid;not null"`
 }

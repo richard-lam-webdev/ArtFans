@@ -36,6 +36,9 @@ func main() {
 	}
 	contentSvc := services.NewContentService(contentRepo, uploadPath)
 	contentHandler := handlers.NewHandler(contentSvc)
+	subscriptionRepo := repositories.NewSubscriptionRepository()
+	subscriptionSvc := services.NewSubscriptionService(subscriptionRepo)
+	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionSvc)
 
 	/* ---------- 4) Gin ---------- */
 	r := gin.New()
@@ -73,6 +76,13 @@ func main() {
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
 		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
+
+		protected.GET("/feed", contentHandler.GetFeed)
+		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)
+		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
+		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
+		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+
 	}
 
 	/* ---------- 10) Admin ---------- */
