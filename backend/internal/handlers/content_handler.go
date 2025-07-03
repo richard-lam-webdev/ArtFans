@@ -105,6 +105,7 @@ func (h *ContentHandler) GetAllContents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"contents": contents})
 }
 
+
 // GET /api/contents/:id
 func (h *ContentHandler) GetContentByID(c *gin.Context) {
 	idParam := c.Param("id")
