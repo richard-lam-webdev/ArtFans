@@ -76,7 +76,22 @@ func (r *ContentRepository) FindByID(id uuid.UUID) (*models.Content, error) {
 	return &content, nil
 }
 
-
 func (r *ContentRepository) Update(content *models.Content) error {
 	return r.db.Save(content).Error
+}
+
+func (r *ContentRepository) GetContentsByUser(userID uuid.UUID) ([]*models.Content, error) {
+	var contents []*models.Content
+	if err := r.db.Where("creator_id = ?", userID).Find(&contents).Error; err != nil {
+		return nil, err
+	}
+	return contents, nil
+}
+
+func (r *ContentRepository) FindAllWithCreators() ([]models.Content, error) {
+	var contents []models.Content
+	if err := r.db.Order("created_at DESC").Find(&contents).Error; err != nil {
+		return nil, err
+	}
+	return contents, nil
 }

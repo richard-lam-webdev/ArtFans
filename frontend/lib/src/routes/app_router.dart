@@ -8,11 +8,11 @@ import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
-import '../screens/home_screen.dart';
 import '../screens/add_content_screen.dart';
 import '../screens/admin_home_screen.dart';
 import '../screens/my_contents_screen.dart';
 import '../screens/edit_content_screen.dart';
+import '../screens/feed_screen.dart';
 
 import '../../main.dart';
 
@@ -59,8 +59,9 @@ class AppRouter {
         GoRoute(
           path: '/home',
           name: 'home',
-          builder: (context, state) => const HomeScreen(),
+          builder: (context, state) => const FeedScreen(),
         ),
+
         GoRoute(
           path: '/add-content',
           name: 'add_content',

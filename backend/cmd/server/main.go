@@ -37,6 +37,9 @@ func main() {
 	}
 	contentSvc := services.NewContentService(contentRepo, uploadPath)
 	contentHandler := handlers.NewHandler(contentSvc)
+	subscriptionRepo := repositories.NewSubscriptionRepository()
+	subscriptionSvc := services.NewSubscriptionService(subscriptionRepo)
+	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionSvc)
 
 	/* ---------- 4) Gin ---------- */
 	r := gin.New()
@@ -65,18 +68,25 @@ func main() {
 
 	/* ---------- 8) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
-
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
 	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
+		protected.GET("/contents", contentHandler.GetAllContents)
+
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
 		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
+
+		protected.GET("/feed", contentHandler.GetFeed)
+		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)
+		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
+		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
+		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+
 	}
 
 	/* ---------- 10) Admin ---------- */

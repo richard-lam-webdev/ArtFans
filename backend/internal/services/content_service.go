@@ -9,6 +9,7 @@ import (
 	"image/jpeg"
 	"image/png"
 	"io"
+	"log"
 	"mime/multipart"
 	"os"
 	"path"
@@ -106,19 +107,26 @@ func (s *ContentService) ServeProtectedImage(
 	contentID uuid.UUID,
 	userID uuid.UUID,
 ) error {
+	log.Printf("🖼️ ServeProtectedImage - contentID: %s | userID: %s", contentID.String(), userID.String())
+
 	content, err := s.repo.FindByID(contentID)
 	if err != nil {
+		log.Printf("❌ Contenu non trouvé: %v", err)
 		return fmt.Errorf("contenu non trouvé")
 	}
+	log.Printf("📄 Contenu trouvé: %s (creatorID: %s)", content.Title, content.CreatorID.String())
 
 	subscribed, err := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
 	if err != nil {
+		log.Printf("❌ Erreur vérif abonnement: %v", err)
 		return fmt.Errorf("erreur vérif abonnement: %v", err)
 	}
+	log.Printf("🔐 Abonné ? %v", subscribed)
 
 	imagePath := filepath.Join(s.uploadPath, content.FilePath)
 	file, err := os.Open(imagePath)
 	if err != nil {
+		log.Printf("❌ Image introuvable: %v", err)
 		return fmt.Errorf("image non trouvée")
 	}
 	defer file.Close()
@@ -131,14 +139,17 @@ func (s *ContentService) ServeProtectedImage(
 	case ".png":
 		img, err = png.Decode(file)
 	default:
+		log.Printf("❌ Format d'image non supporté: %s", ext)
 		return fmt.Errorf("format d'image non supporté")
 	}
 	if err != nil {
+		log.Printf("❌ Erreur décodage image: %v", err)
 		return fmt.Errorf("erreur décodage image: %v", err)
 	}
 
 	var buf bytes.Buffer
 	if subscribed {
+		log.Println("✅ Image originale envoyée (pas de watermark)")
 		if ext == ".png" {
 			err = png.Encode(&buf, img)
 			c.Header("Content-Type", "image/png")
@@ -146,10 +157,8 @@ func (s *ContentService) ServeProtectedImage(
 			err = jpeg.Encode(&buf, img, nil)
 			c.Header("Content-Type", "image/jpeg")
 		}
-		if err != nil {
-			return fmt.Errorf("erreur encoding image: %v", err)
-		}
 	} else {
+		log.Println("🔒 Image avec watermark")
 		watermarked := addWatermark(img, "Abonne-toi pour voir l'image !")
 		if ext == ".png" {
 			err = png.Encode(&buf, watermarked)
@@ -158,9 +167,10 @@ func (s *ContentService) ServeProtectedImage(
 			err = jpeg.Encode(&buf, watermarked, nil)
 			c.Header("Content-Type", "image/jpeg")
 		}
-		if err != nil {
-			return fmt.Errorf("erreur encoding image: %v", err)
-		}
+	}
+	if err != nil {
+		log.Printf("❌ Erreur encoding image: %v", err)
+		return fmt.Errorf("erreur encoding image: %v", err)
 	}
 
 	c.Header("Content-Disposition", "inline; filename="+filepath.Base(imagePath))
@@ -205,4 +215,38 @@ func (s *ContentService) UpdateContent(content *models.Content) error {
 
 func (s *ContentService) DeleteContent(id uuid.UUID) error {
 	return s.repo.Delete(id, s.uploadPath)
+}
+
+func (s *ContentService) GetContentsByUserID(userID uuid.UUID) ([]*models.Content, error) {
+	log.Printf("📦 Fetching contents for userID: %s\n", userID.String())
+
+	return s.repo.GetContentsByUser(userID)
+
+}
+
+func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interface{}, error) {
+	contents, err := s.repo.FindAllWithCreators()
+	if err != nil {
+		return nil, err
+	}
+
+	var feed []map[string]interface{}
+	for _, content := range contents {
+		isSub, err := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
+		if err != nil {
+			return nil, err
+		}
+
+		feed = append(feed, map[string]interface{}{
+			"id":            content.ID,
+			"title":         content.Title,
+			"body":          content.Body,
+			"price":         content.Price,
+			"file_path":     content.FilePath,
+			"creator_id":    content.CreatorID,
+			"created_at":    content.CreatedAt,
+			"is_subscribed": isSub,
+		})
+	}
+	return feed, nil
 }
