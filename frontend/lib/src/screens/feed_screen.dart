@@ -5,7 +5,7 @@ import '../services/content_service.dart';
 import '../providers/theme_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/bottom_nav.dart';
-import '../widgets/protected_image.dart';
+import '../widgets/feed_card.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -44,25 +44,23 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final crossAxisCount = width > 600 ? 2 : 1;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Fil d'actualité"),
         actions: [
           Consumer<ThemeProvider>(
-            builder: (context, themeProvider, _) {
-              return IconButton(
-                tooltip:
-                    themeProvider.isDarkMode
-                        ? "Passer en clair"
-                        : "Passer en sombre",
-                icon: Icon(
-                  themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+            builder:
+                (ctx, theme, _) => IconButton(
+                  tooltip:
+                      theme.isDarkMode ? "Passer en clair" : "Passer en sombre",
+                  icon: Icon(
+                    theme.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                  ),
+                  onPressed: () => theme.toggleTheme(!theme.isDarkMode),
                 ),
-                onPressed: () {
-                  themeProvider.toggleTheme(!themeProvider.isDarkMode);
-                },
-              );
-            },
           ),
         ],
       ),
@@ -71,91 +69,19 @@ class _FeedScreenState extends State<FeedScreen> {
               ? const Center(child: CircularProgressIndicator())
               : _feed.isEmpty
               ? const Center(child: Text("Aucun contenu."))
-              : ListView.builder(
+              : GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  childAspectRatio: 0.75,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                ),
                 itemCount: _feed.length,
-                itemBuilder: (context, index) {
-                  final item = _feed[index];
-                  final contentId = item['id'];
-                  final creatorId = item['creator_id'];
-                  bool isSubscribed = item['is_subscribed'] ?? false;
-
-                  return StatefulBuilder(
-                    builder: (BuildContext innerContext, StateSetter setInner) {
-                      return Card(
-                        margin: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ProtectedImage(
-                              contentId: contentId,
-                              isSubscribed: item['is_subscribed'] as bool,
-                              key: ValueKey(
-                                '$contentId-${item['is_subscribed']}',
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item['title'] ?? '',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(item['body'] ?? ''),
-                                  const SizedBox(height: 6),
-                                  if (!isSubscribed)
-                                    const Text(
-                                      "🔒 Abonne-toi pour voir sans watermark",
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                  const SizedBox(height: 8),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      final messenger = ScaffoldMessenger.of(
-                                        innerContext,
-                                      );
-                                      try {
-                                        if (isSubscribed) {
-                                          await _contentService.unsubscribe(
-                                            creatorId,
-                                          );
-                                        } else {
-                                          await _contentService.subscribe(
-                                            creatorId,
-                                          );
-                                        }
-                                        if (!mounted) return;
-                                        setState(() {
-                                          item['is_subscribed'] = !isSubscribed;
-                                        });
-                                      } catch (e) {
-                                        if (!innerContext.mounted) return;
-                                        messenger.showSnackBar(
-                                          SnackBar(
-                                            content: Text("Erreur : $e"),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: Text(
-                                      isSubscribed
-                                          ? 'Se désabonner'
-                                          : 'S’abonner',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                itemBuilder: (ctx, index) {
+                  return FeedCard(
+                    content: _feed[index],
+                    onSubscribedChanged: _fetchFeed,
                   );
                 },
               ),

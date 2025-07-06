@@ -1,0 +1,160 @@
+// lib/widgets/feed_card.dart
+import 'package:flutter/material.dart';
+import '../services/content_service.dart';
+import 'protected_image.dart';
+import 'comments_sheet.dart';
+
+class FeedCard extends StatefulWidget {
+  final Map<String, dynamic> content;
+  final VoidCallback onSubscribedChanged;
+
+  const FeedCard({
+    super.key,
+    required this.content,
+    required this.onSubscribedChanged,
+  });
+
+  @override
+  State<FeedCard> createState() => _FeedCardState();
+}
+
+class _FeedCardState extends State<FeedCard> {
+  late bool isSubscribed;
+  late int likeCount;
+  late bool liked;
+  final _svc = ContentService();
+
+  @override
+  void initState() {
+    super.initState();
+    isSubscribed = widget.content['is_subscribed'] as bool;
+    likeCount = widget.content['likes_count'] as int? ?? 0;
+    liked = widget.content['liked_by_user'] as bool? ?? false;
+  }
+
+  Future<void> _toggleSubscribe() async {
+    try {
+      if (isSubscribed) {
+        await _svc.unsubscribe(widget.content['creator_id']);
+      } else {
+        await _svc.subscribe(widget.content['creator_id']);
+      }
+      setState(() => isSubscribed = !isSubscribed);
+      widget.onSubscribedChanged();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur abonnement : $e')));
+    }
+  }
+
+  Future<void> _toggleLike() async {
+    setState(() {
+      liked ? likeCount-- : likeCount++;
+      liked = !liked;
+    });
+    try {
+      if (liked) {
+        await _svc.likeContent(widget.content['id']);
+      } else {
+        await _svc.unlikeContent(widget.content['id']);
+      }
+    } catch (e) {
+      // rollback
+      setState(() {
+        liked ? likeCount-- : likeCount++;
+        liked = !liked;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur like : $e')));
+    }
+  }
+
+  void _openComments() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CommentsSheet(contentId: widget.content['id']),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Entête créateur + abonnement
+          ListTile(
+            leading: CircleAvatar(
+              backgroundImage: NetworkImage(
+                widget.content['creator_avatar_url'] ??
+                    'https://placehold.co/40x40',
+              ),
+            ),
+            title: Text(widget.content['creator_name'] ?? 'Créateur'),
+            trailing: TextButton(
+              onPressed: _toggleSubscribe,
+              child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
+            ),
+          ),
+
+          // Image protégée
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: ProtectedImage(
+              contentId: widget.content['id'],
+              isSubscribed: isSubscribed,
+              key: ValueKey('${widget.content['id']}-$isSubscribed'),
+            ),
+          ),
+
+          // Actions social
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? Colors.red : null,
+                  ),
+                  onPressed: _toggleLike,
+                ),
+                Text('$likeCount'),
+                const SizedBox(width: 16),
+                IconButton(
+                  icon: const Icon(Icons.comment_outlined),
+                  onPressed: _openComments,
+                ),
+                const Spacer(),
+              ],
+            ),
+          ),
+
+          // Légende / texte
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              widget.content['title'] ?? '',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              widget.content['body'] ?? '',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
