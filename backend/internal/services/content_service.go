@@ -224,7 +224,6 @@ func (s *ContentService) GetContentsByUserID(userID uuid.UUID) ([]*models.Conten
 
 }
 
-// backend/internal/services/content_service.go
 func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interface{}, error) {
 	contents, err := s.repo.FindAllWithCreators()
 	if err != nil {
@@ -232,23 +231,23 @@ func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interfa
 	}
 
 	var feed []map[string]interface{}
-	for _, content := range contents {
-		isSub, _ := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
-
-		count, _ := s.repo.CountContentLikes(content.ID)
-		liked, _ := s.repo.IsContentLikedBy(userID, content.ID)
+	for _, c := range contents {
+		isSub, _ := s.repo.IsUserSubscribedToCreator(userID, c.CreatorID)
+		count, _ := s.repo.CountContentLikes(c.ID)
+		liked, _ := s.repo.IsContentLikedBy(userID, c.ID)
 
 		feed = append(feed, map[string]interface{}{
-			"id":            content.ID,
-			"title":         content.Title,
-			"body":          content.Body,
-			"price":         content.Price,
-			"file_path":     content.FilePath,
-			"creator_id":    content.CreatorID,
-			"created_at":    content.CreatedAt,
+			"id":            c.ID,
+			"title":         c.Title,
+			"body":          c.Body,
+			"price":         c.Price,
+			"file_path":     c.FilePath,
+			"creator_id":    c.CreatorID,
+			"creator_name":  c.Creator.Username,
+			"created_at":    c.CreatedAt,
 			"is_subscribed": isSub,
-			"likes_count":   count, // ← ajouté
-			"liked_by_user": liked, // ← ajouté
+			"likes_count":   count,
+			"liked_by_user": liked,
 		})
 	}
 	return feed, nil

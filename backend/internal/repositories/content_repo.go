@@ -86,7 +86,12 @@ func (r *ContentRepository) GetContentsByUser(userID uuid.UUID) ([]*models.Conte
 
 func (r *ContentRepository) FindAllWithCreators() ([]models.Content, error) {
 	var contents []models.Content
-	if err := r.db.Order("created_at DESC").Find(&contents).Error; err != nil {
+	err := r.db.
+		Preload("Creator").
+		Order("created_at DESC").
+		Find(&contents).
+		Error
+	if err != nil {
 		return nil, err
 	}
 	return contents, nil
