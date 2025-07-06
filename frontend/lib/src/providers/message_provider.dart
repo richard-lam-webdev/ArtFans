@@ -9,9 +9,9 @@ class MessageProvider extends ChangeNotifier {
 
   final MessageService _messageService = MessageService();
 
-  List<ConversationPreview> _conversations = [];
-  Map<String, List<MessageModel>> _messagesCache = {};
-  Map<String, DateTime> _lastReadAt = {};         // userId → DateTime
+ List<ConversationPreview> _conversations = [];
+ final Map<String, List<MessageModel>> _messagesCache = {};
+ final Map<String, DateTime> _lastReadAt = {};
 
   bool _isLoading = false;
   Timer? _refreshTimer;
