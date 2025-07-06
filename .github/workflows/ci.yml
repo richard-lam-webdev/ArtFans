@@ -51,7 +51,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # ← Étape pour créer un .env factice et éviter l’erreur d’asset manquant
+      # ← Crée un .env avant analyse
       - name: Copy dummy .env
         run: cp frontend/.env.example frontend/.env
 
@@ -95,7 +95,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # ← Flutter build
+      # ← Crée un .env avant le build Flutter
+      - name: Copy dummy .env
+        run: cp frontend/.env.example frontend/.env
+
+      # Flutter build
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -109,7 +113,7 @@ jobs:
         working-directory: frontend
         run: flutter build web --release
 
-      # ← Go build
+      # Go build
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -123,7 +127,7 @@ jobs:
         working-directory: backend
         run: go build -o bin/artfans-server ./cmd/server
 
-      # ← Upload artifacts
+      # Upload artifacts
       - name: Upload Flutter APK
         uses: actions/upload-artifact@v4
         with:
