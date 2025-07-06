@@ -21,13 +21,11 @@ final RouteObserver<ModalRoute<void>> routeObserver =
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (!kIsWeb) {
-    try {
-      await dotenv.load(fileName: ".env");
-      debugPrint("✅ .env local chargé");
-    } catch (e) {
-      debugPrint("⚠️ Pas de fichier .env local : $e");
-    }
+  try {
+    await dotenv.load(fileName: '.env');
+    debugPrint('✅ .env chargé');
+  } catch (e) {
+    debugPrint('⚠️ Impossible de charger .env : $e');
   }
 
   runApp(const MyApp());
