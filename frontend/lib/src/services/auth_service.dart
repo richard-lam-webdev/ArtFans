@@ -98,6 +98,43 @@ class AuthService {
     }
   }
 
+// À ajouter dans lib/services/auth_service.dart
+
+Future<String?> getUserId() async {
+  final token = await getToken();
+  if (token == null) return null;
+
+  try {
+    final parts = token.split('.');
+    if (parts.length == 3) {
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      ) as Map<String, dynamic>;
+
+      const possibleClaims = [
+        'sub', 'userId', 'user_id', 'uid', 'id', // ← ajoute ici si besoin
+      ];
+      for (final k in possibleClaims) {
+        final v = payload[k];
+        if (v != null && (v as String).isNotEmpty) return v.toString();
+      }
+    }
+  } catch (_) {/* JWT corrompu ? */}
+
+  try {
+    final profile = await fetchProfile();
+    const fields = ['id', 'ID', 'userId', 'user_id', 'uid'];
+    for (final k in fields) {
+      final v = profile[k];
+      if (v != null && (v as String).isNotEmpty) return v.toString();
+    }
+  } catch (_) {/* ignore */}
+
+  return null;
+}
+
+
+  
   Future<Map<String, dynamic>> fetchProfile() async {
     final token = await getToken();
     if (token == null) throw Exception('Pas de token');
