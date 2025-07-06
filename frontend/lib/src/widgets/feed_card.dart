@@ -20,16 +20,12 @@ class FeedCard extends StatefulWidget {
 
 class _FeedCardState extends State<FeedCard> {
   late bool isSubscribed;
-  late int likeCount;
-  late bool liked;
   final _svc = ContentService();
 
   @override
   void initState() {
     super.initState();
     isSubscribed = widget.content['is_subscribed'] as bool;
-    likeCount = widget.content['likes_count'] as int? ?? 0;
-    liked = widget.content['liked_by_user'] as bool? ?? false;
   }
 
   Future<void> _toggleSubscribe() async {
@@ -49,21 +45,33 @@ class _FeedCardState extends State<FeedCard> {
   }
 
   Future<void> _toggleLike() async {
+    // récupère les valeurs courantes
+    final bool currentlyLiked =
+        widget.content['liked_by_user'] as bool? ?? false;
+    final int currentCount = widget.content['likes_count'] as int? ?? 0;
+
+    // prépare les nouvelles valeurs
+    final bool newLiked = !currentlyLiked;
+    final int newCount = currentlyLiked ? currentCount - 1 : currentCount + 1;
+
+    // mise à jour optimiste
     setState(() {
-      liked ? likeCount-- : likeCount++;
-      liked = !liked;
+      widget.content['liked_by_user'] = newLiked;
+      widget.content['likes_count'] = newCount;
     });
+
+    // appel réseau
     try {
-      if (liked) {
-        await _svc.likeContent(widget.content['id']);
+      if (newLiked) {
+        await _svc.likeContent(widget.content['id'] as String);
       } else {
-        await _svc.unlikeContent(widget.content['id']);
+        await _svc.unlikeContent(widget.content['id'] as String);
       }
     } catch (e) {
       // rollback
       setState(() {
-        liked ? likeCount-- : likeCount++;
-        liked = !liked;
+        widget.content['liked_by_user'] = currentlyLiked;
+        widget.content['likes_count'] = currentCount;
       });
       ScaffoldMessenger.of(
         context,
@@ -75,12 +83,23 @@ class _FeedCardState extends State<FeedCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => CommentsSheet(contentId: widget.content['id']),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (_) => FractionallySizedBox(
+            heightFactor: 0.4,
+            child: CommentsSheet(contentId: widget.content['id'] as String),
+          ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // on lit à chaque build, depuis la map partagée
+    final bool liked = widget.content['liked_by_user'] as bool? ?? false;
+    final int likeCount = widget.content['likes_count'] as int? ?? 0;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
@@ -88,7 +107,7 @@ class _FeedCardState extends State<FeedCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Entête créateur + abonnement
+          // entête créateur + abonnement
           ListTile(
             leading: CircleAvatar(
               backgroundImage: NetworkImage(
@@ -103,17 +122,17 @@ class _FeedCardState extends State<FeedCard> {
             ),
           ),
 
-          // Image protégée
+          // image protégée
           AspectRatio(
             aspectRatio: 16 / 9,
             child: ProtectedImage(
-              contentId: widget.content['id'],
+              contentId: widget.content['id'] as String,
               isSubscribed: isSubscribed,
               key: ValueKey('${widget.content['id']}-$isSubscribed'),
             ),
           ),
 
-          // Actions social
+          // actions social
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -136,7 +155,7 @@ class _FeedCardState extends State<FeedCard> {
             ),
           ),
 
-          // Légende / texte
+          // titre + texte
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(

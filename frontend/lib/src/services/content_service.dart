@@ -242,15 +242,20 @@ class ContentService {
     throw Exception('Erreur fetchComments: ${resp.statusCode}');
   }
 
-  Future<void> postComment(String contentId, String text) async {
+  Future<void> postComment(
+    String contentId,
+    String text, {
+    String? parentId,
+  }) async {
     final token = await _getToken();
+    final body = {'text': text, if (parentId != null) 'parent_id': parentId};
     final resp = await http.post(
       Uri.parse('$_baseUrl/api/contents/$contentId/comments'),
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({'text': text}),
+      body: jsonEncode(body),
     );
     if (resp.statusCode != 201) {
       throw Exception('Erreur postComment: ${resp.statusCode}');

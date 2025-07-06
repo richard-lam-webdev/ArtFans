@@ -224,6 +224,7 @@ func (s *ContentService) GetContentsByUserID(userID uuid.UUID) ([]*models.Conten
 
 }
 
+// backend/internal/services/content_service.go
 func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interface{}, error) {
 	contents, err := s.repo.FindAllWithCreators()
 	if err != nil {
@@ -232,10 +233,10 @@ func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interfa
 
 	var feed []map[string]interface{}
 	for _, content := range contents {
-		isSub, err := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
-		if err != nil {
-			return nil, err
-		}
+		isSub, _ := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
+
+		count, _ := s.repo.CountContentLikes(content.ID)
+		liked, _ := s.repo.IsContentLikedBy(userID, content.ID)
 
 		feed = append(feed, map[string]interface{}{
 			"id":            content.ID,
@@ -246,7 +247,19 @@ func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interfa
 			"creator_id":    content.CreatorID,
 			"created_at":    content.CreatedAt,
 			"is_subscribed": isSub,
+			"likes_count":   count, // ← ajouté
+			"liked_by_user": liked, // ← ajouté
 		})
 	}
 	return feed, nil
+}
+
+// LikeContent enregistre un like pour un user sur un content
+func (s *ContentService) LikeContent(userID, contentID uuid.UUID) error {
+	return s.repo.CreateLike(userID, contentID)
+}
+
+// UnlikeContent supprime un like existant
+func (s *ContentService) UnlikeContent(userID, contentID uuid.UUID) error {
+	return s.repo.DeleteLike(userID, contentID)
 }

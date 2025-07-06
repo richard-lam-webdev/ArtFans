@@ -11,52 +11,57 @@ import (
 // et le ParentID pour gérer les fils de réponses.
 type CommentWithMeta struct {
 	models.Comment
-	LikeCount int64 `json:"like_count"`
-	LikedByMe bool  `json:"liked_by_me"`
+	AuthorName string `json:"author_name"`
+	LikeCount  int64  `json:"like_count"`
+	LikedByMe  bool   `json:"liked_by_me"`
 }
 
 // CommentService gère les commentaires et leurs likes
 type CommentService struct {
 	repo     *repositories.CommentRepository
 	likeRepo *repositories.CommentLikeRepository
+	userRepo *repositories.UserRepository
 }
 
 // NewCommentService injecte les repositories nécessaires
 func NewCommentService(
 	repo *repositories.CommentRepository,
 	likeRepo *repositories.CommentLikeRepository,
+	userRepo *repositories.UserRepository,
 ) *CommentService {
-	return &CommentService{repo: repo, likeRepo: likeRepo}
+	return &CommentService{repo: repo, likeRepo: likeRepo, userRepo: userRepo}
 }
 
 // FetchComments récupère tous les commentaires associés à un contenu,
 // avec métadonnées (likes + likedByMe).
 // userID est l'utilisateur courant (extrait du JWT) pour le flag LikedByMe.
-func (s *CommentService) FetchComments(
-	contentID uuid.UUID,
-	userID uuid.UUID,
-) ([]CommentWithMeta, error) {
+func (s *CommentService) FetchComments(contentID, userID uuid.UUID) ([]CommentWithMeta, error) {
 	raw, err := s.repo.FindAllByContent(contentID)
 	if err != nil {
 		return nil, err
 	}
-
 	out := make([]CommentWithMeta, 0, len(raw))
 	for _, c := range raw {
-		// Comptage des likes
+		// 1) récupérer le user pour avoir son username
+		user, err := s.userRepo.FindByID(c.AuthorID)
+		if err != nil {
+			return nil, err
+		}
+		// 2) likes
 		cnt, err := s.likeRepo.CountByComment(c.ID)
 		if err != nil {
 			return nil, err
 		}
-		// Vérification si liked par l'utilisateur
 		liked, err := s.likeRepo.IsLiked(userID, c.ID)
 		if err != nil {
 			return nil, err
 		}
+
 		out = append(out, CommentWithMeta{
-			Comment:   c,
-			LikeCount: cnt,
-			LikedByMe: liked,
+			Comment:    c,
+			AuthorName: user.Username, // ← on alimente le pseudo
+			LikeCount:  cnt,
+			LikedByMe:  liked,
 		})
 	}
 	return out, nil

@@ -79,7 +79,9 @@ class _FeedScreenState extends State<FeedScreen> {
                 ),
                 itemCount: _feed.length,
                 itemBuilder: (ctx, index) {
+                  final content = _feed[index];
                   return FeedCard(
+                    key: ValueKey(content['id']),
                     content: _feed[index],
                     onSubscribedChanged: _fetchFeed,
                   );
