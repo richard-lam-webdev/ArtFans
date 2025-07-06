@@ -1,3 +1,4 @@
+# .github/workflows/ci.yml
 name: CI ARTFANS
 
 on:
@@ -20,7 +21,6 @@ jobs:
         with:
           go-version: '1.21'
 
-      # → Télécharger les modules Go avant tout
       - name: Go modules
         working-directory: backend
         run: go mod download
@@ -36,7 +36,6 @@ jobs:
         run: |
           go test ./... -coverprofile=coverage.out
 
-      # → (Optionnel) Publier le fichier coverage.out comme artifact
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -44,7 +43,7 @@ jobs:
           name: go-coverage-report
           path: backend/coverage.out
 
-  # 2) Analyse Flutter (pas de tests)
+  # 2) Analyse Flutter (sans test)
   flutter-analyze:
     name: Flutter Analyze
     runs-on: ubuntu-latest
@@ -52,21 +51,22 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # → Cache des packages pub
+      # ← Étape pour créer un .env factice et éviter l’erreur d’asset manquant
+      - name: Copy dummy .env
+        run: cp frontend/.env.example frontend/.env
+
       - name: Cache Flutter Pub
         uses: actions/cache@v3
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-flutter-pub-${{ hashFiles('frontend/pubspec.yaml') }}
 
-      # → Cache des artefacts Dart (.dart_tool)
       - name: Cache Dart Tool
         uses: actions/cache@v3
         with:
           path: frontend/.dart_tool
           key: ${{ runner.os }}-dart-tool-${{ hashFiles('frontend/pubspec.yaml') }}
 
-      # → Cache Gradle pour flutter build apk
       - name: Cache Gradle
         uses: actions/cache@v3
         with:
@@ -86,7 +86,7 @@ jobs:
         working-directory: frontend
         run: flutter analyze
 
-  # 3) Build Artifacts (Flutter + Go)
+  # 3) Build & Upload Artifacts (Flutter + Go)
   build-and-upload:
     name: Build & Upload Artifacts
     needs: [ go-check, flutter-analyze ]
@@ -95,7 +95,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Flutter build
+      # ← Flutter build
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -109,7 +109,7 @@ jobs:
         working-directory: frontend
         run: flutter build web --release
 
-      # Go build
+      # ← Go build
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
@@ -123,7 +123,7 @@ jobs:
         working-directory: backend
         run: go build -o bin/artfans-server ./cmd/server
 
-      # Upload artifacts
+      # ← Upload artifacts
       - name: Upload Flutter APK
         uses: actions/upload-artifact@v4
         with:
