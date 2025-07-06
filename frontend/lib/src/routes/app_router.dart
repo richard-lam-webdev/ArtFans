@@ -13,6 +13,9 @@ import '../screens/admin_home_screen.dart';
 import '../screens/my_contents_screen.dart';
 import '../screens/edit_content_screen.dart';
 import '../screens/feed_screen.dart';
+import '../screens/conversations_screen.dart';
+import '../screens/chat_screen.dart';
+
 
 import '../../main.dart';
 
@@ -75,6 +78,23 @@ class AppRouter {
         GoRoute(
           path: "/my-contents",
           builder: (context, state) => const MyContentsScreen(),
+        ),
+        GoRoute(
+          path: '/messages',
+          name: 'messages',
+          builder: (context, state) => const ConversationsScreen(),
+        ),
+        GoRoute(
+          path: '/chat/:userId',
+          name: 'chat',
+          builder: (context, state) {
+            final userId = state.pathParameters['userId']!;
+            final userName = state.extra as String? ?? 'Utilisateur';
+            return ChatScreen(
+              otherUserId: userId,
+              otherUserName: userName,
+            );
+          },
         ),
         GoRoute(
           path: '/edit-content/:id',

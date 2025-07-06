@@ -41,7 +41,12 @@ func main() {
 	subscriptionSvc := services.NewSubscriptionService(subscriptionRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionSvc)
 
-	/* ---------- 4) Gin ---------- */
+	/* ---------- 4) Message Service ---------- */
+	messageRepo := repositories.NewMessageRepository()
+	messageSvc := services.NewMessageService(messageRepo, userRepo)
+	messageHandler := handlers.NewMessageHandler(messageSvc)
+
+	/* ---------- 5) Gin ---------- */
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.Use(cors.New(cors.Config{
@@ -53,23 +58,24 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	/* ---------- 5) Statique pour les uploads ---------- */
+	/* ---------- 6) Statique pour les uploads ---------- */
 	r.Static("/uploads", uploadPath)
 
-	/* ---------- 6) Health ---------- */
+	/* ---------- 7) Health ---------- */
 	r.GET("/health", handlers.HealthCheck)
 
-	/* ---------- 7) Auth public ---------- */
+	/* ---------- 8) Auth public ---------- */
 	auth := r.Group("/api/auth")
 	{
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
-	/* ---------- 8) Contenus publics ---------- */
+	/* ---------- 9) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-	/* ---------- 9) Routes protégées JWT ---------- */
+
+	/* ---------- 10) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
@@ -86,9 +92,13 @@ func main() {
 		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
 		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
 
+		// Messages
+		protected.POST("/messages", messageHandler.SendMessage)
+		protected.GET("/messages", messageHandler.GetConversations)
+		protected.GET("/messages/:userId", messageHandler.GetConversation)
 	}
 
-	/* ---------- 10) Admin ---------- */
+	/* ---------- 11) Admin ---------- */
 	admin := r.Group("/api/admin",
 		middleware.JWTAuth(),
 		handlers.AdminMiddleware(),
@@ -102,7 +112,7 @@ func main() {
 		admin.PUT("/contents/:id/reject", handlers.RejectContentHandler)
 	}
 
-	/* ---------- 11) Start ---------- */
+	/* ---------- 12) Start ---------- */
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Serveur sur %s…", addr)
 	if err := r.Run(addr); err != nil {
