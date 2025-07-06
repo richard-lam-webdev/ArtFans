@@ -1,6 +1,5 @@
 // lib/widgets/feed_card.dart
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../services/content_service.dart';
 import 'protected_image.dart';
 import 'comments_sheet.dart';
@@ -20,21 +19,27 @@ class FeedCard extends StatefulWidget {
 }
 
 class _FeedCardState extends State<FeedCard> {
+  late bool isSubscribed;
   final _svc = ContentService();
 
+  @override
+  void initState() {
+    super.initState();
+    isSubscribed = widget.content['is_subscribed'] as bool;
+  }
+
   Future<void> _toggleSubscribe() async {
-    final currently = widget.content['is_subscribed'] as bool;
     try {
-      if (currently) {
-        await _svc.unsubscribe(widget.content['creator_id'] as String);
+      if (isSubscribed) {
+        await _svc.unsubscribe(widget.content['creator_id']);
       } else {
-        await _svc.subscribe(widget.content['creator_id'] as String);
+        await _svc.subscribe(widget.content['creator_id']);
       }
-      setState(() {
-        widget.content['is_subscribed'] = !currently;
-      });
+      if (!mounted) return;
+      setState(() => isSubscribed = !isSubscribed);
       widget.onSubscribedChanged();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erreur abonnement : $e')));
@@ -42,18 +47,22 @@ class _FeedCardState extends State<FeedCard> {
   }
 
   Future<void> _toggleLike() async {
-    final currentlyLiked = widget.content['liked_by_user'] as bool? ?? false;
-    final currentCount = widget.content['likes_count'] as int? ?? 0;
-    final newLiked = !currentlyLiked;
-    final newCount = currentCount + (newLiked ? 1 : -1);
+    // récupère les valeurs courantes
+    final bool currentlyLiked =
+        widget.content['liked_by_user'] as bool? ?? false;
+    final int currentCount = widget.content['likes_count'] as int? ?? 0;
 
-    // 1) mise à jour optimiste
+    // prépare les nouvelles valeurs
+    final bool newLiked = !currentlyLiked;
+    final int newCount = currentlyLiked ? currentCount - 1 : currentCount + 1;
+
+    // mise à jour optimiste
     setState(() {
       widget.content['liked_by_user'] = newLiked;
       widget.content['likes_count'] = newCount;
     });
 
-    // 2) appel réseau
+    // appel réseau
     try {
       if (newLiked) {
         await _svc.likeContent(widget.content['id'] as String);
@@ -61,7 +70,8 @@ class _FeedCardState extends State<FeedCard> {
         await _svc.unlikeContent(widget.content['id'] as String);
       }
     } catch (e) {
-      // 3) rollback
+      if (!mounted) return;
+      // rollback
       setState(() {
         widget.content['liked_by_user'] = currentlyLiked;
         widget.content['likes_count'] = currentCount;
@@ -89,11 +99,9 @@ class _FeedCardState extends State<FeedCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isSubscribed = widget.content['is_subscribed'] as bool? ?? false;
-    final liked = widget.content['liked_by_user'] as bool? ?? false;
-    final likeCount = widget.content['likes_count'] as int? ?? 0;
-    final creatorId = widget.content['creator_id'] as String;
-    final creatorName = widget.content['creator_name'] as String? ?? 'Créateur';
+    // on lit à chaque build, depuis la map partagée
+    final bool liked = widget.content['liked_by_user'] as bool? ?? false;
+    final int likeCount = widget.content['likes_count'] as int? ?? 0;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -102,7 +110,7 @@ class _FeedCardState extends State<FeedCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Entête : avatar / nom / icône message / bouton s'abonner
+          // entête créateur + abonnement
           ListTile(
             leading: CircleAvatar(
               backgroundImage: NetworkImage(
@@ -110,33 +118,14 @@ class _FeedCardState extends State<FeedCard> {
                     'https://placehold.co/40x40',
               ),
             ),
-            title: Text(creatorName),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.send, size: 20),
-                  padding: const EdgeInsets.all(4),
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  tooltip: 'Envoyer un message',
-                  onPressed: () {
-                    GoRouter.of(
-                      context,
-                    ).push('/chat/$creatorId', extra: creatorName);
-                  },
-                ),
-                TextButton(
-                  onPressed: _toggleSubscribe,
-                  child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
-                ),
-              ],
+            title: Text(widget.content['creator_name'] ?? 'Créateur'),
+            trailing: TextButton(
+              onPressed: _toggleSubscribe,
+              child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
             ),
           ),
 
-          // Image protégée
+          // image protégée
           AspectRatio(
             aspectRatio: 16 / 9,
             child: ProtectedImage(
@@ -146,7 +135,7 @@ class _FeedCardState extends State<FeedCard> {
             ),
           ),
 
-          // Actions sociale : like + commentaire
+          // actions social
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -169,7 +158,7 @@ class _FeedCardState extends State<FeedCard> {
             ),
           ),
 
-          // Titre + corps
+          // titre + texte
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(
