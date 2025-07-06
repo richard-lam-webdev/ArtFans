@@ -40,6 +40,10 @@ func main() {
 	subscriptionRepo := repositories.NewSubscriptionRepository()
 	subscriptionSvc := services.NewSubscriptionService(subscriptionRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionSvc)
+	commentRepo := repositories.NewCommentRepository()
+	commentLikeRepo := repositories.NewCommentLikeRepository()
+	commentSvc := services.NewCommentService(commentRepo, commentLikeRepo, userRepo)
+	commentHandler := handlers.NewCommentHandler(commentSvc)
 
 	/* ---------- 4) Message Service ---------- */
 	messageRepo := repositories.NewMessageRepository()
@@ -85,12 +89,18 @@ func main() {
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
 		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
-
+		protected.POST("/contents/:id/like", contentHandler.LikeContent)
+		protected.DELETE("/contents/:id/like", contentHandler.UnlikeContent)
 		protected.GET("/feed", contentHandler.GetFeed)
 		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)
 		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
 		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
 		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+		// Comments
+		protected.GET("/contents/:id/comments", commentHandler.GetComments)
+		protected.POST("/contents/:id/comments", commentHandler.PostComment)
+		protected.POST("/comments/:commentID/like", commentHandler.LikeComment)
+		protected.DELETE("/comments/:commentID/like", commentHandler.UnlikeComment)
 
 		// Messages
 		protected.POST("/messages", messageHandler.SendMessage)

@@ -231,22 +231,34 @@ func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interfa
 	}
 
 	var feed []map[string]interface{}
-	for _, content := range contents {
-		isSub, err := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
-		if err != nil {
-			return nil, err
-		}
+	for _, c := range contents {
+		isSub, _ := s.repo.IsUserSubscribedToCreator(userID, c.CreatorID)
+		count, _ := s.repo.CountContentLikes(c.ID)
+		liked, _ := s.repo.IsContentLikedBy(userID, c.ID)
 
 		feed = append(feed, map[string]interface{}{
-			"id":            content.ID,
-			"title":         content.Title,
-			"body":          content.Body,
-			"price":         content.Price,
-			"file_path":     content.FilePath,
-			"creator_id":    content.CreatorID,
-			"created_at":    content.CreatedAt,
+			"id":            c.ID,
+			"title":         c.Title,
+			"body":          c.Body,
+			"price":         c.Price,
+			"file_path":     c.FilePath,
+			"creator_id":    c.CreatorID,
+			"creator_name":  c.Creator.Username,
+			"created_at":    c.CreatedAt,
 			"is_subscribed": isSub,
+			"likes_count":   count,
+			"liked_by_user": liked,
 		})
 	}
 	return feed, nil
+}
+
+// LikeContent enregistre un like pour un user sur un content
+func (s *ContentService) LikeContent(userID, contentID uuid.UUID) error {
+	return s.repo.CreateLike(userID, contentID)
+}
+
+// UnlikeContent supprime un like existant
+func (s *ContentService) UnlikeContent(userID, contentID uuid.UUID) error {
+	return s.repo.DeleteLike(userID, contentID)
 }

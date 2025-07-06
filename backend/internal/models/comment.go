@@ -8,9 +8,16 @@ import (
 
 // Comment représente un commentaire posté par un utilisateur sur un Content
 type Comment struct {
-	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	ContentID uuid.UUID `gorm:"not null"`
-	AuthorID  uuid.UUID `gorm:"not null"`
-	Text      string    `gorm:"not null"`
-	CreatedAt time.Time `gorm:"autoCreateTime"`
+	ID        uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	ContentID uuid.UUID  `gorm:"column:content_id;not null;index"           json:"content_id"`
+	AuthorID  uuid.UUID  `gorm:"column:author_id;not null;index"            json:"author_id"`
+	Text      string     `gorm:"not null"                                   json:"text"`
+	CreatedAt time.Time  `gorm:"column:created_at;autoCreateTime"           json:"created_at"`
+	ParentID  *uuid.UUID `gorm:"column:parent_id;type:uuid;index"           json:"parent_id"`
+}
+
+type CommentLike struct {
+	UserID    uuid.UUID `gorm:"column:user_id;type:uuid;not null;primaryKey"`
+	CommentID uuid.UUID `gorm:"column:comment_id;type:uuid;not null;primaryKey"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 }
