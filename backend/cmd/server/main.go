@@ -40,6 +40,10 @@ func main() {
 	subscriptionRepo := repositories.NewSubscriptionRepository()
 	subscriptionSvc := services.NewSubscriptionService(subscriptionRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionSvc)
+	commentRepo := repositories.NewCommentRepository()
+	commentLikeRepo := repositories.NewCommentLikeRepository()
+	commentService := services.NewCommentService(commentRepo, commentLikeRepo)
+	commentHandler := handlers.NewCommentHandler(commentService)
 
 	/* ---------- 4) Gin ---------- */
 	r := gin.New()
@@ -74,7 +78,6 @@ func main() {
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
-		protected.GET("/contents", contentHandler.GetAllContents)
 
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
@@ -86,6 +89,9 @@ func main() {
 		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
 		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
 		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+		// Comments
+		protected.GET("/contents/:id/comments", commentHandler.GetComments)
+		protected.POST("/contents/:id/comments", commentHandler.PostComment)
 
 	}
 
