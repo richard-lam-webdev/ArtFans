@@ -14,3 +14,7 @@ type Message struct {
 	Text       string    `gorm:"not null"`
 	SentAt     time.Time `gorm:"autoCreateTime"`
 }
+
+func (Message) TableName() string {
+	return "message"
+}
