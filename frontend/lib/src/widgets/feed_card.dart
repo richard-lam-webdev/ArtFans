@@ -35,9 +35,11 @@ class _FeedCardState extends State<FeedCard> {
       } else {
         await _svc.subscribe(widget.content['creator_id']);
       }
+      if (!mounted) return;
       setState(() => isSubscribed = !isSubscribed);
       widget.onSubscribedChanged();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erreur abonnement : $e')));
@@ -68,6 +70,7 @@ class _FeedCardState extends State<FeedCard> {
         await _svc.unlikeContent(widget.content['id'] as String);
       }
     } catch (e) {
+      if (!mounted) return;
       // rollback
       setState(() {
         widget.content['liked_by_user'] = currentlyLiked;

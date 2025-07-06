@@ -45,11 +45,13 @@ class _CommentsSheetState extends State<CommentsSheet> {
         text,
         parentId: _replyToId,
       );
+      if (!mounted) return;
       _ctrl.clear();
       _replyToId = null;
       _replyToAuthor = null;
       _loadComments();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erreur commentaire : $e')));
@@ -72,6 +74,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
         await _commentSvc.likeComment(id);
       }
     } catch (e) {
+      if (!mounted) return;
       // rollback
       setState(() {
         c['liked_by_me'] = already;
