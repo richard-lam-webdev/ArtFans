@@ -17,50 +17,25 @@ func NewMessageRepository() *MessageRepository {
 	return &MessageRepository{db: database.DB}
 }
 
-// Create crée un nouveau message
+/* -------------------------------------------------------------------------- */
+/* CRUD basique                                                               */
+/* -------------------------------------------------------------------------- */
+
 func (r *MessageRepository) Create(message *models.Message) error {
 	return r.db.Create(message).Error
 }
 
-// GetConversationBetween récupère tous les messages entre deux utilisateurs
 func (r *MessageRepository) GetConversationBetween(userID1, userID2 uuid.UUID) ([]models.Message, error) {
 	var messages []models.Message
-	err := r.db.Where(
-		"(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)",
-		userID1, userID2, userID2, userID1,
-	).Order("sent_at ASC").Find(&messages).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return messages, nil
+	err := r.db.
+		Where(`(sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)`,
+			userID1, userID2, userID2, userID1).
+		Order("sent_at ASC").
+		Find(&messages).
+		Error
+	return messages, err
 }
 
-// GetUserConversations récupère la dernière message de chaque conversation pour un utilisateur
-func (r *MessageRepository) GetUserConversations(userID uuid.UUID) ([]models.Message, error) {
-	var messages []models.Message
-
-	// Sous-requête pour obtenir le dernier message de chaque conversation
-	subQuery := r.db.Model(&models.Message{}).
-		Select("GREATEST(sender_id, receiver_id) as user1, LEAST(sender_id, receiver_id) as user2, MAX(sent_at) as max_sent_at").
-		Where("sender_id = ? OR receiver_id = ?", userID, userID).
-		Group("GREATEST(sender_id, receiver_id), LEAST(sender_id, receiver_id)")
-
-	// Requête principale pour récupérer les messages complets
-	err := r.db.Joins(
-		"JOIN (?) as last_messages ON ((messages.sender_id = last_messages.user1 AND messages.receiver_id = last_messages.user2) OR (messages.sender_id = last_messages.user2 AND messages.receiver_id = last_messages.user1)) AND messages.sent_at = last_messages.max_sent_at",
-		subQuery,
-	).Where("messages.sender_id = ? OR messages.receiver_id = ?", userID, userID).
-		Order("messages.sent_at DESC").
-		Find(&messages).Error
-
-	if err != nil {
-		return nil, err
-	}
-	return messages, nil
-}
-
-// GetMessageByID récupère un message par son ID
 func (r *MessageRepository) GetMessageByID(id uuid.UUID) (*models.Message, error) {
 	var message models.Message
 	err := r.db.First(&message, "id = ?", id).Error
@@ -73,16 +48,53 @@ func (r *MessageRepository) GetMessageByID(id uuid.UUID) (*models.Message, error
 	return &message, nil
 }
 
-// MarkAsRead marque un message comme lu (si tu veux ajouter cette fonctionnalité plus tard)
-func (r *MessageRepository) MarkAsRead(messageID uuid.UUID) error {
-	// Pour l'instant, on ne fait rien car le modèle n'a pas de champ "read"
-	// Tu pourras ajouter un champ ReadAt *time.Time dans le modèle si besoin
-	return nil
+func (r *MessageRepository) GetConversationPreviews(userID uuid.UUID) ([]models.ConversationPreview, error) {
+	var previews []models.ConversationPreview
+	uid := userID.String() // ← string une bonne fois pour toutes
+
+	// Sous-requête : pour chaque partenaire, dernier timestamp
+	sub := r.db.
+		Table("message").
+		Select(`
+			(CASE
+			   WHEN sender_id::text = ? THEN receiver_id::text
+			   ELSE sender_id::text
+			 END)                         AS partner_id,
+			MAX(sent_at)                  AS last_sent_at
+		`, uid).
+		Where("sender_id::text = ? OR receiver_id::text = ?", uid, uid).
+		Group("partner_id")
+
+	// Requête finale
+	err := r.db.
+		Table("message AS m").
+		Select(`
+			l.partner_id                  AS other_user_id,
+			u.username                    AS other_user_name,
+			m.text                        AS last_message,
+			m.sent_at                     AS last_message_time,
+			m.sender_id::text             AS last_message_sender
+		`).
+		Joins(`
+			JOIN (?) AS l ON
+			     m.sent_at = l.last_sent_at
+			  AND (
+			       (m.sender_id::text   = ? AND m.receiver_id::text = l.partner_id)
+			    OR (m.receiver_id::text = ? AND m.sender_id::text   = l.partner_id)
+			  )
+		`, sub, uid, uid).
+		Joins(`JOIN "user" AS u ON u.id::text = l.partner_id`).
+		Order("m.sent_at DESC").
+		Scan(&previews).Error
+
+	return previews, err
 }
 
-// GetUnreadCount compte les messages non lus pour un utilisateur (pour plus tard)
+func (r *MessageRepository) MarkAsRead(messageID uuid.UUID) error {
+	return nil // champ ReadAt pas encore implémenté
+}
+
 func (r *MessageRepository) GetUnreadCount(userID uuid.UUID) (int64, error) {
 	var count int64
-	// Pour l'instant retourne 0, tu pourras implémenter quand tu auras un champ "read"
 	return count, nil
 }

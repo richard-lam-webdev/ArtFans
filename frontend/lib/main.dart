@@ -14,13 +14,16 @@ import 'src/services/admin_content_service.dart';
 import 'src/services/admin_service.dart';
 import 'src/routes/app_router.dart';
 import 'theme/app_theme.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import 'src/providers/message_provider.dart';
+import 'src/widgets/app_wrapper.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb) {
     try {
       await dotenv.load(fileName: ".env");
@@ -29,7 +32,7 @@ Future<void> main() async {
       debugPrint("⚠️ Pas de fichier .env local : $e");
     }
   }
-
+    timeago.setLocaleMessages('fr', timeago.FrMessages());
   runApp(const MyApp());
 }
 
@@ -57,7 +60,9 @@ class MyApp extends StatelessWidget {
           create: (_) => AdminContentProvider(service: AdminContentService()),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => MessageProvider()),
       ],
+      child: AppWrapper(
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) {
           final router = AppRouter.router(context);
@@ -69,6 +74,7 @@ class MyApp extends StatelessWidget {
             routerConfig: router,
           );
         },
+      ),
       ),
     );
   }

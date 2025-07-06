@@ -42,6 +42,7 @@ dependencies:
   universal_platform: ^1.0.0+1
   intl: ^0.18.0
   salomon_bottom_bar: ^3.3.2
+  timeago: ^3.7.1
 
 dev_dependencies:
   flutter_test:
