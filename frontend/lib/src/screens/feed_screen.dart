@@ -8,6 +8,7 @@ import '../providers/message_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/feed_card.dart';
+import 'search_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -48,9 +49,26 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Fil d'actualité"),
+        titleSpacing: 0,
+        title: InkWell(
+          onTap:
+              () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
+          child: IgnorePointer(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Recherche',
+                prefixIcon: const Icon(Icons.search),
+                border: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
         actions: [
-          // Badge Messages
           Consumer<MessageProvider>(
             builder: (context, messageProvider, _) {
               final unreadCount = messageProvider.totalUnreadCount;
@@ -91,8 +109,6 @@ class _FeedScreenState extends State<FeedScreen> {
               );
             },
           ),
-
-          // Toggle Thème
           Consumer<ThemeProvider>(
             builder:
                 (ctx, theme, _) => IconButton(
@@ -106,7 +122,6 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
@@ -123,7 +138,6 @@ class _FeedScreenState extends State<FeedScreen> {
                   );
                 },
               ),
-
       bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }

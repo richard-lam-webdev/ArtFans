@@ -44,6 +44,7 @@ func main() {
 	commentLikeRepo := repositories.NewCommentLikeRepository()
 	commentSvc := services.NewCommentService(commentRepo, commentLikeRepo, userRepo)
 	commentHandler := handlers.NewCommentHandler(commentSvc)
+	searchHandler := handlers.NewSearchHandler(database.DB)
 
 	/* ---------- 4) Message Service ---------- */
 	messageRepo := repositories.NewMessageRepository()
@@ -78,6 +79,7 @@ func main() {
 	/* ---------- 9) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	r.GET("/api/search", searchHandler.Search)
 
 	/* ---------- 10) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
@@ -106,6 +108,7 @@ func main() {
 		protected.POST("/messages", messageHandler.SendMessage)
 		protected.GET("/messages", messageHandler.GetConversations)
 		protected.GET("/messages/:userId", messageHandler.GetConversation)
+
 	}
 
 	/* ---------- 11) Admin ---------- */
