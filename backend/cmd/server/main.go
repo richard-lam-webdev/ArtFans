@@ -50,6 +50,8 @@ func main() {
 	messageSvc := services.NewMessageService(messageRepo, userRepo)
 	messageHandler := handlers.NewMessageHandler(messageSvc)
 
+	adminStatsHandler := handlers.NewAdminStatsHandler()
+
 	/* ---------- 5) Gin ---------- */
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -69,8 +71,8 @@ func main() {
 	r.GET("/health", handlers.HealthCheck)
 
 	/* ---------- 8) Auth public ---------- */
-	auth := r.Group("/api/auth")
 	{
+		auth := r.Group("/api/auth")
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
@@ -120,6 +122,14 @@ func main() {
 		admin.DELETE("/contents/:id", handlers.DeleteContentHandler)
 		admin.PUT("/contents/:id/approve", handlers.ApproveContentHandler)
 		admin.PUT("/contents/:id/reject", handlers.RejectContentHandler)
+
+		admin.GET("/stats", adminStatsHandler.GetStats)
+		admin.GET("/dashboard", adminStatsHandler.GetDashboard)
+		admin.GET("/top-creators", adminStatsHandler.GetTopCreators)
+		admin.GET("/top-contents", adminStatsHandler.GetTopContents)
+		admin.GET("/flop-contents", adminStatsHandler.GetFlopContents)
+		admin.GET("/revenue-chart", adminStatsHandler.GetRevenueChart)
+		admin.GET("/quick-stats", adminStatsHandler.GetQuickStats)
 	}
 
 	/* ---------- 12) Start ---------- */

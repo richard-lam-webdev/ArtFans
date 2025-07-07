@@ -48,7 +48,7 @@ type Payment struct {
 
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CreatorID uuid.UUID `gorm:"column:creator_id;not null"`
+	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"`
 	Title     string    `gorm:"not null"`
 	Body      string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
@@ -129,6 +129,25 @@ func main() {
 		    CREATE TYPE payment_status AS ENUM ('pending','succeeded','failed');
 		  END IF;
 		END$$;`)
+
+	db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+			SELECT 1 FROM pg_constraint
+			WHERE conname = 'fk_content_creator'
+				AND conrelid = 'content'::regclass
+			) THEN
+			ALTER TABLE content DROP CONSTRAINT IF EXISTS fk_content_creator;
+			ALTER TABLE content ALTER COLUMN creator_id TYPE uuid USING creator_id::uuid;
+			ALTER TABLE content
+				ADD CONSTRAINT fk_content_creator
+				FOREIGN KEY (creator_id) REFERENCES users(id)
+				ON UPDATE CASCADE ON DELETE CASCADE;
+			END IF;
+		END
+		$$;
+		`)
 
 	if err := db.AutoMigrate(
 		&User{},
