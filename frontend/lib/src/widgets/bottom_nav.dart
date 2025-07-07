@@ -19,9 +19,7 @@ class BottomNav extends StatelessWidget {
         context.go('/add-content');
         break;
       case 2:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Recherche à venir !')));
+        context.go('/my-subscriptions');
         break;
       case 3:
         ScaffoldMessenger.of(

@@ -16,6 +16,8 @@ import 'theme/app_theme.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'src/providers/message_provider.dart';
 import 'src/widgets/app_wrapper.dart';
+import 'src/services/subscription_service.dart'; 
+import 'src/providers/subscription_provider.dart'; 
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -40,7 +42,7 @@ class MyApp extends StatelessWidget {
     final authService = AuthService();
     final userService = UserService(authService);
     final adminService = AdminService();
-
+    final subscriptionService = SubscriptionService(); // ✨ NOUVEAU
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
@@ -54,6 +56,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => AdminContentProvider(service: AdminContentService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SubscriptionProvider(subscriptionService: subscriptionService),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MessageProvider()),
