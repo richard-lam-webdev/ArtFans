@@ -28,6 +28,11 @@ func main() {
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
+	/* ---------- 2b) Repos pour profil créateur ---------- */
+	subRepo := repositories.NewSubscriptionRepository()
+	publicContentRepo := repositories.NewPublicContentRepository()
+	handlers.SetCreatorRepos(userRepo, subRepo, publicContentRepo)
+
 	/* ---------- 3) ContentService ---------- */
 	contentRepo := repositories.NewContentRepository()
 	uploadPath := config.C.UploadPath
@@ -64,6 +69,9 @@ func main() {
 
 	/* ---------- 8) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
+
+	/* ---------- 8b) Profil créateur public ---------- */
+	r.GET("/api/creators/:username", handlers.GetPublicCreatorProfileHandler)
 
 	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())

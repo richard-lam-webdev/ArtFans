@@ -27,14 +27,12 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	return &u, err
 }
 
+// Create ajoute un nouvel utilisateur en base.
 func (r *UserRepository) Create(u *models.User) error {
 	return r.db.Create(u).Error
 }
 
-func SetTestDB(db *gorm.DB) {
-	database.DB = db
-}
-
+// FindByID renvoie nil,nil si pas trouvé, ou l'erreur de GORM si autre.
 func (r *UserRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	var user models.User
 	err := r.db.First(&user, "id = ?", id).Error
@@ -47,7 +45,17 @@ func (r *UserRepository) FindByID(id uuid.UUID) (*models.User, error) {
 	return &user, nil
 }
 
-// UpdateRole met à jour le rôle d’un utilisateur donné
+// FindByUsername renvoie l'utilisateur correspondant au username, ou nil,nil si pas trouvé.
+func (r *UserRepository) FindByUsername(username string) (*models.User, error) {
+	var user models.User
+	err := r.db.Where("username = ?", username).First(&user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &user, err
+}
+
+// UpdateRole met à jour le rôle d’un utilisateur donné.
 func (r *UserRepository) UpdateRole(userID uuid.UUID, newRole models.Role) error {
 	res := r.db.Model(&models.User{}).
 		Where("id = ?", userID).
@@ -61,11 +69,16 @@ func (r *UserRepository) UpdateRole(userID uuid.UUID, newRole models.Role) error
 	return nil
 }
 
-// FindAll récupère tous les utilisateurs
+// FindAll récupère tous les utilisateurs.
 func (r *UserRepository) FindAll() ([]models.User, error) {
 	var users []models.User
 	if err := r.db.Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
+}
+
+// SetTestDB permet de remplacer la DB utilisée (pour les tests).
+func SetTestDB(db *gorm.DB) {
+	database.DB = db
 }
