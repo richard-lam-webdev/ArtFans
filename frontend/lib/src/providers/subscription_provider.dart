@@ -13,7 +13,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
   SubscriptionStatus _status = SubscriptionStatus.initial;
   List<Map<String, dynamic>> _mySubscriptions = [];
-  Map<String, bool> _subscriptionCache = {}; // Cache pour éviter les appels répétés
+  final Map<String, bool> _subscriptionCache = {}; // Cache pour éviter les appels répétés
   Map<String, dynamic>? _creatorStats;
   String? _errorMessage;
 

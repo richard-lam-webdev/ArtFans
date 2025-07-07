@@ -268,8 +268,14 @@ class _FeedCardState extends State<FeedCard> {
             ),
             title: Text(widget.content['creator_name'] ?? 'Créateur'),
             trailing: TextButton(
-              onPressed: _toggleSubscribe,
-              child: Text(isSubscribed ? 'Se désabonner' : 'S\'abonner'),
+              onPressed: _isLoadingSubscription ? null : _toggleSubscribe,
+              child: _isLoadingSubscription
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(isSubscribed ? 'Se désabonner' : 'S\'abonner'),
             ),
           ),
 

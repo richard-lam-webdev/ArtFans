@@ -110,11 +110,10 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Theme.of(context).primaryColor.withOpacity(0.2),
-                  ),
+                  color: Theme.of(context).primaryColor.withAlpha((0.2 * 255).round()),                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
