@@ -88,6 +88,7 @@ func (h *AdminStatsHandler) GetTopCreators(c *gin.Context) {
 		}
 	}
 
+	// ✨ UTILISER LA VERSION ULTRA-SAFE
 	creators, err := h.service.GetTopCreators(limit, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
