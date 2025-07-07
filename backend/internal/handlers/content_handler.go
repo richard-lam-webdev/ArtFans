@@ -83,25 +83,26 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 }
 
 func (h *ContentHandler) GetAllContents(c *gin.Context) {
-	contents, err := h.service.GetAllContents()
+	log.Println("➡️ GetAllContents called")
+
+	userIDRaw, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	contents, err := h.service.GetContentsByUserID(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur serveur"})
 		return
 	}
 
-	var response []gin.H
-	for _, content := range contents {
-		response = append(response, gin.H{
-			"id":         content.ID,
-			"title":      content.Title,
-			"body":       content.Body,
-			"price":      content.Price,
-			"status":     content.Status,
-			"created_at": content.CreatedAt,
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"contents": response})
+	c.JSON(http.StatusOK, gin.H{"contents": contents})
 }
 
 // GET /api/contents/:id
@@ -196,4 +197,96 @@ func (h *ContentHandler) DeleteContent(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// GET /api/contents/:id/image
+func (h *ContentHandler) GetContentImage(c *gin.Context) {
+	contentIDStr := c.Param("id")
+	contentID, err := uuid.Parse(contentIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID de contenu invalide"})
+		return
+	}
+
+	userIDRaw, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Non autorisé"})
+		return
+	}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	if err := h.service.ServeProtectedImage(c, contentID, userID); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+}
+
+// GET /api/feed
+func (h *ContentHandler) GetFeed(c *gin.Context) {
+	userIDRaw, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	feed, err := h.service.GetFeedContents(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur serveur"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"feed": feed})
+}
+
+// POST  /api/contents/:id/like
+func (h *ContentHandler) LikeContent(c *gin.Context) {
+	userRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, _ := uuid.Parse(userRaw.(string))
+
+	contentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID contenu invalide"})
+		return
+	}
+
+	if err := h.service.LikeContent(userID, contentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de liker"})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+// DELETE /api/contents/:id/like
+func (h *ContentHandler) UnlikeContent(c *gin.Context) {
+	userRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, _ := uuid.Parse(userRaw.(string))
+
+	contentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID contenu invalide"})
+		return
+	}
+
+	if err := h.service.UnlikeContent(userID, contentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de un-liker"})
+		return
+	}
+	c.Status(http.StatusOK)
 }

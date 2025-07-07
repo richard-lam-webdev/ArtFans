@@ -42,13 +42,11 @@ class BottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = context.watch<UserProvider>().user;
-
     final isAdmin =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'admin';
 
     final isCreator =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
-
     final isWideScreen = MediaQuery.of(context).size.width > 480;
 
     final items = <SalomonBottomBarItem>[
@@ -63,6 +61,11 @@ class BottomNav extends StatelessWidget {
         selectedColor: Colors.green[700]!,
       ),
       SalomonBottomBarItem(
+        icon: const Icon(Icons.dynamic_feed),
+        title: isWideScreen ? const Text('Feed') : const SizedBox.shrink(),
+        selectedColor: Colors.indigo[700]!,
+      ),
+      SalomonBottomBarItem(
         icon: const Icon(Icons.search),
         title: isWideScreen ? const Text('Recherche') : const SizedBox.shrink(),
         selectedColor: Colors.blue[700]!,
@@ -74,7 +77,6 @@ class BottomNav extends StatelessWidget {
       ),
     ];
 
-    // Ajout conditionnel
     if (isCreator) {
       items.add(
         SalomonBottomBarItem(

@@ -1,14 +1,27 @@
 package services
 
 import (
+	"bytes"
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
+	"image/jpeg"
+	"image/png"
 	"io"
+	"log"
 	"mime/multipart"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
+
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
@@ -88,6 +101,110 @@ func (s *ContentService) GetAllContents() ([]models.Content, error) {
 	return s.repo.FindAll()
 }
 
+// -------- Ajout : Protection d'accès à l'image (watermark ou original) ----------
+func (s *ContentService) ServeProtectedImage(
+	c *gin.Context,
+	contentID uuid.UUID,
+	userID uuid.UUID,
+) error {
+	log.Printf("🖼️ ServeProtectedImage - contentID: %s | userID: %s", contentID.String(), userID.String())
+
+	content, err := s.repo.FindByID(contentID)
+	if err != nil {
+		log.Printf("❌ Contenu non trouvé: %v", err)
+		return fmt.Errorf("contenu non trouvé")
+	}
+	log.Printf("📄 Contenu trouvé: %s (creatorID: %s)", content.Title, content.CreatorID.String())
+
+	subscribed, err := s.repo.IsUserSubscribedToCreator(userID, content.CreatorID)
+	if err != nil {
+		log.Printf("❌ Erreur vérif abonnement: %v", err)
+		return fmt.Errorf("erreur vérif abonnement: %v", err)
+	}
+	log.Printf("🔐 Abonné ? %v", subscribed)
+
+	imagePath := filepath.Join(s.uploadPath, content.FilePath)
+	file, err := os.Open(imagePath)
+	if err != nil {
+		log.Printf("❌ Image introuvable: %v", err)
+		return fmt.Errorf("image non trouvée")
+	}
+	defer file.Close()
+
+	ext := strings.ToLower(path.Ext(imagePath))
+	var img image.Image
+	switch ext {
+	case ".jpg", ".jpeg":
+		img, err = jpeg.Decode(file)
+	case ".png":
+		img, err = png.Decode(file)
+	default:
+		log.Printf("❌ Format d'image non supporté: %s", ext)
+		return fmt.Errorf("format d'image non supporté")
+	}
+	if err != nil {
+		log.Printf("❌ Erreur décodage image: %v", err)
+		return fmt.Errorf("erreur décodage image: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if subscribed {
+		log.Println("✅ Image originale envoyée (pas de watermark)")
+		if ext == ".png" {
+			err = png.Encode(&buf, img)
+			c.Header("Content-Type", "image/png")
+		} else {
+			err = jpeg.Encode(&buf, img, nil)
+			c.Header("Content-Type", "image/jpeg")
+		}
+	} else {
+		log.Println("🔒 Image avec watermark")
+		watermarked := addWatermark(img, "Abonne-toi pour voir l'image !")
+		if ext == ".png" {
+			err = png.Encode(&buf, watermarked)
+			c.Header("Content-Type", "image/png")
+		} else {
+			err = jpeg.Encode(&buf, watermarked, nil)
+			c.Header("Content-Type", "image/jpeg")
+		}
+	}
+	if err != nil {
+		log.Printf("❌ Erreur encoding image: %v", err)
+		return fmt.Errorf("erreur encoding image: %v", err)
+	}
+
+	c.Header("Content-Disposition", "inline; filename="+filepath.Base(imagePath))
+	c.Data(200, c.GetHeader("Content-Type"), buf.Bytes())
+	return nil
+}
+
+// Watermark visible (répété sur toute la largeur)
+func addWatermark(img image.Image, watermark string) image.Image {
+	bounds := img.Bounds()
+	rgba := image.NewRGBA(bounds)
+	draw.Draw(rgba, bounds, img, image.Point{}, draw.Src)
+
+	col := color.RGBA{255, 0, 0, 255} // Rouge vif
+
+	d := &font.Drawer{
+		Dst:  rgba,
+		Src:  image.NewUniform(col),
+		Face: basicfont.Face7x13,
+	}
+	textWidth := d.MeasureString(watermark).Round()
+	spacingX := 20
+	spacingY := 40
+
+	for y := spacingY; y < bounds.Dy(); y += spacingY {
+		for x := 0; x < bounds.Dx(); x += textWidth + spacingX {
+			d.Dot = fixed.P(x, y)
+			d.DrawString(watermark)
+		}
+	}
+	return rgba
+}
+
+// ---------- CRUD pour les contenus (utilisé par tes handlers) -----------
 func (s *ContentService) GetContentByID(id uuid.UUID) (*models.Content, error) {
 	return s.repo.FindByID(id)
 }
@@ -97,5 +214,51 @@ func (s *ContentService) UpdateContent(content *models.Content) error {
 }
 
 func (s *ContentService) DeleteContent(id uuid.UUID) error {
-	return s.repo.Delete(id)
+	return s.repo.Delete(id, s.uploadPath)
+}
+
+func (s *ContentService) GetContentsByUserID(userID uuid.UUID) ([]*models.Content, error) {
+	log.Printf("📦 Fetching contents for userID: %s\n", userID.String())
+
+	return s.repo.GetContentsByUser(userID)
+
+}
+
+func (s *ContentService) GetFeedContents(userID uuid.UUID) ([]map[string]interface{}, error) {
+	contents, err := s.repo.FindAllWithCreators()
+	if err != nil {
+		return nil, err
+	}
+
+	var feed []map[string]interface{}
+	for _, c := range contents {
+		isSub, _ := s.repo.IsUserSubscribedToCreator(userID, c.CreatorID)
+		count, _ := s.repo.CountContentLikes(c.ID)
+		liked, _ := s.repo.IsContentLikedBy(userID, c.ID)
+
+		feed = append(feed, map[string]interface{}{
+			"id":            c.ID,
+			"title":         c.Title,
+			"body":          c.Body,
+			"price":         c.Price,
+			"file_path":     c.FilePath,
+			"creator_id":    c.CreatorID,
+			"creator_name":  c.Creator.Username,
+			"created_at":    c.CreatedAt,
+			"is_subscribed": isSub,
+			"likes_count":   count,
+			"liked_by_user": liked,
+		})
+	}
+	return feed, nil
+}
+
+// LikeContent enregistre un like pour un user sur un content
+func (s *ContentService) LikeContent(userID, contentID uuid.UUID) error {
+	return s.repo.CreateLike(userID, contentID)
+}
+
+// UnlikeContent supprime un like existant
+func (s *ContentService) UnlikeContent(userID, contentID uuid.UUID) error {
+	return s.repo.DeleteLike(userID, contentID)
 }
