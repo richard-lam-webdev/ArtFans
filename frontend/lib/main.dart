@@ -77,7 +77,7 @@ class MyApp extends StatelessWidget {
           builder: (context, themeProvider, _) {
             final router = AppRouter.router(context);
             return MaterialApp.router(
-              title: 'ArtFans App',
+              title: 'ArtFans',
               theme: AppTheme.light,
               darkTheme: AppTheme.dark,
               themeMode: themeProvider.themeMode,
