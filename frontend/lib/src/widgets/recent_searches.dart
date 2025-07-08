@@ -7,7 +7,7 @@ class RecentSearches extends StatefulWidget {
   const RecentSearches({super.key, required this.onSearch});
 
   @override
-  _RecentSearchesState createState() => _RecentSearchesState();
+  State<RecentSearches> createState() => _RecentSearchesState();
 }
 
 class _RecentSearchesState extends State<RecentSearches> {
@@ -20,8 +20,9 @@ class _RecentSearchesState extends State<RecentSearches> {
     _future = _repo.all();
   }
 
-  void _clear() async {
+  Future<void> _clear() async {
     await _repo.clear();
+    if (!mounted) return;
     setState(() => _future = _repo.all());
   }
 

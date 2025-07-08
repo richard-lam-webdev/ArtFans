@@ -118,36 +118,47 @@ class _FeedCardState extends State<FeedCard> {
         ) ??
         false;
 
-    if (!confirmed) return;
+    // Si le widget a été démonté ou si l'utilisateur annule, on arrête
+    if (!mounted || !confirmed) return;
 
     setState(() => _isLoadingSubscription = true);
 
+    // Exécution de l'action
     final success =
         currentlySubscribed
             ? await subProv.unsubscribeFromCreator(creatorId)
             : await subProv.subscribeToCreator(creatorId);
 
+    // Vérification après l'appel async
+    if (!mounted) return;
+
     if (success) {
-      // met à jour le provider et notifie
+      // Mise à jour du provider
       subProv.setSubscriptionStatus(creatorId, !currentlySubscribed);
-      showCustomSnackBar(
-        context,
-        currentlySubscribed
-            ? 'Vous êtes désabonné de $creatorName'
-            : 'Abonnement à $creatorName réussi !',
-        type: SnackBarType.success,
-      );
-      // si besoin de refetch du feed
-      widget.onSubscribedChanged();
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          currentlySubscribed
+              ? 'Vous êtes désabonné de $creatorName'
+              : 'Abonnement à $creatorName réussi !',
+          type: SnackBarType.success,
+        );
+        widget.onSubscribedChanged();
+      }
     } else {
-      showCustomSnackBar(
-        context,
-        subProv.errorMessage ?? 'Erreur lors de la mise à jour',
-        type: SnackBarType.error,
-      );
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          subProv.errorMessage ?? 'Erreur lors de la mise à jour',
+          type: SnackBarType.error,
+        );
+      }
     }
 
-    if (mounted) setState(() => _isLoadingSubscription = false);
+    // Désactivation du loader si toujours monté
+    if (mounted) {
+      setState(() => _isLoadingSubscription = false);
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -164,12 +175,14 @@ class _FeedCardState extends State<FeedCard> {
     });
 
     try {
+      if (!mounted) return;
       if (newLiked) {
         await _svc.likeContent(widget.content['id'] as String);
       } else {
         await _svc.unlikeContent(widget.content['id'] as String);
       }
     } catch (e) {
+      // En cas d'erreur, rollback et afficher un SnackBar
       if (!mounted) return;
       setState(() {
         widget.content['liked_by_user'] = currentlyLiked;
@@ -182,6 +195,7 @@ class _FeedCardState extends State<FeedCard> {
   }
 
   void _openComments() {
+    // Pas d'await, utilisation synchrone du context
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -199,7 +213,6 @@ class _FeedCardState extends State<FeedCard> {
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
-    // on lit l'état directement depuis le provider
     final isSubscribed =
         creatorId != null
             ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
@@ -215,7 +228,6 @@ class _FeedCardState extends State<FeedCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // entête créateur + abonnement
           ListTile(
             leading: CircleAvatar(
               backgroundImage: NetworkImage(
@@ -236,8 +248,6 @@ class _FeedCardState extends State<FeedCard> {
                       child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
                     ),
           ),
-
-          // image protégée
           AspectRatio(
             aspectRatio: 16 / 9,
             child: ProtectedImage(
@@ -246,8 +256,6 @@ class _FeedCardState extends State<FeedCard> {
               key: ValueKey('${widget.content['id']}-$isSubscribed'),
             ),
           ),
-
-          // actions social
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -269,8 +277,6 @@ class _FeedCardState extends State<FeedCard> {
               ],
             ),
           ),
-
-          // titre + texte
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(

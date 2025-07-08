@@ -16,7 +16,7 @@ class CreatorTile extends StatefulWidget {
 class _CreatorTileState extends State<CreatorTile> {
   bool _isLoading = false;
 
-  Future<void> _toggleFollow(BuildContext context) async {
+  Future<void> _toggleFollow() async {
     final subProv = context.read<SubscriptionProvider>();
     final id = widget.creator.id;
     final name = widget.creator.username;
@@ -68,6 +68,8 @@ class _CreatorTileState extends State<CreatorTile> {
               ),
         ) ??
         false;
+
+    if (!mounted) return;
     if (!confirmed) return;
 
     setState(() => _isLoading = true);
@@ -77,8 +79,10 @@ class _CreatorTileState extends State<CreatorTile> {
             ? await subProv.unsubscribeFromCreator(id)
             : await subProv.subscribeToCreator(id);
 
+    if (!mounted) return;
+
     if (success) {
-      // Met à jour immédiatement le cache et notifie
+      // Met à jour le cache et affiche un SnackBar
       subProv.setSubscriptionStatus(id, !currentlyFollowed);
       showCustomSnackBar(
         context,
@@ -95,7 +99,8 @@ class _CreatorTileState extends State<CreatorTile> {
       );
     }
 
-    if (mounted) setState(() => _isLoading = false);
+    if (!mounted) return;
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -117,10 +122,14 @@ class _CreatorTileState extends State<CreatorTile> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
               : TextButton(
-                onPressed: () => _toggleFollow(context),
+                onPressed: _toggleFollow,
                 child: Text(isFollowed ? 'Se désabonner' : 'Suivre'),
               ),
-      onTap: () => Navigator.of(context).pushNamed('/u/${widget.creator.id}'),
+      onTap: () {
+        if (mounted) {
+          Navigator.of(context).pushNamed('/u/${widget.creator.id}');
+        }
+      },
     );
   }
 }

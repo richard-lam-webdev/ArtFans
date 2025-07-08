@@ -12,13 +12,13 @@ import '../services/api_service.dart';
 // Debouncer utilitaire (300 ms par défaut)
 // ---------------------------------------------------------------------------
 class _Debouncer {
-  _Debouncer({this.delay = const Duration(milliseconds: 300)});
-  final Duration delay;
+  _Debouncer();
+  final Duration _delay = const Duration(milliseconds: 300);
   Timer? _timer;
 
   void call(VoidCallback action) {
     _timer?.cancel();
-    _timer = Timer(delay, action);
+    _timer = Timer(_delay, action);
   }
 
   void dispose() => _timer?.cancel();

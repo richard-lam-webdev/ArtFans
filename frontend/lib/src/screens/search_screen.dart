@@ -23,7 +23,7 @@ class SearchScreen extends StatelessWidget {
 }
 
 class _SearchView extends StatelessWidget {
-  const _SearchView({super.key});
+  const _SearchView();
 
   @override
   Widget build(BuildContext context) {
@@ -182,10 +182,13 @@ class _CreatorTileState extends State<CreatorTile> {
             false;
 
         if (!confirmed) return;
+        if (!mounted) return;
 
         final ok = await subscriptionProvider.unsubscribeFromCreator(
           widget.creator.id,
         );
+        if (!mounted) return;
+
         if (ok) {
           showCustomSnackBar(
             context,
@@ -234,10 +237,13 @@ class _CreatorTileState extends State<CreatorTile> {
             false;
 
         if (!confirmed) return;
+        if (!mounted) return;
 
         final ok = await subscriptionProvider.subscribeToCreator(
           widget.creator.id,
         );
+        if (!mounted) return;
+
         if (ok) {
           showCustomSnackBar(
             context,
@@ -254,9 +260,12 @@ class _CreatorTileState extends State<CreatorTile> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       showCustomSnackBar(context, 'Erreur : $e', type: SnackBarType.error);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
