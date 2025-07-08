@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
@@ -55,6 +54,7 @@ func main() {
 	/* ---------- 5) Gin ---------- */
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(middleware.PrometheusMiddleware())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -79,12 +79,7 @@ func main() {
 
 	/* ---------- 9) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	/* ---------- 10) Routes protégées JWT ---------- */
-	/* ---------- 8) Contenus publics ---------- */
-	r.GET("/api/contents", contentHandler.GetAllContents)
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
