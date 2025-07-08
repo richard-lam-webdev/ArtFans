@@ -53,7 +53,7 @@ type Payment struct {
 // ✨ CORRIGÉ : Content avec le bon type pour creator_id
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"` // ✨ CORRIGÉ
+	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"`
 	Title     string    `gorm:"not null"`
 	Body      string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
@@ -173,19 +173,24 @@ func main() {
 	`)
 
 	log.Println("🔄 Migration des tables...")
-	if err := db.AutoMigrate(
-		&User{},         // D'abord les utilisateurs
-		&Content{},      // Puis les contenus
-		&Subscription{}, // Puis les abonnements
-		&Payment{},      // Puis les paiements
-		&Comment{},      // Puis les commentaires
-		&CommentLike{},  // Puis les likes de commentaires
-		&Like{},         // Puis les likes
-		&Message{},      // Puis les messages
-		&Report{},       // Enfin les reports
-	); err != nil {
-		log.Fatalf("AutoMigrate failed: %v", err)
-	}
+	db.Exec(`
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+			SELECT 1 FROM pg_constraint
+			WHERE conname = 'fk_content_creator'
+				AND conrelid = 'content'::regclass
+			) THEN
+			ALTER TABLE content DROP CONSTRAINT IF EXISTS fk_content_creator;
+			ALTER TABLE content ALTER COLUMN creator_id TYPE uuid USING creator_id::uuid;
+			ALTER TABLE content
+				ADD CONSTRAINT fk_content_creator
+				FOREIGN KEY (creator_id) REFERENCES users(id)
+				ON UPDATE CASCADE ON DELETE CASCADE;
+			END IF;
+		END
+		$$;
+		`)
 
 	// ✨ NOUVEAU : Recréation des contraintes APRÈS migration
 	log.Println("🔗 Recréation des contraintes de clé étrangère...")
@@ -262,6 +267,20 @@ func main() {
 	db.Exec(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscription_active ON subscription(subscriber_id, creator_id, status) WHERE status = 'active';`)
 	db.Exec(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_content_creator_id ON content(creator_id);`)
 	db.Exec(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_content_status ON content(status);`)
+
+	if err := db.AutoMigrate(
+		&User{},         // D'abord les utilisateurs
+		&Content{},      // Puis les contenus
+		&Subscription{}, // Puis les abonnements
+		&Payment{},      // Puis les paiements
+		&Comment{},      // Puis les commentaires
+		&CommentLike{},  // Puis les likes de commentaires
+		&Like{},         // Puis les likes
+		&Message{},      // Puis les messages
+		&Report{},       // Enfin les reports
+	); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
 
 	// 🔑 Seed admin
 	log.Println("👤 Vérification du compte admin...")
