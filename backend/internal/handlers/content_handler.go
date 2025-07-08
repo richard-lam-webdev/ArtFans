@@ -105,7 +105,6 @@ func (h *ContentHandler) GetAllContents(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"contents": contents})
 }
 
-
 // GET /api/contents/:id
 func (h *ContentHandler) GetContentByID(c *gin.Context) {
 	idParam := c.Param("id")
@@ -200,9 +199,8 @@ func (h *ContentHandler) DeleteContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// GetContentImage GET /api/contents/:id/image (protégé par JWT)
+// GET /api/contents/:id/image
 func (h *ContentHandler) GetContentImage(c *gin.Context) {
-	// Récupère l'ID du contenu
 	contentIDStr := c.Param("id")
 	contentID, err := uuid.Parse(contentIDStr)
 	if err != nil {
@@ -210,7 +208,6 @@ func (h *ContentHandler) GetContentImage(c *gin.Context) {
 		return
 	}
 
-	// Récupère l'ID utilisateur via le middleware JWTAuth
 	userIDRaw, ok := c.Get("userID")
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Non autorisé"})
@@ -222,9 +219,7 @@ func (h *ContentHandler) GetContentImage(c *gin.Context) {
 		return
 	}
 
-	// Utilise le service pour servir l'image avec les vérifs
-	err = h.service.ServeProtectedImage(c, contentID, userID)
-	if err != nil {
+	if err := h.service.ServeProtectedImage(c, contentID, userID); err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
 	}
@@ -250,4 +245,48 @@ func (h *ContentHandler) GetFeed(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"feed": feed})
+}
+
+// POST  /api/contents/:id/like
+func (h *ContentHandler) LikeContent(c *gin.Context) {
+	userRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, _ := uuid.Parse(userRaw.(string))
+
+	contentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID contenu invalide"})
+		return
+	}
+
+	if err := h.service.LikeContent(userID, contentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de liker"})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+// DELETE /api/contents/:id/like
+func (h *ContentHandler) UnlikeContent(c *gin.Context) {
+	userRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, _ := uuid.Parse(userRaw.(string))
+
+	contentID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID contenu invalide"})
+		return
+	}
+
+	if err := h.service.UnlikeContent(userID, contentID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de un-liker"})
+		return
+	}
+	c.Status(http.StatusOK)
 }

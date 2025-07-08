@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/handlers"
@@ -40,8 +40,19 @@ func main() {
 	subscriptionRepo := repositories.NewSubscriptionRepository()
 	subscriptionSvc := services.NewSubscriptionService(subscriptionRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionSvc)
+	commentRepo := repositories.NewCommentRepository()
+	commentLikeRepo := repositories.NewCommentLikeRepository()
+	commentSvc := services.NewCommentService(commentRepo, commentLikeRepo, userRepo)
+	commentHandler := handlers.NewCommentHandler(commentSvc)
 
-	/* ---------- 4) Gin ---------- */
+	/* ---------- 4) Message Service ---------- */
+	messageRepo := repositories.NewMessageRepository()
+	messageSvc := services.NewMessageService(messageRepo, userRepo)
+	messageHandler := handlers.NewMessageHandler(messageSvc)
+
+	adminStatsHandler := handlers.NewAdminStatsHandler()
+
+	/* ---------- 5) Gin ---------- */
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.Use(cors.New(cors.Config{
@@ -53,19 +64,24 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	/* ---------- 5) Statique pour les uploads ---------- */
+	/* ---------- 6) Statique pour les uploads ---------- */
 	r.Static("/uploads", uploadPath)
 
-	/* ---------- 6) Health ---------- */
+	/* ---------- 7) Health ---------- */
 	r.GET("/health", handlers.HealthCheck)
 
-	/* ---------- 7) Auth public ---------- */
-	auth := r.Group("/api/auth")
+	/* ---------- 8) Auth public ---------- */
 	{
+		auth := r.Group("/api/auth")
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
+	/* ---------- 9) Contenus publics ---------- */
+	r.GET("/api/contents", contentHandler.GetAllContents)
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	/* ---------- 10) Routes protégées JWT ---------- */
 	/* ---------- 8) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -74,22 +90,34 @@ func main() {
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
-		protected.GET("/contents", contentHandler.GetAllContents)
 
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
 		protected.DELETE("/contents/:id", contentHandler.DeleteContent)
-
+		protected.POST("/contents/:id/like", contentHandler.LikeContent)
+		protected.DELETE("/contents/:id/like", contentHandler.UnlikeContent)
 		protected.GET("/feed", contentHandler.GetFeed)
-		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)
-		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
-		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
-		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+		//subscriptions
+		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)     // S'abonner (30€)
+		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe) // Se désabonner
+		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)   // Vérifier abonnement
+		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)     // Mes abonnements (IDs)
+		protected.GET("/subscriptions/my", subscriptionHandler.GetMySubscriptions)     // ✨ NOUVEAU : Mes abonnements détaillés
+		protected.GET("/creator/stats", subscriptionHandler.GetCreatorStats)
+		// Comments
+		protected.GET("/contents/:id/comments", commentHandler.GetComments)
+		protected.POST("/contents/:id/comments", commentHandler.PostComment)
+		protected.POST("/comments/:commentID/like", commentHandler.LikeComment)
+		protected.DELETE("/comments/:commentID/like", commentHandler.UnlikeComment)
 
+		// Messages
+		protected.POST("/messages", messageHandler.SendMessage)
+		protected.GET("/messages", messageHandler.GetConversations)
+		protected.GET("/messages/:userId", messageHandler.GetConversation)
 	}
 
-	/* ---------- 10) Admin ---------- */
+	/* ---------- 11) Admin ---------- */
 	admin := r.Group("/api/admin",
 		middleware.JWTAuth(),
 		handlers.AdminMiddleware(),
@@ -101,9 +129,17 @@ func main() {
 		admin.DELETE("/contents/:id", handlers.DeleteContentHandler)
 		admin.PUT("/contents/:id/approve", handlers.ApproveContentHandler)
 		admin.PUT("/contents/:id/reject", handlers.RejectContentHandler)
+
+		admin.GET("/stats", adminStatsHandler.GetStats)
+		admin.GET("/dashboard", adminStatsHandler.GetDashboard)
+		admin.GET("/top-creators", adminStatsHandler.GetTopCreators)
+		admin.GET("/top-contents", adminStatsHandler.GetTopContents)
+		admin.GET("/flop-contents", adminStatsHandler.GetFlopContents)
+		admin.GET("/revenue-chart", adminStatsHandler.GetRevenueChart)
+		admin.GET("/quick-stats", adminStatsHandler.GetQuickStats)
 	}
 
-	/* ---------- 11) Start ---------- */
+	/* ---------- 12) Start ---------- */
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Serveur sur %s…", addr)
 	if err := r.Run(addr); err != nil {

@@ -42,6 +42,8 @@ dependencies:
   universal_platform: ^1.0.0+1
   intl: ^0.18.0
   salomon_bottom_bar: ^3.3.2
+  timeago: ^3.7.1
+  fl_chart: ^1.0.0 
 
 dev_dependencies:
   flutter_test:
@@ -66,7 +68,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - .env
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
