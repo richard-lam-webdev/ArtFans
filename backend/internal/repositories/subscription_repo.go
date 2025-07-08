@@ -25,8 +25,7 @@ func (r *SubscriptionRepository) Create(sub *models.Subscription) error {
 func (r *SubscriptionRepository) Delete(subscriberID, creatorID uuid.UUID) error {
 	return r.db.
 		Where("subscriber_id = ? AND creator_id = ?", subscriberID, creatorID).
-		Delete(&models.Subscription{}).
-		Error
+		Delete(&models.Subscription{}).Error
 }
 
 // IsSubscribed vérifie si subscriber est abonné à creator
