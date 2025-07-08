@@ -16,7 +16,7 @@ import '../screens/feed_screen.dart';
 import '../screens/conversations_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/my_subscriptions_screen.dart';
-
+import '../screens/splash_screen.dart'; 
 
 import '../../main.dart';
 
@@ -26,30 +26,56 @@ class AppRouter {
     final userProv = context.read<UserProvider>();
 
     return GoRouter(
-      initialLocation: '/login',
+      initialLocation: '/splash', 
       refreshListenable: Listenable.merge([auth, userProv]),
       observers: [routeObserver],
 
       redirect: (BuildContext _, GoRouterState state) {
-        final loggedIn = auth.status == AuthStatus.authenticated;
-        final loggingIn = state.uri.toString() == '/login';
-        final registering = state.uri.toString() == '/register';
-        final goingToAdmin = state.uri.toString() == '/admin';
+        final isAuthenticated = auth.status == AuthStatus.authenticated;
+        final isLoading = auth.status == AuthStatus.loading;
+        final isInitialized = auth.isInitialized;
+        
+        final currentPath = state.uri.toString();
 
-        if (!loggedIn && !loggingIn && !registering) {
+        if (!isInitialized || isLoading) {
+          if (currentPath != '/splash') {
+            return '/splash';
+          }
+          return null;
+        }
+
+        final loggingIn = currentPath == '/login';
+        final registering = currentPath == '/register';
+        final goingToAdmin = currentPath == '/admin';
+        final onSplash = currentPath == '/splash';
+
+        // ✨ Si on est sur le splash et initialisé, rediriger selon l'état
+        if (onSplash && isInitialized) {
+          return isAuthenticated ? '/home' : '/login';
+        }
+
+        if (!isAuthenticated && !loggingIn && !registering && !onSplash) {
           return '/login';
         }
-        if (loggedIn && (loggingIn || registering)) {
+        
+        if (isAuthenticated && (loggingIn || registering)) {
           return '/home';
         }
+        
         final role = userProv.user?['Role'] as String?;
         if (goingToAdmin && role != 'admin') {
           return '/home';
         }
+        
         return null;
       },
 
       routes: <GoRoute>[
+        GoRoute(
+          path: '/splash',
+          name: 'splash',
+          builder: (context, state) => const SplashScreen(),
+        ),
         GoRoute(
           path: '/login',
           name: 'login',
@@ -65,7 +91,6 @@ class AppRouter {
           name: 'home',
           builder: (context, state) => const FeedScreen(),
         ),
-
         GoRoute(
           path: '/add-content',
           name: 'add_content',
