@@ -10,13 +10,59 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   String? _token;
   String? _errorMessage;
-  AuthStatus _status = AuthStatus.unauthenticated;
+  AuthStatus _status = AuthStatus.loading; 
+  bool _isInitialized = false; 
 
-  AuthProvider({required AuthService authService}) : _authService = authService;
+  AuthProvider({required AuthService authService}) : _authService = authService {
+    _initializeAuth(); 
+  }
 
   AuthStatus get status => _status;
   String? get token => _token;
   String? get errorMessage => _errorMessage;
+  bool get isInitialized => _isInitialized; 
+
+  Future<void> _initializeAuth() async {
+    try {
+      final storedToken = await _authService.getToken();
+      if (storedToken != null && storedToken.isNotEmpty) {
+        await _validateToken(storedToken);
+      } else {
+        _status = AuthStatus.unauthenticated;
+      }
+    } catch (e) {
+      debugPrint('Erreur lors de l\'initialisation de l\'auth: $e');
+      _status = AuthStatus.unauthenticated;
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _validateToken(String token) async {
+    try {
+      // Teste le token en récupérant le profil
+      await _authService.fetchProfile();
+      _token = token;
+      _status = AuthStatus.authenticated;
+      _errorMessage = null;
+    } catch (e) {
+      // Token invalide ou expiré
+      debugPrint('Token invalide: $e');
+      await _authService.logout(); // Supprime le token invalide
+      _token = null;
+      _status = AuthStatus.unauthenticated;
+    }
+  }
+
+  Future<void> checkAuthStatus() async {
+    if (_status == AuthStatus.loading) return; // Déjà en cours
+    
+    _status = AuthStatus.loading;
+    notifyListeners();
+    
+    await _initializeAuth();
+  }
 
   /// Tente de se connecter ; en cas de succès on stocke le token
   Future<void> login({required String email, required String password}) async {
