@@ -94,10 +94,13 @@ func main() {
 		protected.POST("/contents/:id/like", contentHandler.LikeContent)
 		protected.DELETE("/contents/:id/like", contentHandler.UnlikeContent)
 		protected.GET("/feed", contentHandler.GetFeed)
-		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)
-		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
-		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
-		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+		//subscriptions
+		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)     // S'abonner (30€)
+		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe) // Se désabonner
+		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)   // Vérifier abonnement
+		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)     // Mes abonnements (IDs)
+		protected.GET("/subscriptions/my", subscriptionHandler.GetMySubscriptions)     // ✨ NOUVEAU : Mes abonnements détaillés
+		protected.GET("/creator/stats", subscriptionHandler.GetCreatorStats)
 		// Comments
 		protected.GET("/contents/:id/comments", commentHandler.GetComments)
 		protected.POST("/contents/:id/comments", commentHandler.PostComment)
