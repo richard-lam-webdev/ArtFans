@@ -54,7 +54,6 @@ type Payment struct {
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"`
-	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"` // ✨ CORRIGÉ
 	Title     string    `gorm:"not null"`
 	Body      string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
@@ -193,20 +192,6 @@ func main() {
 		$$;
 		`)
 
-	if err := db.AutoMigrate(
-		&User{},         // D'abord les utilisateurs
-		&Content{},      // Puis les contenus
-		&Subscription{}, // Puis les abonnements
-		&Payment{},      // Puis les paiements
-		&Comment{},      // Puis les commentaires
-		&CommentLike{},  // Puis les likes de commentaires
-		&Like{},         // Puis les likes
-		&Message{},      // Puis les messages
-		&Report{},       // Enfin les reports
-	); err != nil {
-		log.Fatalf("AutoMigrate failed: %v", err)
-	}
-
 	// ✨ NOUVEAU : Recréation des contraintes APRÈS migration
 	log.Println("🔗 Recréation des contraintes de clé étrangère...")
 
@@ -282,6 +267,20 @@ func main() {
 	db.Exec(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_subscription_active ON subscription(subscriber_id, creator_id, status) WHERE status = 'active';`)
 	db.Exec(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_content_creator_id ON content(creator_id);`)
 	db.Exec(`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_content_status ON content(status);`)
+
+	if err := db.AutoMigrate(
+		&User{},         // D'abord les utilisateurs
+		&Content{},      // Puis les contenus
+		&Subscription{}, // Puis les abonnements
+		&Payment{},      // Puis les paiements
+		&Comment{},      // Puis les commentaires
+		&CommentLike{},  // Puis les likes de commentaires
+		&Like{},         // Puis les likes
+		&Message{},      // Puis les messages
+		&Report{},       // Enfin les reports
+	); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
 
 	// 🔑 Seed admin
 	log.Println("👤 Vérification du compte admin...")
