@@ -1,3 +1,5 @@
+// lib/src/screens/feed_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -49,26 +51,19 @@ class _FeedScreenState extends State<FeedScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 0,
-        title: InkWell(
-          onTap:
-              () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const SearchScreen())),
-          child: IgnorePointer(
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Recherche',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ),
+        title: const Text("Fil d'actualité"),
         actions: [
+          // Icône Recherche
+          IconButton(
+            tooltip: 'Recherche',
+            icon: const Icon(Icons.search_outlined),
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SearchScreen()));
+            },
+          ),
+          // Badge Messages
           Consumer<MessageProvider>(
             builder: (context, messageProvider, _) {
               final unreadCount = messageProvider.totalUnreadCount;
@@ -109,6 +104,7 @@ class _FeedScreenState extends State<FeedScreen> {
               );
             },
           ),
+          // Toggle Thème
           Consumer<ThemeProvider>(
             builder:
                 (ctx, theme, _) => IconButton(
