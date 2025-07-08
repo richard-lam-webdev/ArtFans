@@ -48,6 +48,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.10.0
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -70,6 +72,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - .env
+    - assets/icons/app_icon.png
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
@@ -98,3 +101,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_icons:
+  # chemin vers votre image source (square recommandé, au moins 512×512)
+  image_path: "assets/icons/app_icon.png"
+  # génère pour Android et iOS
+  android: true
+  ios: true
+  # (optionnel) nom du launcherActivity pour Android v2
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icons/foreground.png" # si icône adaptative

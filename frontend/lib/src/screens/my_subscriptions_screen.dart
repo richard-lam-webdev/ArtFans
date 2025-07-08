@@ -33,7 +33,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<SubscriptionProvider>().fetchMySubscriptions(),
+            onPressed: () =>
+                context.read<SubscriptionProvider>().fetchMySubscriptions(),
           ),
         ],
       ),
@@ -110,10 +111,15 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withAlpha((0.1 * 255).round()),
+                  color: Theme.of(context)
+                      .primaryColor
+                      .withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                  color: Theme.of(context).primaryColor.withAlpha((0.2 * 255).round()),                  ),
+                    color: Theme.of(context)
+                        .primaryColor
+                        .withAlpha((0.2 * 255).round()),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,8 +127,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                     Text(
                       'Résumé de vos abonnements',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -153,7 +159,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                   itemCount: subscriptions.length,
                   itemBuilder: (context, index) {
                     final subscription = subscriptions[index];
-                    return _buildSubscriptionCard(context, subscription, provider);
+                    return _buildSubscriptionCard(
+                        context, subscription, provider);
                   },
                 ),
               ),
@@ -161,11 +168,12 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
           );
         },
       ),
-      bottomNavigationBar: const BottomNav(currentIndex: 2), // Index pour "Mes abonnements"
+      bottomNavigationBar: const BottomNav(currentIndex: 2),
     );
   }
 
-  Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
+  Widget _buildSummaryItem(
+      String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
@@ -186,17 +194,13 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
     );
   }
 
-  Widget _buildSubscriptionCard(
-    BuildContext context,
-    Map<String, dynamic> subscription,
-    SubscriptionProvider provider,
-  ) {
+  Widget _buildSubscriptionCard(BuildContext context,
+      Map<String, dynamic> subscription, SubscriptionProvider provider) {
     final creatorId = subscription['creator_id'].toString();
     final startDate = subscription['start_date'].toString();
     final endDate = subscription['end_date'].toString();
     final daysRemaining = subscription['days_remaining'] as int? ?? 0;
     final isActive = subscription['is_active'] as bool? ?? false;
-    subscription['status'].toString();
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -205,6 +209,7 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // En-tête
             Row(
               children: [
                 CircleAvatar(
@@ -220,11 +225,9 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Créateur ID: ${creatorId.substring(0, 8)}...', // Affichage partiel de l'ID
+                        'Créateur ID: ${creatorId.substring(0, 8)}...',
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                            fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       Text(
                         provider.formatEndDate(endDate),
@@ -240,7 +243,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isActive ? Colors.green : Colors.red,
                         borderRadius: BorderRadius.circular(12),
@@ -248,42 +252,53 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                       child: Text(
                         isActive ? 'Actif' : 'Expiré',
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                     const SizedBox(height: 4),
                     const Text(
                       '30€',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ],
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            
-            // Informations détaillées
+
+            // Informations détaillées avec nouveau style
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: Colors.lightBlue.shade50, // fond pastel bleu
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
                 children: [
-                  _buildDetailRow('Début', _formatDate(startDate)),
+                  _buildDetailRow(
+                    'Début',
+                    _formatDate(startDate),
+                    textColor: Colors.blue.shade900,
+                    fontWeight: FontWeight.w600,
+                  ),
                   const SizedBox(height: 4),
-                  _buildDetailRow('Fin', _formatDate(endDate)),
+                  _buildDetailRow(
+                    'Fin',
+                    _formatDate(endDate),
+                    textColor: Colors.blue.shade900,
+                    fontWeight: FontWeight.w600,
+                  ),
                   const SizedBox(height: 4),
                   _buildDetailRow(
                     'Statut',
                     provider.formatDaysRemaining(daysRemaining),
+                    textColor: daysRemaining > 0
+                        ? Colors.green.shade700
+                        : Colors.red.shade700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ],
               ),
@@ -295,7 +310,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => _showUnsubscribeDialog(context, creatorId, provider),
+                      onPressed: () =>
+                          _showUnsubscribeDialog(context, creatorId, provider),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
@@ -307,7 +323,6 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        // Aller voir le profil du créateur ou son contenu
                         showCustomSnackBar(
                           context,
                           'Fonctionnalité à venir : voir le profil du créateur',
@@ -326,15 +341,24 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  /// Ligne de détail qui accepte couleur et poids de police
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    Color textColor = Colors.black87,
+    FontWeight fontWeight = FontWeight.normal,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(color: textColor, fontWeight: fontWeight),
         ),
-        Text(value),
+        Text(
+          value,
+          style: TextStyle(color: textColor, fontWeight: fontWeight),
+        ),
       ],
     );
   }
