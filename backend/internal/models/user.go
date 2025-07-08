@@ -38,25 +38,21 @@ func (r Role) GormDBDataType(db *gorm.DB, field *schema.Field) string {
 // User représente un utilisateur de l’application.
 // Pour Postgres, on laisse le type "uuid" (sans DEFAULT) et on gère l'UUID côté Go.
 type User struct {
-	ID             uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	Username       string     `gorm:"column:username;unique;not null" json:"username"`
-	Email          string     `gorm:"unique;not null" json:"-"`
-	HashedPassword string     `gorm:"column:hashed_password;not null" json:"-"`
-	Role           Role       `gorm:"type:role;not null" json:"role"`
-	CreatedAt      time.Time  `gorm:"column:created_at;autoCreateTime" json:"created_at"`
-
-	// Nouveaux champs pour le profil public
-	Bio       string `gorm:"type:text" json:"bio"`
-	AvatarURL string `gorm:"column:avatar_url" json:"avatar_url"`
-
-	// Autres champs existants
-	SIRET       string     `gorm:"size:14" json:"siret"`
-	LegalStatus string     `json:"legal_status"`
-	LegalName   string     `json:"legal_name"`
-	Address     string     `json:"address"`
-	Country     string     `json:"country"`
-	VATNumber   string     `gorm:"column:vat_number" json:"vat_number"`
-	BirthDate   *time.Time `json:"birth_date"`
+	ID             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Username       string    `gorm:"column:username;unique;not null"`
+	Email          string    `gorm:"unique;not null"`
+	HashedPassword string    `gorm:"column:hashed_password;not null"`
+	Role           Role      `gorm:"type:role;not null"`
+	CreatedAt      time.Time `gorm:"column:created_at;autoCreateTime"`
+	SIRET          string    `gorm:"size:14"`
+	LegalStatus    string
+	LegalName      string
+	Address        string
+	Country        string
+	VATNumber      string
+	BirthDate      *time.Time
+	Bio            string `gorm:"type:text" json:"bio"`
+	AvatarURL      string `gorm:"column:avatar_url" json:"avatar_url"`
 }
 
 // BeforeCreate est un hook GORM qui génère un UUID pour l'utilisateur si nécessaire,
