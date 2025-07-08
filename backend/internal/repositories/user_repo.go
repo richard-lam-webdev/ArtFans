@@ -27,9 +27,11 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 	return &u, err
 }
 
-// Create ajoute un nouvel utilisateur en base.
-func (r *UserRepository) Create(u *models.User) error {
-	return r.db.Create(u).Error
+func (r *UserRepository) Create(user *models.User) error {
+	if err := r.db.Create(user).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 // FindByID renvoie nil,nil si pas trouvé, ou l'erreur de GORM si autre.
