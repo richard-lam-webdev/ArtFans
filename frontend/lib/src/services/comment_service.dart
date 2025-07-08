@@ -1,14 +1,20 @@
 // lib/services/comment_service.dart
 import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class CommentService {
   final _storage = const FlutterSecureStorage();
-  final String _baseUrl = const String.fromEnvironment(
-    'API_URL',
-    defaultValue: 'http://localhost:8080',
-  );
+  final String _baseUrl = (() {
+    try {
+      return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+    } catch (_) {
+      return 'http://localhost:8080';
+    }
+  })();
+
+  String get baseUrl => _baseUrl;
 
   Future<String?> _getToken() => _storage.read(key: 'jwt_token');
 
