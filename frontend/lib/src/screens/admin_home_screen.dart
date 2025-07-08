@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/admin_provider.dart';
 import '../providers/admin_content_provider.dart';
+import '../providers/admin_stats_provider.dart';
 import '../widgets/bottom_nav.dart';
+import '../widgets/admin_dashboard_widgets.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -19,8 +21,15 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final adminStats = context.read<AdminStatsProvider>();
+      adminStats.fetchDashboard();
+      adminStats.fetchRevenueChart();
+      adminStats.fetchTopCreators();
+      adminStats.fetchQuickStats();
+
       context.read<AdminProvider>().fetchUsers();
       context.read<AdminContentProvider>().fetchContents();
+      context.read<AdminStatsProvider>().fetchDashboard();
     });
   }
 
@@ -29,17 +38,27 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final auth = context.read<AuthProvider>();
 
     return DefaultTabController(
-      length: 2,
+      length: 3, // ✨ MODIFIÉ : 3 onglets au lieu de 2
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Back-office Admin'),
           bottom: const TabBar(
             tabs: [
+              Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)), // ✨ NOUVEAU
               Tab(text: 'Utilisateurs', icon: Icon(Icons.person)),
               Tab(text: 'Contenus', icon: Icon(Icons.article)),
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                // Rafraîchir toutes les données
+                context.read<AdminProvider>().fetchUsers();
+                context.read<AdminContentProvider>().fetchContents();
+                context.read<AdminStatsProvider>().refreshAll();
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.logout),
               onPressed: () {
@@ -49,15 +68,208 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             ),
           ],
         ),
-        body: const TabBarView(children: [_UsersTab(), _ContentsTab()]),
+        body: TabBarView(
+          children: [
+            _DashboardTab(), // ✨ NOUVEAU
+            _UsersTab(),
+            _ContentsTab(),
+          ],
+        ),
         bottomNavigationBar: const BottomNav(currentIndex: 4),
       ),
     );
   }
 }
 
+// ✨ NOUVEAU : Onglet Dashboard
+class _DashboardTab extends StatelessWidget {
+  const _DashboardTab();
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+    final prov = context.watch<AdminStatsProvider>();
+
+    if (prov.status == AdminStatsStatus.loading ||
+        prov.status == AdminStatsStatus.initial) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (prov.status == AdminStatsStatus.error) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Erreur : ${prov.errorMessage}',
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => prov.fetchDashboard(),
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final dashboard = prov.dashboard;
+    if (dashboard.isEmpty) {
+      return const Center(
+        child: Text('Aucune donnée disponible'),
+      );
+    }
+
+    final stats = dashboard['stats'] as Map<String, dynamic>? ?? {};
+    final topCreators = dashboard['top_creators'] as List<dynamic>? ?? [];
+    final recentRevenue = dashboard['recent_revenue'] as List<dynamic>? ?? [];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sélecteur de période
+          PeriodSelector(
+            selectedPeriod: prov.selectedPeriod,
+            onPeriodChanged: (period) => prov.setPeriod(period),
+          ),
+          
+          const SizedBox(height: 16),
+
+          // KPI Grid
+          KpiGrid(
+            stats: stats,
+            formatCurrency: prov.formatCurrency,
+            formatPercentage: prov.formatPercentage,
+            formatNumber: prov.formatNumber,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Graphiques et listes
+          if (MediaQuery.of(context).size.width > 800)
+            // Layout large : côte à côte
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: RevenueChart(
+                    data: List<Map<String, dynamic>>.from(recentRevenue),
+                    title: 'Revenus des 7 derniers jours',
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 1,
+                  child: TopCreatorsWidget(
+                    creators: List<Map<String, dynamic>>.from(topCreators),
+                    title: 'Top 5 Créateurs',
+                  ),
+                ),
+              ],
+            )
+          else
+            // Layout mobile : en colonne
+            Column(
+              children: [
+                RevenueChart(
+                  data: List<Map<String, dynamic>>.from(recentRevenue),
+                  title: 'Revenus des 7 derniers jours',
+                ),
+                const SizedBox(height: 16),
+                TopCreatorsWidget(
+                  creators: List<Map<String, dynamic>>.from(topCreators),
+                  title: 'Top 5 Créateurs',
+                ),
+              ],
+            ),
+
+          const SizedBox(height: 24),
+
+          // Informations supplémentaires
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Résumé de la période',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSummaryRow(
+                    context,
+                    'Revenus moyens par utilisateur',
+                    prov.formatCurrency((stats['avg_revenue_per_user'] ?? 0.0).round()),
+                  ),
+                  _buildSummaryRow(
+                    context,
+                    'Contenus moyens par créateur',
+                    (stats['avg_content_per_creator'] ?? 0.0).toStringAsFixed(1),
+                  ),
+                  _buildSummaryRow(
+                    context,
+                    'Contenus approuvés',
+                    '${stats['approved_contents'] ?? 0}',
+                  ),
+                  _buildSummaryRow(
+                    context,
+                    'Contenus rejetés',
+                    '${stats['rejected_contents'] ?? 0}',
+                  ),
+                  _buildSummaryRow(
+                    context,
+                    'Période analysée',
+                    '${stats['period'] ?? 'N/A'}',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    } catch (e, stack) {
+      debugPrint('❌ Erreur dans _DashboardTab : $e\n$stack');
+      return Center(child: Text('Erreur interne : $e'));
+    }
+  }
+
+  Widget _buildSummaryRow(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ----------------------------
-// Onglet Utilisateurs
+// Onglet Utilisateurs (existant)
 // ----------------------------
 class _UsersTab extends StatelessWidget {
   const _UsersTab();
@@ -91,78 +303,77 @@ class _UsersTab extends StatelessWidget {
           DataColumn(label: Text('Inscrit le')),
           DataColumn(label: Text('Action')),
         ],
-        rows:
-            users.map((u) {
-              final id = u['ID'] as String;
-              final role = u['Role'] as String;
-              final createdAt = u['CreatedAt'] as String;
-              final isSubscriber = role == 'subscriber';
+        rows: users.map((u) {
+          final id = u['ID'] as String;
+          final role = u['Role'] as String;
+          final createdAt = u['CreatedAt'] as String;
+          final isSubscriber = role == 'subscriber';
 
-              return DataRow(
-                cells: [
-                  DataCell(Text(u['Username'] as String)),
-                  DataCell(Text(u['Email'] as String)),
-                  DataCell(Text(role)),
-                  DataCell(Text(createdAt)),
-                  DataCell(
-                    isSubscriber
-                        // Si subscriber → bouton Promouvoir
-                        ? ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              await context.read<AdminProvider>().updateRole(
-                                id,
-                                'creator',
-                              );
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Promu en creator !'),
-                                ),
-                              );
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Erreur : $e')),
-                              );
-                            }
-                          },
-                          child: const Text('Promouvoir'),
-                        )
-                        // Sinon (creator/admin) → bouton Rétrograder
-                        : ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              await context.read<AdminProvider>().updateRole(
-                                id,
-                                'subscriber',
-                              );
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Rétrogradé en subscriber !'),
-                                ),
-                              );
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Erreur : $e')),
-                              );
-                            }
-                          },
-                          child: const Text('Rétrograder'),
-                        ),
-                  ),
-                ],
-              );
-            }).toList(),
+          return DataRow(
+            cells: [
+              DataCell(Text(u['Username'] as String)),
+              DataCell(Text(u['Email'] as String)),
+              DataCell(Text(role)),
+              DataCell(Text(createdAt)),
+              DataCell(
+                isSubscriber
+                    // Si subscriber → bouton Promouvoir
+                    ? ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            await context.read<AdminProvider>().updateRole(
+                                  id,
+                                  'creator',
+                                );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Promu en creator !'),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erreur : $e')),
+                            );
+                          }
+                        },
+                        child: const Text('Promouvoir'),
+                      )
+                    // Sinon (creator/admin) → bouton Rétrograder
+                    : ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            await context.read<AdminProvider>().updateRole(
+                                  id,
+                                  'subscriber',
+                                );
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Rétrogradé en subscriber !'),
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Erreur : $e')),
+                            );
+                          }
+                        },
+                        child: const Text('Rétrograder'),
+                      ),
+              ),
+            ],
+          );
+        }).toList(),
       ),
     );
   }
 }
 
 // ----------------------------
-// Onglet Contenus
+// Onglet Contenus (existant)
 // ----------------------------
 class _ContentsTab extends StatelessWidget {
   const _ContentsTab();
@@ -196,56 +407,55 @@ class _ContentsTab extends StatelessWidget {
           DataColumn(label: Text('Statut')),
           DataColumn(label: Text('Actions')),
         ],
-        rows:
-            contents.map((c) {
-              final id = c['ID'] as String? ?? '';
-              final title = c['Title'] as String? ?? '';
-              final author = c['AuthorID'] as String? ?? '';
-              final createdAt = c['CreatedAt'] as String? ?? '';
-              final status = c['Status'] as String? ?? 'pending';
+        rows: contents.map((c) {
+          final id = c['ID'] as String? ?? '';
+          final title = c['Title'] as String? ?? '';
+          final author = c['AuthorID'] as String? ?? '';
+          final createdAt = c['CreatedAt'] as String? ?? '';
+          final status = c['Status'] as String? ?? 'pending';
 
-              Widget actionCell;
-              if (status == 'pending') {
-                actionCell = Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      tooltip: 'Approuver',
-                      onPressed: () => prov.approveContent(id),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      tooltip: 'Rejeter',
-                      onPressed: () => prov.rejectContent(id),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent),
-                      tooltip: 'Supprimer',
-                      onPressed: () => prov.deleteContent(id),
-                    ),
-                  ],
-                );
-              } else {
-                final approved = status == 'approved';
-                actionCell = Text(
-                  approved ? '✅ Approuvé' : '🚫 Rejeté',
-                  style: TextStyle(
-                    color: approved ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }
+          Widget actionCell;
+          if (status == 'pending') {
+            actionCell = Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.check, color: Colors.green),
+                  tooltip: 'Approuver',
+                  onPressed: () => prov.approveContent(id),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  tooltip: 'Rejeter',
+                  onPressed: () => prov.rejectContent(id),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.redAccent),
+                  tooltip: 'Supprimer',
+                  onPressed: () => prov.deleteContent(id),
+                ),
+              ],
+            );
+          } else {
+            final approved = status == 'approved';
+            actionCell = Text(
+              approved ? '✅ Approuvé' : '🚫 Rejeté',
+              style: TextStyle(
+                color: approved ? Colors.green : Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          }
 
-              return DataRow(
-                cells: [
-                  DataCell(Text(title)),
-                  DataCell(Text(author)),
-                  DataCell(Text(createdAt)),
-                  DataCell(Text(status)),
-                  DataCell(actionCell),
-                ],
-              );
-            }).toList(),
+          return DataRow(
+            cells: [
+              DataCell(Text(title)),
+              DataCell(Text(author)),
+              DataCell(Text(createdAt)),
+              DataCell(Text(status)),
+              DataCell(actionCell),
+            ],
+          );
+        }).toList(),
       ),
     );
   }

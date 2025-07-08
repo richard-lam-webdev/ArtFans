@@ -29,6 +29,11 @@ func main() {
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
+	/* ---------- 2b) Repos pour profil créateur ---------- */
+	subRepo := repositories.NewSubscriptionRepository()
+	publicContentRepo := repositories.NewPublicContentRepository()
+	handlers.SetCreatorRepos(userRepo, subRepo, publicContentRepo)
+
 	/* ---------- 3) ContentService ---------- */
 	contentRepo := repositories.NewContentRepository()
 	uploadPath := config.C.UploadPath
@@ -50,6 +55,8 @@ func main() {
 	messageSvc := services.NewMessageService(messageRepo, userRepo)
 	messageHandler := handlers.NewMessageHandler(messageSvc)
 
+	adminStatsHandler := handlers.NewAdminStatsHandler()
+
 	/* ---------- 5) Gin ---------- */
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
@@ -69,8 +76,8 @@ func main() {
 	r.GET("/health", handlers.HealthCheck)
 
 	/* ---------- 8) Auth public ---------- */
-	auth := r.Group("/api/auth")
 	{
+		auth := r.Group("/api/auth")
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
@@ -79,7 +86,10 @@ func main() {
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	/* ---------- 10) Routes protégées JWT ---------- */
+	/* ---------- 8b) Profil créateur public ---------- */
+	r.GET("/api/creators/:username", handlers.GetPublicCreatorProfileHandler)
+
+	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
@@ -123,6 +133,14 @@ func main() {
 		admin.DELETE("/contents/:id", handlers.DeleteContentHandler)
 		admin.PUT("/contents/:id/approve", handlers.ApproveContentHandler)
 		admin.PUT("/contents/:id/reject", handlers.RejectContentHandler)
+
+		admin.GET("/stats", adminStatsHandler.GetStats)
+		admin.GET("/dashboard", adminStatsHandler.GetDashboard)
+		admin.GET("/top-creators", adminStatsHandler.GetTopCreators)
+		admin.GET("/top-contents", adminStatsHandler.GetTopContents)
+		admin.GET("/flop-contents", adminStatsHandler.GetFlopContents)
+		admin.GET("/revenue-chart", adminStatsHandler.GetRevenueChart)
+		admin.GET("/quick-stats", adminStatsHandler.GetQuickStats)
 	}
 
 	/* ---------- 12) Start ---------- */
