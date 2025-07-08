@@ -8,13 +8,13 @@ class Creator {
     required this.isFollowed,
   });
 
-  final int id;
+  final String id;
   final String username;
   final String avatarUrl;
   bool isFollowed;
 
   factory Creator.fromJson(Map<String, dynamic> json) => Creator(
-    id: json['id'] as int,
+    id: json['id'] as String,
     username: json['username'] as String,
     avatarUrl: json['avatar_url'] as String? ?? '',
     isFollowed: json['is_followed'] as bool? ?? false,

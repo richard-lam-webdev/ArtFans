@@ -8,13 +8,13 @@ class Content {
     required this.creatorName,
   });
 
-  final int id;
+  final String id;
   final String title;
   final String thumbnailUrl;
   final String creatorName;
 
   factory Content.fromJson(Map<String, dynamic> json) => Content(
-    id: json['id'] as int,
+    id: json['id'] as String,
     title: json['title'] as String? ?? '',
     thumbnailUrl: json['thumbnail_url'] as String? ?? '',
     creatorName: json['creator_name'] as String? ?? '',

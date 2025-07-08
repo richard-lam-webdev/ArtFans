@@ -48,7 +48,7 @@ type Payment struct {
 
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CreatorID uuid.UUID `gorm:"column:creator_id;not null"`
+	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"`
 	Title     string    `gorm:"not null"`
 	Body      string    `gorm:"not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`

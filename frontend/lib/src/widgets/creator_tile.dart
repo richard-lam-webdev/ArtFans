@@ -1,10 +1,9 @@
-// lib/widgets/creator_tile.dart
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-
+import '../services/api_service.dart';
 import '../models/creator.dart';
-import '../providers/auth_provider.dart'; // pour récupérer le token
+import '../providers/auth_provider.dart';
 
 class CreatorTile extends StatefulWidget {
   final Creator creator;
@@ -42,7 +41,7 @@ class _CreatorTileState extends State<CreatorTile> {
   Future<void> _toggleFollow(String token) async {
     final client = http.Client();
     final url = Uri.parse(
-      'http://localhost:8080/api/subscriptions/${widget.creator.id}',
+      '${ApiService.baseUrl}/api/subscriptions/${widget.creator.id}',
     );
     final headers = {
       'Authorization': 'Bearer $token',

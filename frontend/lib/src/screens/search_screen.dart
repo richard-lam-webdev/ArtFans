@@ -1,12 +1,11 @@
-import '../widgets/recent_searches.dart';
-import '../providers/recent_search_provider.dart';
-
+// lib/src/screens/search_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-// Le provider expose également les classes Creator et Content
 import '../providers/search_provider.dart';
+import '../providers/recent_search_provider.dart';
+import '../widgets/recent_searches.dart';
 
 class SearchScreen extends StatelessWidget {
   const SearchScreen({super.key});
@@ -65,10 +64,7 @@ class _SearchView extends StatelessWidget {
     }
     if (search.query.isEmpty) {
       return RecentSearches(
-        onSearch: (q) {
-          // remplit le champ et déclenche la recherche
-          context.read<SearchProvider>().onQueryChanged(q);
-        },
+        onSearch: (q) => context.read<SearchProvider>().onQueryChanged(q),
       );
     }
     if (search.creators.isEmpty && search.contents.isEmpty) {
@@ -77,34 +73,27 @@ class _SearchView extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        if (search.creators.isNotEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Créateurs',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+        if (search.creators.isNotEmpty) ...[
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            sliver: SliverToBoxAdapter(
+              child: Text('Créateurs', style: TextStyle(fontSize: 18)),
             ),
           ),
-        if (search.creators.isNotEmpty)
           SliverList(
             delegate: SliverChildBuilderDelegate(
-              (context, index) => CreatorTile(creator: search.creators[index]),
+              (_, i) => CreatorTile(creator: search.creators[i]),
               childCount: search.creators.length,
             ),
           ),
-        if (search.contents.isNotEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Contenus',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+        ],
+        if (search.contents.isNotEmpty) ...[
+          const SliverPadding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            sliver: SliverToBoxAdapter(
+              child: Text('Contenus', style: TextStyle(fontSize: 18)),
             ),
           ),
-        if (search.contents.isNotEmpty)
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             sliver: SliverGrid(
@@ -115,23 +104,23 @@ class _SearchView extends StatelessWidget {
                 childAspectRatio: 3 / 4,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) =>
-                    ContentCard(content: search.contents[index]),
+                (_, i) => ContentCard(content: search.contents[i]),
                 childCount: search.contents.length,
               ),
             ),
           ),
+        ],
       ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Widgets UI (sont typés avec Creator & Content)
+// Widgets UI (typés Creator & Content)
 // ---------------------------------------------------------------------------
 
 class CreatorTile extends StatelessWidget {
-  const CreatorTile({super.key, required this.creator});
+  const CreatorTile({Key? key, required this.creator}) : super(key: key);
 
   final Creator creator;
 
@@ -141,9 +130,7 @@ class CreatorTile extends StatelessWidget {
       leading: CircleAvatar(backgroundImage: NetworkImage(creator.avatarUrl)),
       title: Text(creator.username),
       trailing: TextButton(
-        onPressed: () {
-          // TODO: appel follow/unfollow
-        },
+        onPressed: () {}, // implémenté ailleurs
         child: Text(creator.isFollowed ? 'Abonné' : 'Suivre'),
       ),
       onTap: () => context.push('/u/${creator.id}'),
@@ -152,7 +139,7 @@ class CreatorTile extends StatelessWidget {
 }
 
 class ContentCard extends StatelessWidget {
-  const ContentCard({super.key, required this.content});
+  const ContentCard({Key? key, required this.content}) : super(key: key);
 
   final Content content;
 
