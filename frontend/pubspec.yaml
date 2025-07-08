@@ -43,6 +43,7 @@ dependencies:
   intl: ^0.18.0
   salomon_bottom_bar: ^3.3.2
   timeago: ^3.7.1
+  shared_preferences: ^2.5.3 
   fl_chart: ^1.0.0 
 
 dev_dependencies:

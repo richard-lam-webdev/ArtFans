@@ -22,9 +22,7 @@ class BottomNav extends StatelessWidget {
         context.go('/my-subscriptions');
         break;
       case 3:
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Profil à venir !')));
+        context.go('/profile');
         break;
       case 4:
         if (isCreator) {
@@ -42,7 +40,6 @@ class BottomNav extends StatelessWidget {
     final user = context.watch<UserProvider>().user;
     final isAdmin =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'admin';
-
     final isCreator =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
     final isWideScreen = MediaQuery.of(context).size.width > 480;
@@ -56,22 +53,17 @@ class BottomNav extends StatelessWidget {
       SalomonBottomBarItem(
         icon: const Icon(Icons.add_box),
         title: isWideScreen ? const Text('Ajouter') : const SizedBox.shrink(),
-        selectedColor: Colors.green[700]!,
+        selectedColor: Colors.green,
       ),
       SalomonBottomBarItem(
         icon: const Icon(Icons.dynamic_feed),
         title: isWideScreen ? const Text('Feed') : const SizedBox.shrink(),
-        selectedColor: Colors.indigo[700]!,
-      ),
-      SalomonBottomBarItem(
-        icon: const Icon(Icons.search),
-        title: isWideScreen ? const Text('Recherche') : const SizedBox.shrink(),
-        selectedColor: Colors.blue[700]!,
+        selectedColor: Colors.indigo,
       ),
       SalomonBottomBarItem(
         icon: const Icon(Icons.person),
         title: isWideScreen ? const Text('Profil') : const SizedBox.shrink(),
-        selectedColor: Colors.teal[700]!,
+        selectedColor: Colors.teal,
       ),
     ];
 
@@ -81,7 +73,7 @@ class BottomNav extends StatelessWidget {
           icon: const Icon(Icons.folder_copy),
           title:
               isWideScreen ? const Text('Contenus') : const SizedBox.shrink(),
-          selectedColor: Colors.orange[700]!,
+          selectedColor: Colors.orange,
         ),
       );
     } else if (isAdmin) {
@@ -89,7 +81,7 @@ class BottomNav extends StatelessWidget {
         SalomonBottomBarItem(
           icon: const Icon(Icons.admin_panel_settings),
           title: isWideScreen ? const Text('Admin') : const SizedBox.shrink(),
-          selectedColor: Colors.red[700]!,
+          selectedColor: Colors.red,
         ),
       );
     }

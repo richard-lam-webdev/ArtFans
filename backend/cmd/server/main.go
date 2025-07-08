@@ -49,6 +49,7 @@ func main() {
 	commentLikeRepo := repositories.NewCommentLikeRepository()
 	commentSvc := services.NewCommentService(commentRepo, commentLikeRepo, userRepo)
 	commentHandler := handlers.NewCommentHandler(commentSvc)
+	searchHandler := handlers.NewSearchHandler(database.DB)
 
 	/* ---------- 4) Message Service ---------- */
 	messageRepo := repositories.NewMessageRepository()
@@ -94,6 +95,7 @@ func main() {
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
+		protected.GET("/search", searchHandler.Search)
 
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
@@ -119,6 +121,7 @@ func main() {
 		protected.POST("/messages", messageHandler.SendMessage)
 		protected.GET("/messages", messageHandler.GetConversations)
 		protected.GET("/messages/:userId", messageHandler.GetConversation)
+
 	}
 
 	/* ---------- 11) Admin ---------- */

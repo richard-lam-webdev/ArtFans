@@ -1,3 +1,5 @@
+// lib/src/screens/feed_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import '../providers/message_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/feed_card.dart';
+import 'search_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -50,6 +53,16 @@ class _FeedScreenState extends State<FeedScreen> {
       appBar: AppBar(
         title: const Text("Fil d'actualité"),
         actions: [
+          // Icône Recherche
+          IconButton(
+            tooltip: 'Recherche',
+            icon: const Icon(Icons.search_outlined),
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SearchScreen()));
+            },
+          ),
           // Badge Messages
           Consumer<MessageProvider>(
             builder: (context, messageProvider, _) {
@@ -91,7 +104,6 @@ class _FeedScreenState extends State<FeedScreen> {
               );
             },
           ),
-
           // Toggle Thème
           Consumer<ThemeProvider>(
             builder:
@@ -106,7 +118,6 @@ class _FeedScreenState extends State<FeedScreen> {
           ),
         ],
       ),
-
       body:
           _loading
               ? const Center(child: CircularProgressIndicator())
@@ -123,7 +134,6 @@ class _FeedScreenState extends State<FeedScreen> {
                   );
                 },
               ),
-
       bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }

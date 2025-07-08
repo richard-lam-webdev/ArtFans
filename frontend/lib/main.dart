@@ -18,8 +18,8 @@ import 'theme/app_theme.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'src/providers/message_provider.dart';
 import 'src/widgets/app_wrapper.dart';
-import 'src/services/subscription_service.dart'; 
-import 'src/providers/subscription_provider.dart'; 
+import 'src/services/subscription_service.dart';
+import 'src/providers/subscription_provider.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -64,10 +64,14 @@ class MyApp extends StatelessWidget {
           create: (_) => AdminContentProvider(service: AdminContentService()),
         ),
         ChangeNotifierProvider(
-          create: (_) => AdminStatsProvider(adminStatsService: adminStatsService),
+          create:
+              (_) => AdminStatsProvider(adminStatsService: adminStatsService),
         ),
         ChangeNotifierProvider(
-          create: (_) => SubscriptionProvider(subscriptionService: subscriptionService),
+          create:
+              (_) => SubscriptionProvider(
+                subscriptionService: subscriptionService,
+              ),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MessageProvider()),
