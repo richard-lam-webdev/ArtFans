@@ -15,6 +15,7 @@ import '../screens/edit_content_screen.dart';
 import '../screens/feed_screen.dart';
 import '../screens/conversations_screen.dart';
 import '../screens/chat_screen.dart';
+import '../screens/my_subscriptions_screen.dart';
 
 
 import '../../main.dart';
@@ -78,6 +79,11 @@ class AppRouter {
         GoRoute(
           path: "/my-contents",
           builder: (context, state) => const MyContentsScreen(),
+        ),
+        GoRoute(
+          path: "/my-subscriptions",
+          name: 'my_subscriptions',
+          builder: (context, state) => const MySubscriptionsScreen(),
         ),
         GoRoute(
           path: '/messages',

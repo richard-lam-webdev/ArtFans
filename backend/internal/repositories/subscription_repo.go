@@ -25,8 +25,7 @@ func (r *SubscriptionRepository) Create(sub *models.Subscription) error {
 func (r *SubscriptionRepository) Delete(subscriberID, creatorID uuid.UUID) error {
 	return r.db.
 		Where("subscriber_id = ? AND creator_id = ?", subscriberID, creatorID).
-		Delete(&models.Subscription{}).
-		Error
+		Delete(&models.Subscription{}).Error
 }
 
 // IsSubscribed vérifie si subscriber est abonné à creator
@@ -55,4 +54,13 @@ func (r *SubscriptionRepository) GetAllSubscriptions(subscriberID uuid.UUID) ([]
 		Where("subscriber_id = ? AND end_date IS NULL", subscriberID).
 		Find(&subs).Error
 	return subs, err
+}
+
+// CountByCreatorID renvoie le nombre d'abonnés pour un créateur donné.
+func (r *SubscriptionRepository) CountByCreatorID(creatorID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Subscription{}).
+		Where("creator_id = ?", creatorID).
+		Count(&count).Error
+	return count, err
 }

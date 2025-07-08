@@ -16,7 +16,7 @@ const (
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"`
-	Creator   User      `gorm:"foreignKey:CreatorID;constraint:OnDelete:CASCADE;"`
+	Creator   User      `gorm:"foreignKey:CreatorID"`
 	Title     string    `gorm:"not null" json:"title"`
 	Body      string    `gorm:"not null" json:"body"`
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`

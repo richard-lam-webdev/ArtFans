@@ -51,6 +51,8 @@ type User struct {
 	Country        string
 	VATNumber      string
 	BirthDate      *time.Time
+	Bio            string `gorm:"type:text" json:"bio"`
+	AvatarURL      string `gorm:"column:avatar_url" json:"avatar_url"`
 }
 
 // BeforeCreate est un hook GORM qui génère un UUID pour l'utilisateur si nécessaire,
