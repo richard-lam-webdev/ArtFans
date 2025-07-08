@@ -67,7 +67,7 @@ class KpiCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -126,7 +126,7 @@ class PeriodSelector extends StatelessWidget {
                     label: Text(period['label'] as String),
                     selected: isSelected,
                     onSelected: (_) => onPeriodChanged(period['value'] as int),
-                    selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
+                    selectedColor: Theme.of(context).primaryColor.withAlpha((0.2 * 255).round()),
                   ),
                 );
               }).toList(),
@@ -235,7 +235,7 @@ class RevenueChart extends StatelessWidget {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        color: Theme.of(context).primaryColor.withAlpha((0.1 * 255).round()),
                       ),
                     ),
                   ],

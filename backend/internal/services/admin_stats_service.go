@@ -23,6 +23,7 @@ func NewAdminStatsService() *AdminStatsService {
 // GetBasicStats - Version simple sans JOIN complexes
 func (s *AdminStatsService) GetBasicStats(days int) (*models.AdminStatsSimple, error) {
 	var stats models.AdminStatsSimple
+	var subscriptionCount int64
 
 	// Période
 	endDate := time.Now()
@@ -47,10 +48,10 @@ func (s *AdminStatsService) GetBasicStats(days int) (*models.AdminStatsSimple, e
 		Count(&stats.TotalContents)
 
 	// Total Revenue (depuis les payments dans la période)
-	database.DB.Table("payment").
-		Where("paid_at >= ? AND paid_at <= ? AND status = ?", startDate, endDate, "succeeded").
-		Select("COALESCE(SUM(amount), 0)").
-		Scan(&stats.TotalRevenue)
+	database.DB.Table("subscription").
+		Where("created_at >= ? AND created_at <= ?", startDate, endDate).
+		Count(&subscriptionCount)
+	stats.TotalRevenue = subscriptionCount * 3000 // 30€ en centimes par abonnement
 
 	// Total Subscribers actifs
 	database.DB.Table("subscription").
@@ -85,6 +86,7 @@ func (s *AdminStatsService) GetBasicStats(days int) (*models.AdminStatsSimple, e
 }
 
 // GetTopCreators - Version corrigée avec les bons types UUID
+// GetTopCreators - Version corrigée avec les bons calculs
 func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.SimpleCreatorRank, error) {
 	var creators []models.SimpleCreatorRank
 
@@ -135,31 +137,29 @@ func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.Simple
 				creator.CreatorID, startDate, endDate).
 			Count(&allCreators[i].ContentCount)
 
-		// Revenus totaux (somme des prix des contenus dans la période)
-		var totalRevenue *int64
-		database.DB.Table("content").
+		// Revenus totaux (nombre d'abonnements × 30€)
+		var subscriptionCount int64
+		database.DB.Table("subscription").
 			Where("creator_id = ? AND created_at >= ? AND created_at <= ?",
 				creator.CreatorID, startDate, endDate).
-			Select("COALESCE(SUM(price), 0)").
-			Scan(&totalRevenue)
+			Count(&subscriptionCount)
 
-		if totalRevenue != nil {
-			allCreators[i].TotalRevenue = *totalRevenue
-		}
+		allCreators[i].TotalRevenue = subscriptionCount * 3000 // 30€ en centimes
 
-		// Nombre d'abonnés actifs (abonnements en cours)
-		database.DB.Table("subscription").
-			Where("creator_id = ? AND start_date <= NOW() AND end_date >= NOW()",
-				creator.CreatorID).
-			Count(&allCreators[i].Subscribers)
+		// Nombre de nouveaux abonnés dans la période
+		allCreators[i].Subscribers = subscriptionCount
+
+		// DEBUG - Afficher les stats pour chaque créateur
+		fmt.Printf("DEBUG Creator %s (ID: %s): ContentCount=%d, SubscriptionCount=%d, Revenue=%d\n",
+			creator.Username, creator.CreatorID, allCreators[i].ContentCount, subscriptionCount, allCreators[i].TotalRevenue)
 	}
 
-	// 3. Trier par nombre de contenus puis par revenus
+	// 3. Trier par revenus D'ABORD (plus important), puis par nombre de contenus
 	sort.Slice(allCreators, func(i, j int) bool {
-		if allCreators[i].ContentCount != allCreators[j].ContentCount {
-			return allCreators[i].ContentCount > allCreators[j].ContentCount
+		if allCreators[i].TotalRevenue != allCreators[j].TotalRevenue {
+			return allCreators[i].TotalRevenue > allCreators[j].TotalRevenue
 		}
-		return allCreators[i].TotalRevenue > allCreators[j].TotalRevenue
+		return allCreators[i].ContentCount > allCreators[j].ContentCount
 	})
 
 	// 4. Limiter et ajouter les rangs
@@ -167,10 +167,13 @@ func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.Simple
 		limit = len(allCreators)
 	}
 
-	for i := 0; i < limit; i++ {
+	// Ajouter TOUS les créateurs avec leurs stats, même si 0
+	for i := 0; i < len(allCreators) && i < limit; i++ {
 		allCreators[i].Rank = i + 1
 		creators = append(creators, allCreators[i])
 	}
+
+	fmt.Printf("DEBUG: Returning %d creators out of %d total\n", len(creators), len(allCreators))
 
 	return creators, nil
 }
@@ -276,11 +279,11 @@ func (s *AdminStatsService) GetRevenueByDay(days int) ([]models.RevenueByPeriod,
 
 	query := `
 		SELECT 
-			DATE(paid_at) as date,
-			COALESCE(SUM(amount), 0) as amount
-		FROM payment 
-		WHERE paid_at >= $1 AND paid_at <= $2 AND status = 'succeeded'
-		GROUP BY DATE(paid_at)
+			DATE(created_at) as date,
+			COUNT(*) * 3000 as amount
+		FROM subscription 
+		WHERE created_at >= $1 AND created_at <= $2
+		GROUP BY DATE(created_at)
 		ORDER BY date ASC
 	`
 
