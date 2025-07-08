@@ -9,11 +9,11 @@ class SubscriptionProvider extends ChangeNotifier {
   final SubscriptionService _subscriptionService;
 
   SubscriptionProvider({required SubscriptionService subscriptionService})
-      : _subscriptionService = subscriptionService;
+    : _subscriptionService = subscriptionService;
 
   SubscriptionStatus _status = SubscriptionStatus.initial;
   List<Map<String, dynamic>> _mySubscriptions = [];
-  final Map<String, bool> _subscriptionCache = {}; // Cache pour éviter les appels répétés
+  final Map<String, bool> _subscriptionCache = {};
   Map<String, dynamic>? _creatorStats;
   String? _errorMessage;
 
@@ -23,6 +23,12 @@ class SubscriptionProvider extends ChangeNotifier {
   Map<String, dynamic>? get creatorStats => _creatorStats;
   String? get errorMessage => _errorMessage;
 
+  /// Met à jour manuellement l'état d'abonnement (utile après un fetch local)
+  void setSubscriptionStatus(String creatorId, bool isSubscribed) {
+    _subscriptionCache[creatorId] = isSubscribed;
+    notifyListeners();
+  }
+
   /// S'abonner à un créateur
   Future<bool> subscribeToCreator(String creatorId) async {
     _status = SubscriptionStatus.loading;
@@ -30,17 +36,17 @@ class SubscriptionProvider extends ChangeNotifier {
 
     try {
       await _subscriptionService.subscribeToCreator(creatorId);
-      
+
       // Mettre à jour le cache
       _subscriptionCache[creatorId] = true;
-      
+
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
-      
+
       // Rafraîchir la liste des abonnements
       await fetchMySubscriptions();
-      
+
       return true;
     } catch (e) {
       _status = SubscriptionStatus.error;
@@ -57,17 +63,17 @@ class SubscriptionProvider extends ChangeNotifier {
 
     try {
       await _subscriptionService.unsubscribeFromCreator(creatorId);
-      
+
       // Mettre à jour le cache
       _subscriptionCache[creatorId] = false;
-      
+
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
-      
+
       // Rafraîchir la liste des abonnements
       await fetchMySubscriptions();
-      
+
       return true;
     } catch (e) {
       _status = SubscriptionStatus.error;
@@ -87,10 +93,10 @@ class SubscriptionProvider extends ChangeNotifier {
     try {
       final result = await _subscriptionService.checkSubscription(creatorId);
       final isSubscribed = result['subscribed'] as bool? ?? false;
-      
+
       // Mettre en cache
       _subscriptionCache[creatorId] = isSubscribed;
-      
+
       return isSubscribed;
     } catch (e) {
       debugPrint('Erreur vérification abonnement: $e');
@@ -98,12 +104,19 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
+  /// Lecture synchrone du cache pour l'état d'abonnement
+  bool isSubscribed(String creatorId) {
+    return _subscriptionCache[creatorId] ?? false;
+  }
+
   /// Récupérer mes abonnements
   Future<void> fetchMySubscriptions() async {
     try {
       final result = await _subscriptionService.getMySubscriptions();
-      _mySubscriptions = List<Map<String, dynamic>>.from(result['subscriptions'] ?? []);
-      
+      _mySubscriptions = List<Map<String, dynamic>>.from(
+        result['subscriptions'] ?? [],
+      );
+
       // Mettre à jour le cache avec les abonnements actuels
       _subscriptionCache.clear();
       for (final subscription in _mySubscriptions) {
@@ -111,7 +124,7 @@ class SubscriptionProvider extends ChangeNotifier {
         final isActive = subscription['is_active'] as bool? ?? false;
         _subscriptionCache[creatorId] = isActive;
       }
-      
+
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
@@ -158,7 +171,8 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Calculer le coût total des abonnements
   int getTotalMonthlyCost() {
-    return _mySubscriptions.where((sub) => sub['is_active'] == true).length * 30;
+    return _mySubscriptions.where((sub) => sub['is_active'] == true).length *
+        30;
   }
 
   /// Obtenir le nombre d'abonnements actifs
@@ -179,11 +193,11 @@ class SubscriptionProvider extends ChangeNotifier {
       final endDate = DateTime.parse(endDateStr);
       final now = DateTime.now();
       final difference = endDate.difference(now).inDays;
-      
+
       if (difference <= 0) return 'Expiré';
       if (difference == 1) return 'Expire demain';
       if (difference <= 7) return 'Expire dans $difference jours';
-      
+
       return 'Expire le ${endDate.day}/${endDate.month}/${endDate.year}';
     } catch (e) {
       return 'Date invalide';

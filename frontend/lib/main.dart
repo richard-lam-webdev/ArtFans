@@ -11,14 +11,14 @@ import 'src/services/auth_service.dart';
 import 'src/services/user_service.dart';
 import 'src/services/admin_content_service.dart';
 import 'src/services/admin_service.dart';
-import 'src/services/admin_stats_service.dart'; // ✨ AJOUTÉ
+import 'src/services/admin_stats_service.dart';
 import 'src/routes/app_router.dart';
 import 'theme/app_theme.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'src/providers/message_provider.dart';
 import 'src/widgets/app_wrapper.dart';
-import 'src/services/subscription_service.dart'; 
-import 'src/providers/subscription_provider.dart'; 
+import 'src/services/subscription_service.dart';
+import 'src/providers/subscription_provider.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -61,10 +61,14 @@ class MyApp extends StatelessWidget {
         ),
         // ✨ AJOUTÉ : Provider pour les statistiques admin
         ChangeNotifierProvider(
-          create: (_) => AdminStatsProvider(adminStatsService: adminStatsService),
+          create:
+              (_) => AdminStatsProvider(adminStatsService: adminStatsService),
         ),
         ChangeNotifierProvider(
-          create: (_) => SubscriptionProvider(subscriptionService: subscriptionService),
+          create:
+              (_) => SubscriptionProvider(
+                subscriptionService: subscriptionService,
+              ),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MessageProvider()),
@@ -79,7 +83,7 @@ class MyApp extends StatelessWidget {
               darkTheme: AppTheme.dark,
               themeMode: themeProvider.themeMode,
               routerConfig: router,
-              debugShowCheckedModeBanner: false, // ✨ BONUS : enlever le debug banner
+              debugShowCheckedModeBanner: false,
             );
           },
         ),

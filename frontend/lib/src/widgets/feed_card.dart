@@ -1,16 +1,15 @@
-// lib/widgets/feed_card.dart
 import 'package:flutter/material.dart';
-import '../services/content_service.dart';
-import 'protected_image.dart';
-import 'comments_sheet.dart';
 import 'package:provider/provider.dart';
+
+import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
 import '../utils/snackbar_util.dart';
+import 'protected_image.dart';
+import 'comments_sheet.dart';
 
 class FeedCard extends StatefulWidget {
   final Map<String, dynamic> content;
   final VoidCallback onSubscribedChanged;
-  
 
   const FeedCard({
     super.key,
@@ -23,194 +22,147 @@ class FeedCard extends StatefulWidget {
 }
 
 class _FeedCardState extends State<FeedCard> {
-  late bool isSubscribed;
-  final _svc = ContentService();
+  final ContentService _svc = ContentService();
   bool _isLoadingSubscription = false;
 
-  @override
-  void initState() {
-    super.initState();
-    isSubscribed = widget.content['is_subscribed'] as bool;
-  }
   Future<void> _toggleSubscribe() async {
-    final subscriptionProvider = context.read<SubscriptionProvider>();
+    final subProv = context.read<SubscriptionProvider>();
     final creatorId = widget.content['creator_id']?.toString();
-    final creatorName = widget.content['creator_name']?.toString() ?? 'ce créateur';
-    
+    final creatorName =
+        widget.content['creator_name']?.toString() ?? 'ce créateur';
+
     if (creatorId == null) return;
+
+    // On lit l'état actuel dans le provider
+    final currentlySubscribed = subProv.isSubscribed(creatorId);
+
+    // Confirmation
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (ctx) => AlertDialog(
+                title: Text(
+                  currentlySubscribed
+                      ? 'Se désabonner de $creatorName'
+                      : 'S’abonner à $creatorName',
+                ),
+                content:
+                    currentlySubscribed
+                        ? const Text(
+                          'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
+                          'Vous perdrez l\'accès au contenu premium de ce créateur.',
+                        )
+                        : const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Vous allez vous abonner pour :'),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Icon(Icons.euro, color: Colors.green, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  '30€ par mois',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  color: Colors.blue,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Durée : 30 jours'),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  color: Colors.orange,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Accès à tout le contenu'),
+                              ],
+                            ),
+                            SizedBox(height: 16),
+                            Text('Confirmez-vous votre abonnement ?'),
+                          ],
+                        ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Annuler'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: currentlySubscribed ? Colors.red : null,
+                      foregroundColor:
+                          currentlySubscribed ? Colors.white : null,
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: Text(
+                      currentlySubscribed ? 'Se désabonner' : 'Confirmer (30€)',
+                    ),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+
+    if (!confirmed) return;
 
     setState(() => _isLoadingSubscription = true);
 
-    try {
-      if (isSubscribed) {
-        // Se désabonner avec confirmation
-        final confirmed = await _showUnsubscribeDialog(creatorName);
-        if (!confirmed) {
-          setState(() => _isLoadingSubscription = false);
-          return;
-        }
-        
-        final success = await subscriptionProvider.unsubscribeFromCreator(creatorId);
-        if (success) {
-          setState(() => isSubscribed = false);
-          if (mounted) {
-            showCustomSnackBar(
-              context,
-              'Vous êtes désabonné de $creatorName',
-              type: SnackBarType.success,
-            );
-            widget.onSubscribedChanged();
-          }
-        } else {
-          if (mounted) {
-            showCustomSnackBar(
-              context,
-              subscriptionProvider.errorMessage ?? 'Erreur lors du désabonnement',
-              type: SnackBarType.error,
-            );
-          }
-        }
-      } else {
-        // S'abonner avec confirmation (30€)
-        final confirmed = await _showSubscribeDialog(creatorName);
-        if (!confirmed) {
-          setState(() => _isLoadingSubscription = false);
-          return;
-        }
-        
-        final success = await subscriptionProvider.subscribeToCreator(creatorId);
-        if (success) {
-          setState(() => isSubscribed = true);
-          if (mounted) {
-            showCustomSnackBar(
-              context,
-              'Abonnement à $creatorName réussi ! (30€)',
-              type: SnackBarType.success,
-            );
-            widget.onSubscribedChanged();
-          }
-        } else {
-          if (mounted) {
-            showCustomSnackBar(
-              context,
-              subscriptionProvider.errorMessage ?? 'Erreur lors de l\'abonnement',
-              type: SnackBarType.error,
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        showCustomSnackBar(
-          context,
-          'Erreur : $e',
-          type: SnackBarType.error,
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingSubscription = false);
-      }
+    final success =
+        currentlySubscribed
+            ? await subProv.unsubscribeFromCreator(creatorId)
+            : await subProv.subscribeToCreator(creatorId);
+
+    if (success) {
+      // met à jour le provider et notifie
+      subProv.setSubscriptionStatus(creatorId, !currentlySubscribed);
+      showCustomSnackBar(
+        context,
+        currentlySubscribed
+            ? 'Vous êtes désabonné de $creatorName'
+            : 'Abonnement à $creatorName réussi !',
+        type: SnackBarType.success,
+      );
+      // si besoin de refetch du feed
+      widget.onSubscribedChanged();
+    } else {
+      showCustomSnackBar(
+        context,
+        subProv.errorMessage ?? 'Erreur lors de la mise à jour',
+        type: SnackBarType.error,
+      );
     }
-  }
 
-  Future<bool> _showSubscribeDialog(String creatorName) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('S\'abonner à $creatorName'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Vous allez vous abonner pour :'),
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.euro, color: Colors.green, size: 20),
-                SizedBox(width: 8),
-                Text('30€ par mois', style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.schedule, color: Colors.blue, size: 20),
-                SizedBox(width: 8),
-                Text('Durée : 30 jours'),
-              ],
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.star, color: Colors.orange, size: 20),
-                SizedBox(width: 8),
-                Text('Accès à tout le contenu'),
-              ],
-            ),
-            SizedBox(height: 16),
-            Text('Confirmez-vous votre abonnement ?'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirmer (30€)'),
-          ),
-        ],
-      ),
-    ) ?? false;
+    if (mounted) setState(() => _isLoadingSubscription = false);
   }
-
-  Future<bool> _showUnsubscribeDialog(String creatorName) async {
-    return await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Se désabonner de $creatorName'),
-        content: const Text(
-          'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
-          'Vous perdrez l\'accès au contenu premium de ce créateur.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Se désabonner'),
-          ),
-        ],
-      ),
-    ) ?? false;
-  }
-
 
   Future<void> _toggleLike() async {
-    // récupère les valeurs courantes
     final bool currentlyLiked =
         widget.content['liked_by_user'] as bool? ?? false;
     final int currentCount = widget.content['likes_count'] as int? ?? 0;
 
-    // prépare les nouvelles valeurs
     final bool newLiked = !currentlyLiked;
     final int newCount = currentlyLiked ? currentCount - 1 : currentCount + 1;
 
-    // mise à jour optimiste
     setState(() {
       widget.content['liked_by_user'] = newLiked;
       widget.content['likes_count'] = newCount;
     });
 
-    // appel réseau
     try {
       if (newLiked) {
         await _svc.likeContent(widget.content['id'] as String);
@@ -219,7 +171,6 @@ class _FeedCardState extends State<FeedCard> {
       }
     } catch (e) {
       if (!mounted) return;
-      // rollback
       setState(() {
         widget.content['liked_by_user'] = currentlyLiked;
         widget.content['likes_count'] = currentCount;
@@ -247,7 +198,13 @@ class _FeedCardState extends State<FeedCard> {
 
   @override
   Widget build(BuildContext context) {
-    // on lit à chaque build, depuis la map partagée
+    final creatorId = widget.content['creator_id']?.toString();
+    // on lit l'état directement depuis le provider
+    final isSubscribed =
+        creatorId != null
+            ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
+            : false;
+
     final bool liked = widget.content['liked_by_user'] as bool? ?? false;
     final int likeCount = widget.content['likes_count'] as int? ?? 0;
 
@@ -267,16 +224,17 @@ class _FeedCardState extends State<FeedCard> {
               ),
             ),
             title: Text(widget.content['creator_name'] ?? 'Créateur'),
-            trailing: TextButton(
-              onPressed: _isLoadingSubscription ? null : _toggleSubscribe,
-              child: _isLoadingSubscription
-                  ? const SizedBox(
+            trailing:
+                _isLoadingSubscription
+                    ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(isSubscribed ? 'Se désabonner' : 'S\'abonner'),
-            ),
+                    : TextButton(
+                      onPressed: _toggleSubscribe,
+                      child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
+                    ),
           ),
 
           // image protégée

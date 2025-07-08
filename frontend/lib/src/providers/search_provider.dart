@@ -35,13 +35,13 @@ class Creator {
     required this.isFollowed,
   });
 
-  final String id; // ← String et non int
+  final String id;
   final String username;
   final String avatarUrl;
   bool isFollowed;
 
   factory Creator.fromJson(Map<String, dynamic> j) => Creator(
-    id: j['id'] as String, // ← on caste en String
+    id: j['id'] as String,
     username: j['username'] as String? ?? '',
     avatarUrl: j['avatar_url'] as String? ?? '',
     isFollowed: j['is_followed'] as bool? ?? false,
@@ -56,13 +56,13 @@ class Content {
     required this.creatorName,
   });
 
-  final String id; // ← String aussi
+  final String id;
   final String title;
   final String thumbnailUrl;
   final String creatorName;
 
   factory Content.fromJson(Map<String, dynamic> j) => Content(
-    id: j['id'] as String, // ← idem
+    id: j['id'] as String,
     title: j['title'] as String? ?? '',
     thumbnailUrl: j['thumbnail_url'] as String? ?? '',
     creatorName: j['creator_name'] as String? ?? '',
@@ -72,9 +72,12 @@ class Content {
 // ---------------------------------------------------------------------------
 // SearchProvider – logique principale
 // ---------------------------------------------------------------------------
-class SearchProvider extends ChangeNotifier {
-  SearchProvider({http.Client? client}) : _client = client ?? http.Client();
 
+class SearchProvider extends ChangeNotifier {
+  SearchProvider({required this.token, http.Client? client})
+    : _client = client ?? http.Client();
+
+  final String token;
   final http.Client _client;
   final _debouncer = _Debouncer();
 
@@ -111,7 +114,16 @@ class SearchProvider extends ChangeNotifier {
         '${ApiService.baseUrl}/api/search',
       ).replace(queryParameters: {'q': trimmed, 'type': 'creators,contents'});
 
-      final res = await _client.get(uri).timeout(const Duration(seconds: 5));
+      // 2) on injecte le token dans les headers
+      final res = await _client
+          .get(
+            uri,
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (res.statusCode != 200) {
         throw Exception('HTTP ${res.statusCode}');

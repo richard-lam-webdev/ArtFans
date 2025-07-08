@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import '../services/api_service.dart';
+
 import '../models/creator.dart';
-import '../providers/auth_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../utils/snackbar_util.dart';
 
 class CreatorTile extends StatefulWidget {
   final Creator creator;
@@ -14,51 +14,113 @@ class CreatorTile extends StatefulWidget {
 }
 
 class _CreatorTileState extends State<CreatorTile> {
-  late bool _isFollowed;
+  bool _isLoading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _isFollowed = widget.creator.isFollowed;
+  Future<void> _toggleFollow(BuildContext context) async {
+    final subProv = context.read<SubscriptionProvider>();
+    final id = widget.creator.id;
+    final name = widget.creator.username;
+    final currentlyFollowed = subProv.isSubscribed(id);
+
+    // Confirmation dialog
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (ctx) => AlertDialog(
+                title: Text(
+                  currentlyFollowed
+                      ? 'Se désabonner de $name'
+                      : 'S’abonner à $name',
+                ),
+                content:
+                    currentlyFollowed
+                        ? const Text(
+                          'Êtes-vous sûr de vouloir vous désabonner ?',
+                        )
+                        : const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Prix : 30€ / mois'),
+                            SizedBox(height: 8),
+                            Text('Durée : 30 jours'),
+                            SizedBox(height: 16),
+                            Text('Confirmez-vous votre abonnement ?'),
+                          ],
+                        ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Annuler'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: currentlyFollowed ? Colors.red : null,
+                      foregroundColor: currentlyFollowed ? Colors.white : null,
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: Text(
+                      currentlyFollowed ? 'Se désabonner' : 'Confirmer (30€)',
+                    ),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+    if (!confirmed) return;
+
+    setState(() => _isLoading = true);
+
+    final success =
+        currentlyFollowed
+            ? await subProv.unsubscribeFromCreator(id)
+            : await subProv.subscribeToCreator(id);
+
+    if (success) {
+      // Met à jour immédiatement le cache et notifie
+      subProv.setSubscriptionStatus(id, !currentlyFollowed);
+      showCustomSnackBar(
+        context,
+        currentlyFollowed
+            ? 'Vous êtes désabonné de $name'
+            : 'Abonnement à $name réussi !',
+        type: SnackBarType.success,
+      );
+    } else {
+      showCustomSnackBar(
+        context,
+        subProv.errorMessage ?? 'Erreur lors de la mise à jour',
+        type: SnackBarType.error,
+      );
+    }
+
+    if (mounted) setState(() => _isLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final token = context.read<AuthProvider>().token!;
+    final isFollowed = context.watch<SubscriptionProvider>().isSubscribed(
+      widget.creator.id,
+    );
+
     return ListTile(
       leading: CircleAvatar(
         backgroundImage: NetworkImage(widget.creator.avatarUrl),
       ),
       title: Text(widget.creator.username),
-      trailing: TextButton(
-        onPressed: () => _toggleFollow(token),
-        child: Text(_isFollowed ? 'Abonné' : 'Suivre'),
-      ),
+      trailing:
+          _isLoading
+              ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+              : TextButton(
+                onPressed: () => _toggleFollow(context),
+                child: Text(isFollowed ? 'Se désabonner' : 'Suivre'),
+              ),
       onTap: () => Navigator.of(context).pushNamed('/u/${widget.creator.id}'),
     );
-  }
-
-  Future<void> _toggleFollow(String token) async {
-    final client = http.Client();
-    final url = Uri.parse(
-      '${ApiService.baseUrl}/api/subscriptions/${widget.creator.id}',
-    );
-    final headers = {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-    final response =
-        _isFollowed
-            ? await client.delete(url, headers: headers)
-            : await client.post(url, headers: headers);
-    client.close();
-
-    if (response.statusCode == 204) {
-      setState(() => _isFollowed = !_isFollowed);
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur ${response.statusCode}')));
-    }
   }
 }

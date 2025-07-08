@@ -45,7 +45,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		"message":    "Abonnement créé avec succès",
 		"price":      "30€",
 		"duration":   "30 jours",
-		"creator_id": creatorID,
+		"creator_id": creatorID.String(),
 	})
 }
 

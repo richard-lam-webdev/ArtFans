@@ -86,7 +86,6 @@ func main() {
 	/* ---------- 9) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-	r.GET("/api/search", searchHandler.Search)
 
 	/* ---------- 8b) Profil créateur public ---------- */
 	r.GET("/api/creators/:username", handlers.GetPublicCreatorProfileHandler)
@@ -96,6 +95,7 @@ func main() {
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
+		protected.GET("/search", searchHandler.Search)
 
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
