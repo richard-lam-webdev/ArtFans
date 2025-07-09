@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/logger"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
@@ -79,6 +80,12 @@ func (h *ContentHandler) CreateContent(c *gin.Context) {
 		"body":      content.Body,
 		"price":     content.Price,
 		"file_path": content.FilePath,
+	})
+
+	logger.LogContent("content_created", userID.String(), content.ID.String(), map[string]interface{}{
+		"title":      content.Title,
+		"body":       content.Body,
+		"creator_id": content.CreatorID.String(),
 	})
 }
 
@@ -266,7 +273,23 @@ func (h *ContentHandler) LikeContent(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de liker"})
 		return
 	}
+
+	content, err := h.service.GetContentByID(contentID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
+		return
+	}
+	logger.LogContent(
+		"content_liked",
+		userID.String(),
+		contentID.String(),
+		map[string]interface{}{
+			"creator_id": content.CreatorID.String(),
+		},
+	)
+
 	c.Status(http.StatusOK)
+
 }
 
 // DELETE /api/contents/:id/like

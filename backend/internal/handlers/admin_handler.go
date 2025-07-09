@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -150,8 +152,6 @@ func ListContentsHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"contents": out})
 }
-
-// DeleteContentHandler DELETE /api/admin/contents/:id
 func DeleteContentHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	contentID, err := uuid.Parse(idStr)
@@ -160,7 +160,7 @@ func DeleteContentHandler(c *gin.Context) {
 		return
 	}
 	repo := repositories.NewContentRepository()
-	uploadPath := config.C.UploadPath // récupère le chemin d’upload depuis la config centrale
+	uploadPath := config.C.UploadPath
 
 	if err := repo.Delete(contentID, uploadPath); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -170,6 +170,17 @@ func DeleteContentHandler(c *gin.Context) {
 		}
 		return
 	}
+
+	sentry.WithScope(func(scope *sentry.Scope) {
+		scope.SetLevel(sentry.LevelInfo)
+		scope.SetContext("admin_action", map[string]any{
+			"admin_id":   idStr,
+			"action":     "delete_content",
+			"content_id": contentID.String(),
+		})
+		sentry.CaptureMessage(fmt.Sprintf("Admin deleted content %s", contentID))
+	})
+
 	c.JSON(http.StatusOK, gin.H{"message": "Contenu supprimé"})
 }
 

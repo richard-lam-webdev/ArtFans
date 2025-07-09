@@ -9,11 +9,13 @@ import '../providers/theme_provider.dart';
 import '../providers/message_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/bottom_nav.dart';
+import '../services/metrics_service.dart';
 import '../widgets/feed_card.dart';
 import 'search_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
+  
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -23,11 +25,16 @@ class _FeedScreenState extends State<FeedScreen> {
   final ContentService _contentService = ContentService();
   List<Map<String, dynamic>> _feed = [];
   bool _loading = true;
+  late DateTime _pageLoadStart;
 
   @override
   void initState() {
     super.initState();
-    _fetchFeed();
+    _pageLoadStart = DateTime.now();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final loadTime = DateTime.now().difference(_pageLoadStart).inMilliseconds;
+      MetricsService.reportPageLoad('feed', loadTime);
+    });    _fetchFeed();
   }
 
   Future<void> _fetchFeed() async {
