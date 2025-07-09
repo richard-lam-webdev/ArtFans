@@ -61,6 +61,7 @@ func main() {
 	messageHandler := handlers.NewMessageHandler(messageSvc)
 
 	adminStatsHandler := handlers.NewAdminStatsHandler()
+	adminCommentHandler := handlers.NewAdminCommentHandler(commentSvc)
 
 	if err := sentry.InitSentry(); err != nil {
 		log.Printf("⚠️ Impossible d'initialiser Sentry: %v", err)
@@ -162,6 +163,9 @@ func main() {
 		admin.GET("/flop-contents", adminStatsHandler.GetFlopContents)
 		admin.GET("/revenue-chart", adminStatsHandler.GetRevenueChart)
 		admin.GET("/quick-stats", adminStatsHandler.GetQuickStats)
+
+		admin.GET("/comments", adminCommentHandler.ListComments)
+		admin.DELETE("/comments/:id", adminCommentHandler.DeleteComment)
 	}
 
 	logger.LogBusinessEvent("application_started", map[string]interface{}{

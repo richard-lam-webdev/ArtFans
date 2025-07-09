@@ -101,3 +101,20 @@ func (s *CommentService) UnlikeComment(
 ) error {
 	return s.likeRepo.Unlike(userID, commentID)
 }
+
+// ListAllComments retourne tous les commentaires pour l’admin, paginés.
+func (s *CommentService) ListAllComments(page, pageSize int) ([]models.Comment, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+	return s.repo.ListAll(offset, pageSize)
+}
+
+// DeleteCommentByID supprime un commentaire quel que soit son auteur.
+func (s *CommentService) DeleteCommentByID(id uuid.UUID) error {
+	return s.repo.DeleteByID(id)
+}
