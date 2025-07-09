@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
+import 'metrics_service.dart';
 
 class ContentService {
   final String _baseUrl;
@@ -27,14 +28,16 @@ class ContentService {
 
   Future<Map<String, dynamic>?> getContentById(String id) async {
     final token = await _getToken();
-    final response = await http.get(
-      Uri.parse("$_baseUrl/api/contents/$id"),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _performRequest(
+      '/contents/$id',
+      () => http.get(
+        Uri.parse('$_baseUrl/api/contents/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ),
     );
-
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return Map<String, dynamic>.from(data);
@@ -101,43 +104,58 @@ class ContentService {
   }
 
   Future<void> addContent({
-    required String token,
-    required String username,
-    required String title,
-    required String body,
-    required String price,
-    required String role,
-    required String fileName,
-    required Uint8List? fileBytes,
-    String? filePath,
-  }) async {
-    final uri = Uri.parse('$_baseUrl/api/contents');
-    final request =
-        http.MultipartRequest('POST', uri)
-          ..headers['Authorization'] = 'Bearer $token'
-          ..fields['username'] = username
-          ..fields['role'] = role
-          ..fields['title'] = title.trim()
-          ..fields['body'] = body.trim()
-          ..fields['price'] = price.trim();
+  required String token,
+  required String username,
+  required String title,
+  required String body,
+  required String price,
+  required String role,
+  required String fileName,
+  required Uint8List? fileBytes,
+  String? filePath,
+}) async {
+  final uri = Uri.parse('$_baseUrl/api/contents');
+  final request = http.MultipartRequest('POST', uri)
+    ..headers['Authorization'] = 'Bearer $token'
+    ..fields['username'] = username
+    ..fields['role'] = role
+    ..fields['title'] = title.trim()
+    ..fields['body'] = body.trim()
+    ..fields['price'] = price.trim();
 
-    if (UniversalPlatform.isWeb || filePath == null) {
-      if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
-      request.files.add(
-        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
-      );
-    } else {
-      request.files.add(
-        await http.MultipartFile.fromPath('file', filePath, filename: fileName),
-      );
-    }
+  if (UniversalPlatform.isWeb || filePath == null) {
+    if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
+    );
+  } else {
+    request.files.add(
+      await http.MultipartFile.fromPath('file', filePath, filename: fileName),
+    );
+  }
 
-    final streamed = await request.send();
+  final start = DateTime.now();
+  late http.StreamedResponse streamed;
+  try {
+    streamed = await request.send();
+    final latency = DateTime.now().difference(start).inMilliseconds;
+    MetricsService.reportAPILatency('/contents (multipart)', latency);
+
     if (streamed.statusCode != 201) {
+      if (streamed.statusCode >= 500) {
+        MetricsService.reportError('http_5xx');
+      } else {
+        MetricsService.reportError('http_4xx');
+      }
       final respBody = await streamed.stream.bytesToString();
       throw Exception('Erreur ${streamed.statusCode} : $respBody');
     }
+  } catch (e) {
+    MetricsService.reportError('network_error');
+    rethrow;
   }
+}
+
 
   Future<List<Map<String, dynamic>>> fetchFeed() async {
     final token = await _getToken();
@@ -262,3 +280,29 @@ class ContentService {
     }
   }
 }
+
+ Future<http.Response> _performRequest(
+    String endpoint,
+    Future<http.Response> Function() request,
+  ) async {
+    final start = DateTime.now();
+    try {
+      final response = await request();
+      
+      // Mesurer la latence pour tous les appels
+      final latency = DateTime.now().difference(start).inMilliseconds;
+      MetricsService.reportAPILatency(endpoint, latency);
+      
+      // Reporter les erreurs HTTP
+      if (response.statusCode >= 500) {
+        MetricsService.reportError('http_5xx');
+      } else if (response.statusCode >= 400) {
+        MetricsService.reportError('http_4xx');
+      }
+      
+      return response;
+    } catch (e) {
+      MetricsService.reportError('network_error');
+      rethrow;
+    }
+  }
