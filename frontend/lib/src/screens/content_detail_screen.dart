@@ -1,5 +1,3 @@
-// lib/src/screens/content_detail_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +31,15 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     Future.microtask(
       () => context.read<ContentDetailProvider>().load(widget.contentId),
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant ContentDetailScreen old) {
+    super.didUpdateWidget(old);
+    if (old.contentId != widget.contentId) {
+      // on a navigué vers un autre ID : on recharge
+      context.read<ContentDetailProvider>().load(widget.contentId);
+    }
   }
 
   @override
@@ -134,7 +141,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
             // --------------- Auteur & date ---------------
             Text(
-              'par ${c['author_name']} • ${c['created_at']}',
+              'par ${(c['author_name'] as String?)?.isNotEmpty == true ? c['author_name'] : 'Anonyme'}'
+              ' • ${c['created_at']}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
 
@@ -160,7 +168,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   final cm = comments[i];
                   final text = cm['text'] as String? ?? '';
                   final date = cm['created_at'] as String? ?? '';
-                  // On prend author_name directement
                   final authorName = cm['author_name'] as String? ?? 'Anonyme';
                   final commentId = cm['id'].toString();
 
@@ -195,7 +202,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                               ),
                         );
                         if (ok != true) return;
-
                         try {
                           await _adminCommentService.deleteComment(commentId);
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -203,7 +209,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                               content: Text('Commentaire supprimé'),
                             ),
                           );
-                          // On recharge tout
                           await prov.load(widget.contentId);
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(

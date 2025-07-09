@@ -34,6 +34,8 @@ class ContentDetailProvider extends ChangeNotifier {
     try {
       // Méthode aplatie pour l'écran détail
       final detail = await _contentService.getContentDetailById(contentId);
+      print(detail);
+
       final cms = await _commentService.fetchComments(contentId);
 
       _content = detail;

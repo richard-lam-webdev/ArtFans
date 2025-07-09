@@ -45,13 +45,13 @@ class AdminContentService {
       uri,
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (res.statusCode != 200) {
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      throw Exception(body['error'] ?? 'Erreur suppression');
-    }
     if (res.statusCode != 204) {
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      throw Exception(body['error'] ?? 'Erreur suppression');
+      final body =
+          res.body.isNotEmpty
+              ? jsonDecode(res.body) as Map<String, dynamic>
+              : <String, dynamic>{};
+      final message = body['error'] ?? 'Erreur suppression';
+      throw Exception(message);
     }
   }
 

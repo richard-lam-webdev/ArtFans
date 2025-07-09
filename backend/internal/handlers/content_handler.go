@@ -126,7 +126,15 @@ func (h *ContentHandler) GetContentByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, content)
+	c.JSON(http.StatusOK, gin.H{
+		"id":          content.ID,
+		"title":       content.Title,
+		"body":        content.Body,
+		"price":       content.Price,
+		"created_at":  content.CreatedAt,
+		"author_id":   content.CreatorID,
+		"author_name": content.Creator.Username, // ← le nom que tu afficheras
+	})
 }
 
 // PUT /api/contents/:id
