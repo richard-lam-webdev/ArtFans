@@ -20,20 +20,25 @@ import 'src/providers/message_provider.dart';
 import 'src/widgets/app_wrapper.dart';
 import 'src/services/subscription_service.dart';
 import 'src/providers/subscription_provider.dart';
+import 'src/providers/comment_moderation_provider.dart';
+import 'src/services/admin_comment_service.dart';
+import 'src/providers/content_detail_provider.dart';
+import 'src/services/content_service.dart';
+import 'src/services/comment_service.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await dotenv.load(fileName: '.env');
     debugPrint('✅ .env chargé');
   } catch (e) {
     debugPrint('⚠️ Impossible de charger .env : $e');
   }
-  
+
   timeago.setLocaleMessages('fr', timeago.FrMessages());
   runApp(const MyApp());
 }
@@ -48,7 +53,9 @@ class MyApp extends StatelessWidget {
     final adminService = AdminService();
     final adminStatsService = AdminStatsService();
     final subscriptionService = SubscriptionService();
-    
+    final contentService = ContentService();
+    final commentService = CommentService();
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
@@ -75,6 +82,17 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => MessageProvider()),
+        ChangeNotifierProvider(
+          create:
+              (_) => CommentModerationProvider(service: AdminCommentService()),
+        ),
+        ChangeNotifierProvider(
+          create:
+              (_) => ContentDetailProvider(
+                contentService: contentService,
+                commentService: commentService,
+              ),
+        ),
       ],
       child: AppWrapper(
         child: Consumer<ThemeProvider>(

@@ -32,3 +32,28 @@ func (r *CommentRepository) FindAllByContent(contentID uuid.UUID) ([]models.Comm
 func (r *CommentRepository) Create(c *models.Comment) error {
 	return r.db.Create(c).Error
 }
+
+// ListAll récupère tous les commentaires, triés par date décroissante, avec pagination.
+func (r *CommentRepository) ListAll(offset, limit int) ([]models.Comment, error) {
+	var comments []models.Comment
+	err := database.DB.
+		Preload("Author").  // charge l’auteur (User)
+		Preload("Content"). // charge le post parent si besoin
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&comments).Error
+	if err != nil {
+		return nil, err
+	}
+	return comments, nil
+}
+
+// DeleteByID supprime un commentaire selon son ID.
+func (r *CommentRepository) DeleteByID(id uuid.UUID) error {
+	// On utilise id = ? pour filtrer sur le champ PK (uuid)
+	return database.DB.
+		Where("id = ?", id).
+		Delete(&models.Comment{}).
+		Error
+}

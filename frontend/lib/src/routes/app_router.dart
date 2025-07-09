@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/add_content_screen.dart';
@@ -16,7 +17,9 @@ import '../screens/feed_screen.dart';
 import '../screens/conversations_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/my_subscriptions_screen.dart';
-import '../screens/splash_screen.dart'; 
+import '../screens/splash_screen.dart';
+import '../screens/comments_moderation_screen.dart';
+import '../screens/content_detail_screen.dart';
 
 import '../../main.dart';
 
@@ -26,7 +29,7 @@ class AppRouter {
     final userProv = context.read<UserProvider>();
 
     return GoRouter(
-      initialLocation: '/splash', 
+      initialLocation: '/splash',
       refreshListenable: Listenable.merge([auth, userProv]),
       observers: [routeObserver],
 
@@ -34,16 +37,13 @@ class AppRouter {
         final isAuthenticated = auth.status == AuthStatus.authenticated;
         final isLoading = auth.status == AuthStatus.loading;
         final isInitialized = auth.isInitialized;
-        
         final currentPath = state.uri.toString();
-
         if (!isInitialized || isLoading) {
           if (currentPath != '/splash') {
             return '/splash';
           }
           return null;
         }
-
         final loggingIn = currentPath == '/login';
         final registering = currentPath == '/register';
         final goingToAdmin = currentPath == '/admin';
@@ -57,16 +57,16 @@ class AppRouter {
         if (!isAuthenticated && !loggingIn && !registering && !onSplash) {
           return '/login';
         }
-        
+
         if (isAuthenticated && (loggingIn || registering)) {
           return '/home';
         }
-        
+
         final role = userProv.user?['Role'] as String?;
         if (goingToAdmin && role != 'admin') {
           return '/home';
         }
-        
+
         return null;
       },
 
@@ -101,6 +101,20 @@ class AppRouter {
           name: 'admin',
           builder: (context, state) => const AdminHomeScreen(),
         ),
+
+        GoRoute(
+          path: '/admin/moderation/comments',
+          name: 'admin-comments-moderation',
+          builder: (context, state) => const CommentsModerationScreen(),
+        ),
+        GoRoute(
+          path: '/contents/:id',
+          name: 'content_detail',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return ContentDetailScreen(contentId: id);
+          },
+        ),
         GoRoute(
           path: "/my-contents",
           builder: (context, state) => const MyContentsScreen(),
@@ -121,10 +135,7 @@ class AppRouter {
           builder: (context, state) {
             final userId = state.pathParameters['userId']!;
             final userName = state.extra as String? ?? 'Utilisateur';
-            return ChatScreen(
-              otherUserId: userId,
-              otherUserName: userName,
-            );
+            return ChatScreen(otherUserId: userId, otherUserName: userName);
           },
         ),
         GoRoute(

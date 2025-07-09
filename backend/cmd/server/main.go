@@ -57,6 +57,7 @@ func main() {
 	messageHandler := handlers.NewMessageHandler(messageSvc)
 
 	adminStatsHandler := handlers.NewAdminStatsHandler()
+	adminCommentHandler := handlers.NewAdminCommentHandler(commentSvc)
 
 	/* ---------- 5) Gin ---------- */
 	r := gin.New()
@@ -144,6 +145,9 @@ func main() {
 		admin.GET("/flop-contents", adminStatsHandler.GetFlopContents)
 		admin.GET("/revenue-chart", adminStatsHandler.GetRevenueChart)
 		admin.GET("/quick-stats", adminStatsHandler.GetQuickStats)
+
+		admin.GET("/comments", adminCommentHandler.ListComments)
+		admin.DELETE("/comments/:id", adminCommentHandler.DeleteComment)
 	}
 
 	/* ---------- 12) Start ---------- */

@@ -261,4 +261,22 @@ class ContentService {
       throw Exception('Erreur postComment: ${resp.statusCode}');
     }
   }
+
+  Future<Map<String, dynamic>> getContentDetailById(String id) async {
+    // On récupère d’abord le JSON brut
+    final raw = (await getContentById(id))!;
+
+    // On extrait et met en forme :
+    final author = raw['author'] as Map<String, dynamic>? ?? {};
+    return {
+      'id': raw['id'],
+      'title': raw['title'],
+      'body': raw['body'],
+      'price': raw['price'],
+      'image_url': raw['image_url'],
+      'created_at': raw['created_at'],
+      'author_id': author['id'],
+      'author_name': author['username'],
+    };
+  }
 }

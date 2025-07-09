@@ -49,6 +49,10 @@ class AdminContentService {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       throw Exception(body['error'] ?? 'Erreur suppression');
     }
+    if (res.statusCode != 204) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      throw Exception(body['error'] ?? 'Erreur suppression');
+    }
   }
 
   Future<void> approveContent(String id) async {
