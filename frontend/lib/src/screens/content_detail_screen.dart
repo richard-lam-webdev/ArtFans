@@ -8,8 +8,7 @@ import '../services/admin_comment_service.dart';
 
 class ContentDetailScreen extends StatefulWidget {
   final String contentId;
-  const ContentDetailScreen({Key? key, required this.contentId})
-    : super(key: key);
+  const ContentDetailScreen({super.key, required this.contentId});
 
   @override
   State<ContentDetailScreen> createState() => _ContentDetailScreenState();
@@ -22,10 +21,12 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   void initState() {
     super.initState();
     _adminCommentService = AdminCommentService();
-    // Charge le contenu + commentaires
-    Future.microtask(
-      () => context.read<ContentDetailProvider>().load(widget.contentId),
-    );
+
+    // Charge le contenu + commentaires dès la première frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<ContentDetailProvider>().load(widget.contentId);
+    });
   }
 
   @override
@@ -52,7 +53,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => GoRouter.of(context).go('/admin'),
+            onPressed: () => context.go('/admin'),
           ),
           title: const Text('Détail du contenu'),
         ),
@@ -68,7 +69,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => GoRouter.of(context).go('/admin'),
+          onPressed: () => context.go('/admin'),
         ),
         title: Text(c['title'] as String),
       ),
@@ -119,10 +120,16 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       icon: const Icon(Icons.delete, color: Colors.red),
                       tooltip: 'Supprimer le commentaire',
                       onPressed: () async {
+                        // 1. Capture les objets dépendants du contexte AVANT tout await
+                        final messenger = ScaffoldMessenger.of(context);
+                        final detailProv =
+                            context.read<ContentDetailProvider>();
+
+                        // 2. Boîte de dialogue
                         final ok = await showDialog<bool>(
                           context: context,
                           builder:
-                              (_) => AlertDialog(
+                              (dialogCtx) => AlertDialog(
                                 title: const Text('Confirmation'),
                                 content: const Text(
                                   'Supprimer ce commentaire ?',
@@ -130,12 +137,13 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                                 actions: [
                                   TextButton(
                                     onPressed:
-                                        () => Navigator.pop(context, false),
+                                        () =>
+                                            Navigator.of(dialogCtx).pop(false),
                                     child: const Text('Annuler'),
                                   ),
                                   TextButton(
                                     onPressed:
-                                        () => Navigator.pop(context, true),
+                                        () => Navigator.of(dialogCtx).pop(true),
                                     child: const Text('Supprimer'),
                                   ),
                                 ],
@@ -144,16 +152,20 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         if (ok != true) return;
 
                         try {
+                          // 3. Suppression côté API
                           await _adminCommentService.deleteComment(commentId);
-                          ScaffoldMessenger.of(context).showSnackBar(
+
+                          // 4. Feedback utilisateur (plus d’accès direct à context)
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text('Commentaire supprimé'),
                             ),
                           );
-                          // recharge tout
-                          await prov.load(widget.contentId);
+
+                          // 5. Recharge les données
+                          await detailProv.load(widget.contentId);
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(content: Text('Erreur : $e')),
                           );
                         }

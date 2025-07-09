@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/admin_provider.dart';
@@ -16,7 +15,7 @@ import '../widgets/admin_dashboard_widgets.dart';
 import 'comments_moderation_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
-  const AdminHomeScreen({Key? key}) : super(key: key);
+  const AdminHomeScreen({super.key});
 
   @override
   State<AdminHomeScreen> createState() => _AdminHomeScreenState();

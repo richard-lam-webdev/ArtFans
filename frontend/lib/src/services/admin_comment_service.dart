@@ -3,18 +3,13 @@
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 import 'package:frontend/src/services/auth_service.dart';
 
 /// Service pour la modération des commentaires (admin).
 class AdminCommentService {
   /// URL de base (définie dans .env)
   final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
-
-  /// En-têtes HTTP (notamment l’Authorization : Bearer <token>)
-  /// Vous pouvez récupérer votre token via AuthProvider ou AuthService.
   Future<Map<String, String>> _headers() async {
-    // TODO : adapter selon l’implémentation de votre AuthService
     final token = await AuthService().getToken();
     return {
       'Content-Type': 'application/json',

@@ -1,14 +1,11 @@
-// lib/src/screens/moderation/comments_moderation_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/comment_moderation_provider.dart';
-import '../widgets/bottom_nav.dart';
 
 class CommentsModerationScreen extends StatefulWidget {
-  const CommentsModerationScreen({Key? key}) : super(key: key);
+  const CommentsModerationScreen({super.key});
 
   @override
   State<CommentsModerationScreen> createState() =>
@@ -22,14 +19,25 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPage();
+    // On attend la première frame pour charger les données
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadPage();
+    });
   }
 
-  void _loadPage() {
-    context.read<CommentModerationProvider>().fetchComments(
-      page: _page,
-      pageSize: _pageSize,
-    );
+  Future<void> _loadPage() async {
+    try {
+      await context.read<CommentModerationProvider>().fetchComments(
+        page: _page,
+        pageSize: _pageSize,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur lors du chargement : $e')));
+    }
   }
 
   @override
@@ -94,10 +102,7 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                         DataCell(Text(date)),
                         DataCell(
                           InkWell(
-                            onTap:
-                                () => GoRouter.of(
-                                  context,
-                                ).go('/contents/$contentId'),
+                            onTap: () => context.go('/contents/$contentId'),
                             child: Text(
                               'Voir',
                               style: TextStyle(
@@ -111,10 +116,11 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                             icon: const Icon(Icons.delete, color: Colors.red),
                             tooltip: 'Supprimer',
                             onPressed: () async {
+                              // Affiche la boîte de dialogue de confirmation
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder:
-                                    (_) => AlertDialog(
+                                    (dialogContext) => AlertDialog(
                                       title: const Text(
                                         'Confirmer la suppression',
                                       ),
@@ -124,33 +130,41 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                                       actions: [
                                         TextButton(
                                           onPressed:
-                                              () =>
-                                                  Navigator.pop(context, false),
+                                              () => Navigator.of(
+                                                dialogContext,
+                                              ).pop(false),
                                           child: const Text('Annuler'),
                                         ),
                                         TextButton(
                                           onPressed:
-                                              () =>
-                                                  Navigator.pop(context, true),
+                                              () => Navigator.of(
+                                                dialogContext,
+                                              ).pop(true),
                                           child: const Text('Supprimer'),
                                         ),
                                       ],
                                     ),
                               );
-                              if (confirm != true) return;
+
+                              // Vérifie que le widget est toujours monté
+                              if (!mounted || confirm != true) return;
 
                               try {
                                 await context
                                     .read<CommentModerationProvider>()
                                     .deleteComment(id);
+
+                                if (!mounted) return;
+
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Commentaire supprimé'),
                                   ),
                                 );
-                                // recharge la page courante
-                                _loadPage();
+
+                                await _loadPage();
                               } catch (e) {
+                                if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Erreur : $e')),
                                 );
@@ -175,9 +189,9 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                 icon: const Icon(Icons.chevron_left),
                 onPressed:
                     _page > 1
-                        ? () {
+                        ? () async {
                           setState(() => _page--);
-                          _loadPage();
+                          await _loadPage();
                         }
                         : null,
               ),
@@ -186,9 +200,9 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                 icon: const Icon(Icons.chevron_right),
                 onPressed:
                     comments.length == _pageSize
-                        ? () {
+                        ? () async {
                           setState(() => _page++);
-                          _loadPage();
+                          await _loadPage();
                         }
                         : null,
               ),
