@@ -366,8 +366,6 @@ class ContentService {
     }
 
     if (kIsWeb) {
-      // CORRECTION : Utilise la fonction importée conditionnellement
-      print('🌐 Téléchargement Web: $filename (${bytes.length} bytes)');
       downloadFileWeb(bytes, filename);
       return null;
     } else {
@@ -376,7 +374,6 @@ class ContentService {
       final localPath = '${dir.path}/$filename';
       final file = File(localPath);
       await file.writeAsBytes(bytes, flush: true);
-      print('📱 Téléchargement Mobile: $localPath');
       return localPath;
     }
   }
