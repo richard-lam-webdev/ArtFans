@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert';
 // conditionnellement importé uniquement en Web :
 import 'package:flutter/foundation.dart';
@@ -8,8 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:path_provider/path_provider.dart';
-// n'ajoute ceci QUE si tu cibles le Web :
-// ignore: avoid_web_libraries_in_flutter
+// ignore: deprecated_member_use, avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'metrics_service.dart';
 
@@ -378,9 +376,6 @@ class ContentService {
       // Web → crée un Blob + <a download>
       final blob = html.Blob([bytes]);
       final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute('download', filename)
-        ..click();
       html.Url.revokeObjectUrl(url);
       return null;
     }

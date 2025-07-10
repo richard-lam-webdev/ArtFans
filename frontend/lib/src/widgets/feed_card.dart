@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/src/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 import '../services/content_service.dart';
@@ -10,6 +9,7 @@ import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
 import 'comments_sheet.dart';
+// ignore: depend_on_referenced_packages
 import 'package:open_file/open_file.dart';
 
 class FeedCard extends StatefulWidget {
@@ -29,8 +29,6 @@ class FeedCard extends StatefulWidget {
 class _FeedCardState extends State<FeedCard> {
   final ContentService _svc = ContentService();
   bool _isLoadingSubscription = false;
-  bool _isSubscribed = false;
-  bool _isLoading = false;
 
   @override
   void initState() {
@@ -38,7 +36,6 @@ class _FeedCardState extends State<FeedCard> {
     // AJOUT : Initialiser l'état local avec les données du provider
     final creatorId = widget.content['creator_id']?.toString();
     if (creatorId != null) {
-      _isSubscribed = context.read<SubscriptionProvider>().isSubscribed(creatorId);
     }
   }
 

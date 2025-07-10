@@ -78,7 +78,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		},
 	)
 	if err != nil {
-		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]interface{}{
+		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
 			"creator_id": creatorID.String(),
 			"error":      err.Error(),
 		})
