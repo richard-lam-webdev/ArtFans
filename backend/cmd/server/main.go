@@ -75,7 +75,7 @@ func main() {
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -115,7 +115,7 @@ func main() {
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
 		protected.GET("/search", searchHandler.Search)
-
+		protected.GET("/contents/:id/download", contentHandler.DownloadContent)
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
@@ -130,6 +130,7 @@ func main() {
 		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)     // Mes abonnements (IDs)
 		protected.GET("/subscriptions/my", subscriptionHandler.GetMySubscriptions)     // ✨ NOUVEAU : Mes abonnements détaillés
 		protected.GET("/creator/stats", subscriptionHandler.GetCreatorStats)
+		protected.GET("/subscriptions/:creatorID/status", subscriptionHandler.CheckSubscriptionStatus)
 		// Comments
 		protected.GET("/contents/:id/comments", commentHandler.GetComments)
 		protected.POST("/contents/:id/comments", commentHandler.PostComment)
@@ -141,6 +142,7 @@ func main() {
 		protected.GET("/messages", messageHandler.GetConversations)
 		protected.GET("/messages/:userId", messageHandler.GetConversation)
 
+		protected.POST("/contents/:id/report", handlers.ReportContentHandler)
 	}
 
 	/* ---------- 11) Admin ---------- */
@@ -167,6 +169,7 @@ func main() {
 		admin.PUT("/features/:key", handlers.UpdateFeatureHandler)
 		admin.GET("/comments", adminCommentHandler.ListComments)
 		admin.DELETE("/comments/:id", adminCommentHandler.DeleteComment)
+		admin.GET("/reports", handlers.ListReportsHandler)
 	}
 
 	logger.LogBusinessEvent("application_started", map[string]interface{}{

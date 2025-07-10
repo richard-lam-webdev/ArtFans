@@ -1,10 +1,16 @@
-import 'dart:typed_data';
+import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
+import 'package:path_provider/path_provider.dart';
 import 'metrics_service.dart';
+
+// SOLUTION : Import conditionnel avec les deux implémentations
+import 'package:frontend/src/utils/web_download_stub.dart'
+    if (dart.library.html) 'package:frontend/src/utils/web_download_web.dart';
 
 class ContentService {
   final String _baseUrl;
@@ -104,58 +110,57 @@ class ContentService {
   }
 
   Future<void> addContent({
-  required String token,
-  required String username,
-  required String title,
-  required String body,
-  required String price,
-  required String role,
-  required String fileName,
-  required Uint8List? fileBytes,
-  String? filePath,
-}) async {
-  final uri = Uri.parse('$_baseUrl/api/contents');
-  final request = http.MultipartRequest('POST', uri)
-    ..headers['Authorization'] = 'Bearer $token'
-    ..fields['username'] = username
-    ..fields['role'] = role
-    ..fields['title'] = title.trim()
-    ..fields['body'] = body.trim()
-    ..fields['price'] = price.trim();
+    required String token,
+    required String username,
+    required String title,
+    required String body,
+    required String price,
+    required String role,
+    required String fileName,
+    required Uint8List? fileBytes,
+    String? filePath,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/contents');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['username'] = username
+      ..fields['role'] = role
+      ..fields['title'] = title.trim()
+      ..fields['body'] = body.trim()
+      ..fields['price'] = price.trim();
 
-  if (UniversalPlatform.isWeb || filePath == null) {
-    if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
-    request.files.add(
-      http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
-    );
-  } else {
-    request.files.add(
-      await http.MultipartFile.fromPath('file', filePath, filename: fileName),
-    );
-  }
-
-  final start = DateTime.now();
-  late http.StreamedResponse streamed;
-  try {
-    streamed = await request.send();
-    final latency = DateTime.now().difference(start).inMilliseconds;
-    MetricsService.reportAPILatency('/contents (multipart)', latency);
-
-    if (streamed.statusCode != 201) {
-      if (streamed.statusCode >= 500) {
-        MetricsService.reportError('http_5xx');
-      } else {
-        MetricsService.reportError('http_4xx');
-      }
-      final respBody = await streamed.stream.bytesToString();
-      throw Exception('Erreur ${streamed.statusCode} : $respBody');
+    if (UniversalPlatform.isWeb || filePath == null) {
+      if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
+      );
+    } else {
+      request.files.add(
+        await http.MultipartFile.fromPath('file', filePath, filename: fileName),
+      );
     }
-  } catch (e) {
-    MetricsService.reportError('network_error');
-    rethrow;
-  }
-}
 
+    final start = DateTime.now();
+    late http.StreamedResponse streamed;
+    try {
+      streamed = await request.send();
+      final latency = DateTime.now().difference(start).inMilliseconds;
+      MetricsService.reportAPILatency('/contents (multipart)', latency);
+
+      if (streamed.statusCode != 201) {
+        if (streamed.statusCode >= 500) {
+          MetricsService.reportError('http_5xx');
+        } else {
+          MetricsService.reportError('http_4xx');
+        }
+        final respBody = await streamed.stream.bytesToString();
+        throw Exception('Erreur ${streamed.statusCode} : $respBody');
+      }
+    } catch (e) {
+      MetricsService.reportError('network_error');
+      rethrow;
+    }
+  }
 
   Future<List<Map<String, dynamic>>> fetchFeed() async {
     final token = await _getToken();
@@ -175,6 +180,23 @@ class ContentService {
     if (feed is! List) return [];
 
     return List<Map<String, dynamic>>.from(feed);
+  }
+
+  Future<Map<String, dynamic>> fetchFeedPaginated({int page = 1, int limit = 10}) async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse("$_baseUrl/api/feed?page=$page&limit=$limit"),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception("Erreur ${response.statusCode} : ${response.body}");
+    }
+
+    return jsonDecode(response.body);
   }
 
   Future<void> subscribe(String creatorId) async {
@@ -223,7 +245,6 @@ class ContentService {
     throw Exception("Erreur ${response.statusCode}");
   }
 
-  // — Likes
   Future<void> likeContent(String contentId) async {
     final token = await _getToken();
     final resp = await http.post(
@@ -246,7 +267,6 @@ class ContentService {
     }
   }
 
-  // — Commentaires
   Future<List<Map<String, dynamic>>> fetchComments(String contentId) async {
     final token = await _getToken();
     final resp = await http.get(
@@ -281,10 +301,8 @@ class ContentService {
   }
 
   Future<Map<String, dynamic>> getContentDetailById(String id) async {
-    // On récupère d’abord le JSON brut
     final raw = (await getContentById(id))!;
 
-    // On extrait et met en forme :
     final author = raw['author'] as Map<String, dynamic>? ?? {};
     return {
       'id': raw['id'],
@@ -297,9 +315,8 @@ class ContentService {
       'author_name': author['username'],
     };
   }
-}
 
- Future<http.Response> _performRequest(
+  Future<http.Response> _performRequest(
     String endpoint,
     Future<http.Response> Function() request,
   ) async {
@@ -307,11 +324,9 @@ class ContentService {
     try {
       final response = await request();
       
-      // Mesurer la latence pour tous les appels
       final latency = DateTime.now().difference(start).inMilliseconds;
       MetricsService.reportAPILatency(endpoint, latency);
       
-      // Reporter les erreurs HTTP
       if (response.statusCode >= 500) {
         MetricsService.reportError('http_5xx');
       } else if (response.statusCode >= 400) {
@@ -324,3 +339,60 @@ class ContentService {
       rethrow;
     }
   }
+
+  // SOLUTION : Méthode downloadContent qui marche vraiment
+  Future<String?> downloadContent(String contentId) async {
+    final uri = Uri.parse('$_baseUrl/api/contents/$contentId/download');
+    final token = await _getToken();
+    
+    final resp = await http.get(uri, headers: {
+      'Authorization': 'Bearer $token',
+    });
+    
+    if (resp.statusCode != 200) {
+      throw Exception('Erreur ${resp.statusCode} lors du téléchargement');
+    }
+    
+    final bytes = resp.bodyBytes;
+    
+    // Extraire le nom de fichier depuis les headers de réponse
+    String filename = 'contenu.png';
+    final contentDisposition = resp.headers['content-disposition'];
+    if (contentDisposition != null) {
+      final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
+      if (filenameMatch != null) {
+        filename = filenameMatch.group(1) ?? filename;
+      }
+    }
+
+    if (kIsWeb) {
+      downloadFileWeb(bytes, filename);
+      return null;
+    } else {
+      // Mobile → écrit dans un fichier local
+      final dir = await getApplicationDocumentsDirectory();
+      final localPath = '${dir.path}/$filename';
+      final file = File(localPath);
+      await file.writeAsBytes(bytes, flush: true);
+      return localPath;
+    }
+  }
+
+  Future<bool> checkSubscriptionStatus(String creatorId) async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse("$_baseUrl/api/subscriptions/$creatorId/status"),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['subscribed'] == true;
+    }
+    
+    return false;
+  }
+}

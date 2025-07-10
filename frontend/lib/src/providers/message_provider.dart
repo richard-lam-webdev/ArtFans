@@ -75,9 +75,7 @@ class MessageProvider extends ChangeNotifier {
 
   void startAutoRefresh() {
     _refreshTimer?.cancel();
-    refreshConversations(silent: true);
-
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       refreshConversations(silent: true);
       for (final userId in _messagesCache.keys) {
         refreshMessages(userId, silent: true);

@@ -26,6 +26,8 @@ import 'src/services/content_service.dart';
 import 'src/services/comment_service.dart';
 import 'src/providers/feature_flag_provider.dart';
 import 'src/services/feature_flag_service.dart';
+import 'src/providers/report_provider.dart';
+import 'src/services/report_service.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -96,6 +98,9 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => FeatureFlagProvider(service: FeatureFlagService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ReportProvider(reportService: ReportService()),
         ),
       ],
       child: AppWrapper(

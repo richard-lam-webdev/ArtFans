@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -5,10 +6,13 @@ import 'package:go_router/go_router.dart';
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/feature_flag_provider.dart';
+import '../providers/report_provider.dart';
 import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
 import 'comments_sheet.dart';
+// ignore: depend_on_referenced_packages
+import 'package:open_file/open_file.dart';
 
 class FeedCard extends StatefulWidget {
   final Map<String, dynamic> content;
@@ -28,6 +32,14 @@ class _FeedCardState extends State<FeedCard> {
   final ContentService _svc = ContentService();
   bool _isLoadingSubscription = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // AJOUT : Initialiser l'état local avec les données du provider
+    final creatorId = widget.content['creator_id']?.toString();
+    if (creatorId != null) {}
+  }
+
   Future<void> _toggleSubscribe() async {
     final subProv = context.read<SubscriptionProvider>();
     final creatorId = widget.content['creator_id']?.toString();
@@ -36,73 +48,84 @@ class _FeedCardState extends State<FeedCard> {
     if (creatorId == null) return;
 
     final currentlySubscribed = subProv.isSubscribed(creatorId);
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(
-              currentlySubscribed
-                  ? 'Se désabonner de $creatorName'
-                  : 'S’abonner à $creatorName',
-            ),
-            content: currentlySubscribed
-                ? const Text(
-                    'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
-                    'Vous perdrez l\'accès au contenu premium de ce créateur.',
-                  )
-                : const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Vous allez vous abonner pour :'),
-                      SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(Icons.euro, color: Colors.green, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            '30€ par mois',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.schedule, color: Colors.blue, size: 20),
-                          SizedBox(width: 8),
-                          Text('Durée : 30 jours'),
-                        ],
-                      ),
-                      SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(Icons.star, color: Colors.orange, size: 20),
-                          SizedBox(width: 8),
-                          Text('Accès à tout le contenu'),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-                      Text('Confirmez-vous votre abonnement ?'),
-                    ],
+          builder:
+              (ctx) => AlertDialog(
+                title: Text(
+                  currentlySubscribed
+                      ? 'Se désabonner de $creatorName'
+                      : 'S’abonner à $creatorName',
+                ),
+                content:
+                    currentlySubscribed
+                        ? const Text(
+                          'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
+                          'Vous perdrez l\'accès au contenu premium de ce créateur.',
+                        )
+                        : const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Vous allez vous abonner pour :'),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Icon(Icons.euro, color: Colors.green, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  '30€ par mois',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  color: Colors.blue,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Durée : 30 jours'),
+                              ],
+                            ),
+                            SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.star,
+                                  color: Colors.orange,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Accès à tout le contenu'),
+                              ],
+                            ),
+                            SizedBox(height: 16),
+                            Text('Confirmez-vous votre abonnement ?'),
+                          ],
+                        ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Annuler'),
                   ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Annuler'),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: currentlySubscribed ? Colors.red : null,
+                      foregroundColor:
+                          currentlySubscribed ? Colors.white : null,
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: Text(
+                      currentlySubscribed ? 'Se désabonner' : 'Confirmer (30€)',
+                    ),
+                  ),
+                ],
               ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: currentlySubscribed ? Colors.red : null,
-                  foregroundColor:
-                      currentlySubscribed ? Colors.white : null,
-                ),
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(
-                  currentlySubscribed ? 'Se désabonner' : 'Confirmer (30€)',
-                ),
-              ),
-            ],
-          ),
         ) ??
         false;
 
@@ -110,9 +133,10 @@ class _FeedCardState extends State<FeedCard> {
 
     setState(() => _isLoadingSubscription = true);
 
-    final success = currentlySubscribed
-        ? await subProv.unsubscribeFromCreator(creatorId)
-        : await subProv.subscribeToCreator(creatorId);
+    final success =
+        currentlySubscribed
+            ? await subProv.unsubscribeFromCreator(creatorId)
+            : await subProv.subscribeToCreator(creatorId);
 
     if (!mounted) return;
 
@@ -126,6 +150,19 @@ class _FeedCardState extends State<FeedCard> {
         type: SnackBarType.success,
       );
       widget.onSubscribedChanged();
+      // MODIFICATION : Le provider se met à jour automatiquement dans ses méthodes
+      // Pas besoin de setSubscriptionStatus ici, c'est déjà fait dans le provider
+
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          currentlySubscribed
+              ? 'Vous êtes désabonné de $creatorName'
+              : 'Abonnement à $creatorName réussi !',
+          type: SnackBarType.success,
+        );
+        widget.onSubscribedChanged();
+      }
     } else {
       showCustomSnackBar(
         context,
@@ -163,8 +200,9 @@ class _FeedCardState extends State<FeedCard> {
         widget.content['liked_by_user'] = currentlyLiked;
         widget.content['likes_count'] = currentCount;
       });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Erreur like : $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erreur like : $e')));
     }
   }
 
@@ -175,26 +213,108 @@ class _FeedCardState extends State<FeedCard> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.4,
-        child: CommentsSheet(contentId: widget.content['id'] as String),
-      ),
+      builder:
+          (_) => FractionallySizedBox(
+            heightFactor: 0.4,
+            child: CommentsSheet(contentId: widget.content['id'] as String),
+          ),
     );
+  }
+
+  // NOUVELLE MÉTHODE pour gérer le téléchargement sur web et mobile
+  Future<void> _downloadContent() async {
+    try {
+      final contentId = widget.content['id'] as String;
+      final localPath = await _svc.downloadContent(contentId);
+
+      if (kIsWeb) {
+        // Sur web, le fichier est téléchargé automatiquement
+        if (mounted) {
+          showCustomSnackBar(
+            context,
+            'Téléchargement terminé',
+            type: SnackBarType.success,
+          );
+        }
+      } else {
+        // Sur mobile, on peut ouvrir le fichier
+        if (localPath != null) {
+          await OpenFile.open(localPath);
+          if (mounted) {
+            showCustomSnackBar(
+              context,
+              'Ouverture du fichier…',
+              type: SnackBarType.success,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          'Erreur de téléchargement : $e',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
+  Future<void> _reportContent() async {
+    final reasons = ['Inapproprié', 'Spam', 'Autre'];
+    final selected = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => SimpleDialog(
+            title: const Text('Signaler ce contenu'),
+            children:
+                reasons
+                    .map(
+                      (r) => SimpleDialogOption(
+                        child: Text(r),
+                        onPressed: () => Navigator.of(ctx).pop(r),
+                      ),
+                    )
+                    .toList(),
+          ),
+    );
+    if (selected == null || !mounted) return;
+
+    try {
+      await context.read<ReportProvider>().submitReport(
+        widget.content['id'] as String,
+        reason: selected,
+      );
+      if (!mounted) return;
+      showCustomSnackBar(
+        context,
+        'Merci, le contenu a été signalé.',
+        type: SnackBarType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showCustomSnackBar(
+        context,
+        'Erreur lors du signalement : $e',
+        type: SnackBarType.error,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
-    final isSubscribed = creatorId != null
-        ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
-        : false;
+    final isSubscribed =
+        creatorId != null
+            ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
+            : false;
 
     final bool liked = widget.content['liked_by_user'] as bool? ?? false;
     final int likeCount = widget.content['likes_count'] as int? ?? 0;
 
     final commentEnabled = context.watch<FeatureFlagProvider>().features.any(
-          (f) => f.key == featureComments && f.enabled,
-        );
+      (f) => f.key == featureComments && f.enabled,
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -225,16 +345,17 @@ class _FeedCardState extends State<FeedCard> {
                 ),
               ),
             ),
-            trailing: _isLoadingSubscription
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : TextButton(
-                    onPressed: _toggleSubscribe,
-                    child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
-                  ),
+            trailing:
+                _isLoadingSubscription
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : TextButton(
+                      onPressed: _toggleSubscribe,
+                      child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
+                    ),
           ),
           AspectRatio(
             aspectRatio: 16 / 9,
@@ -264,10 +385,25 @@ class _FeedCardState extends State<FeedCard> {
                   ),
                   const SizedBox(width: 16),
                 ],
+
+                // BOUTON TÉLÉCHARGEMENT CORRIGÉ pour web et mobile
+                if (isSubscribed)
+                  IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    tooltip: 'Télécharger',
+                    onPressed: _downloadContent, // Utilise la nouvelle méthode
+                  ),
+
+                IconButton(
+                  icon: const Icon(Icons.flag_outlined),
+                  tooltip: 'Signaler',
+                  onPressed: _reportContent,
+                ),
                 const Spacer(),
               ],
             ),
           ),
+
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(
