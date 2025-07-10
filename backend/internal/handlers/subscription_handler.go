@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -71,20 +72,21 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		subscriberID.String(),
 		30.00,
 		true,
-		map[string]interface{}{
+		map[string]any{
 			"creator_id": creatorID.String(),
 			"method":     "stripe",
 		},
 	)
-	if err != nil {
-		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]interface{}{
+	subErr := h.service.Subscribe(creatorID, subscriberID)
+	if subErr != nil {
+		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
 			"creator_id": creatorID.String(),
-			"error":      err.Error(),
+			"error":      subErr.Error(),
 		})
 
-		sentry.CapturePaymentError(err, subscriberID.String(), 30.00, map[string]any{
+		sentry.CapturePaymentError(subErr, subscriberID.String(), 30.00, map[string]any{
 			"creator_id":   creatorID.String(),
-			"stripe_error": err.Error(),
+			"stripe_error": subErr.Error(),
 		})
 
 		c.JSON(500, gin.H{"error": "Payment failed"})
@@ -235,5 +237,44 @@ func (h *SubscriptionHandler) GetCreatorStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    stats,
+	})
+}
+
+func (h *SubscriptionHandler) CheckSubscriptionStatus(c *gin.Context) {
+	// Récupération de l'ID utilisateur depuis le contexte
+	subscriberIDRaw, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+
+	subscriberID, err := uuid.Parse(subscriberIDRaw.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	// Récupération de l'ID créateur depuis les paramètres
+	creatorIDParam := c.Param("creatorID")
+	creatorID, err := uuid.Parse(creatorIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID créateur invalide"})
+		return
+	}
+
+	// Vérification du statut d'abonnement
+	isSubscribed, err := h.service.IsSubscribed(subscriberID, creatorID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Erreur lors de la vérification du statut d'abonnement",
+		})
+		return
+	}
+
+	// Réponse simple avec le statut
+	c.JSON(http.StatusOK, gin.H{
+		"subscribed": isSubscribed,
+		"creator_id": creatorID,
+		"timestamp":  time.Now(),
 	})
 }

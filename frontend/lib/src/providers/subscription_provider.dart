@@ -23,32 +23,52 @@ class SubscriptionProvider extends ChangeNotifier {
   Map<String, dynamic>? get creatorStats => _creatorStats;
   String? get errorMessage => _errorMessage;
 
+  /// NOUVELLE MÉTHODE : Initialise le cache avec les données du feed
+  void initializeFeedSubscriptions(List<Map<String, dynamic>> feedItems) {
+    debugPrint('🔄 Initialisation des abonnements depuis le feed...');
+    for (final item in feedItems) {
+      final creatorId = item['creator_id']?.toString();
+      final isSubscribed = item['is_subscribed'] as bool? ?? false;
+      
+      if (creatorId != null) {
+        _subscriptionCache[creatorId] = isSubscribed;
+        debugPrint('📝 Cache: Creator $creatorId -> $isSubscribed');
+      }
+    }
+    debugPrint('✅ Cache initialisé avec ${_subscriptionCache.length} créateurs');
+    // Pas de notifyListeners() ici car on initialise juste
+  }
+
   /// Met à jour manuellement l'état d'abonnement (utile après un fetch local)
   void setSubscriptionStatus(String creatorId, bool isSubscribed) {
+    debugPrint('🔄 Mise à jour manuelle: Creator $creatorId -> $isSubscribed');
     _subscriptionCache[creatorId] = isSubscribed;
     notifyListeners();
   }
 
   /// S'abonner à un créateur
   Future<bool> subscribeToCreator(String creatorId) async {
+    debugPrint('📝 Tentative d\'abonnement à $creatorId');
     _status = SubscriptionStatus.loading;
     notifyListeners();
 
     try {
       await _subscriptionService.subscribeToCreator(creatorId);
 
-      // Mettre à jour le cache
+      // Mettre à jour le cache IMMÉDIATEMENT
       _subscriptionCache[creatorId] = true;
+      debugPrint('✅ Abonnement réussi: Cache mis à jour pour $creatorId -> true');
 
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
 
-      // Rafraîchir la liste des abonnements
-      await fetchMySubscriptions();
+      // Rafraîchir la liste des abonnements en arrière-plan
+      fetchMySubscriptions();
 
       return true;
     } catch (e) {
+      debugPrint('❌ Erreur abonnement: $e');
       _status = SubscriptionStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
@@ -58,24 +78,27 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Se désabonner d'un créateur
   Future<bool> unsubscribeFromCreator(String creatorId) async {
+    debugPrint('📝 Tentative de désabonnement de $creatorId');
     _status = SubscriptionStatus.loading;
     notifyListeners();
 
     try {
       await _subscriptionService.unsubscribeFromCreator(creatorId);
 
-      // Mettre à jour le cache
+      // Mettre à jour le cache IMMÉDIATEMENT
       _subscriptionCache[creatorId] = false;
+      debugPrint('✅ Désabonnement réussi: Cache mis à jour pour $creatorId -> false');
 
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
 
-      // Rafraîchir la liste des abonnements
-      await fetchMySubscriptions();
+      // Rafraîchir la liste des abonnements en arrière-plan
+      fetchMySubscriptions();
 
       return true;
     } catch (e) {
+      debugPrint('❌ Erreur désabonnement: $e');
       _status = SubscriptionStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
@@ -96,6 +119,7 @@ class SubscriptionProvider extends ChangeNotifier {
 
       // Mettre en cache
       _subscriptionCache[creatorId] = isSubscribed;
+      notifyListeners(); // Notifier après mise en cache
 
       return isSubscribed;
     } catch (e) {
@@ -106,7 +130,9 @@ class SubscriptionProvider extends ChangeNotifier {
 
   /// Lecture synchrone du cache pour l'état d'abonnement
   bool isSubscribed(String creatorId) {
-    return _subscriptionCache[creatorId] ?? false;
+    final result = _subscriptionCache[creatorId] ?? false;
+    debugPrint('🔍 Vérification cache: Creator $creatorId -> $result');
+    return result;
   }
 
   /// Récupérer mes abonnements
@@ -118,7 +144,6 @@ class SubscriptionProvider extends ChangeNotifier {
       );
 
       // Mettre à jour le cache avec les abonnements actuels
-      _subscriptionCache.clear();
       for (final subscription in _mySubscriptions) {
         final creatorId = subscription['creator_id'].toString();
         final isActive = subscription['is_active'] as bool? ?? false;
@@ -132,6 +157,22 @@ class SubscriptionProvider extends ChangeNotifier {
       _status = SubscriptionStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
+    }
+  }
+
+  /// NOUVELLE MÉTHODE : Force la vérification du statut pour un créateur spécifique
+  Future<void> refreshSubscriptionStatus(String creatorId) async {
+    try {
+      final result = await _subscriptionService.checkSubscription(creatorId);
+      final isSubscribed = result['subscribed'] as bool? ?? false;
+      
+      if (_subscriptionCache[creatorId] != isSubscribed) {
+        _subscriptionCache[creatorId] = isSubscribed;
+        debugPrint('🔄 Refresh: Creator $creatorId -> $isSubscribed');
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Erreur refresh subscription: $e');
     }
   }
 
