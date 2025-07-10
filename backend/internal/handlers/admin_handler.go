@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
@@ -222,4 +223,40 @@ func RejectContentHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Contenu rejeté"})
+}
+
+// ListFeaturesHandler GET /api/admin/features
+func ListFeaturesHandler(c *gin.Context) {
+	featRepo := repositories.NewFeatureRepository(database.DB)
+	feats, err := featRepo.List(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de récupérer les features"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"features": feats})
+}
+
+// UpdateFeatureHandler PUT /api/admin/features/:key
+func UpdateFeatureHandler(c *gin.Context) {
+	key := c.Param("key")
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide"})
+		return
+	}
+
+	featRepo := repositories.NewFeatureRepository(database.DB)
+	if err := featRepo.Update(c.Request.Context(), key, body.Enabled); err != nil {
+		switch err.Error() {
+		case "feature not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": "Feature non trouvée"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de mettre à jour la feature"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Feature mise à jour"})
 }

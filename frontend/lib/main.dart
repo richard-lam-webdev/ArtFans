@@ -1,4 +1,3 @@
-// main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +24,8 @@ import 'src/services/admin_comment_service.dart';
 import 'src/providers/content_detail_provider.dart';
 import 'src/services/content_service.dart';
 import 'src/services/comment_service.dart';
+import 'src/providers/feature_flag_provider.dart';
+import 'src/services/feature_flag_service.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -92,6 +93,9 @@ class MyApp extends StatelessWidget {
                 contentService: contentService,
                 commentService: commentService,
               ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => FeatureFlagProvider(service: FeatureFlagService()),
         ),
       ],
       child: AppWrapper(

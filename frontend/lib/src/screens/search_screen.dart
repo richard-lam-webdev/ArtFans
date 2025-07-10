@@ -2,22 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/auth_provider.dart';
 import '../providers/search_provider.dart';
 import '../providers/subscription_provider.dart';
-import '../providers/auth_provider.dart';
 import '../utils/snackbar_util.dart';
+import '../widgets/feature_gate.dart';
+import '../constants/features.dart';
 
 class SearchScreen extends StatelessWidget {
   const SearchScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (ctx) {
-        final token = ctx.read<AuthProvider>().token!;
-        return SearchProvider(token: token);
-      },
-      child: const _SearchView(),
+    return FeatureGate(
+      featureKey: featureSearch,
+      fallback:
+          (_) => Scaffold(
+            appBar: AppBar(title: const Text('Recherche')),
+            body: const Center(child: Text('Recherche avancée désactivée')),
+          ),
+      builder:
+          (_) => ChangeNotifierProvider(
+            create: (ctx) {
+              final token = ctx.read<AuthProvider>().token!;
+              return SearchProvider(token: token);
+            },
+            child: const _SearchView(),
+          ),
     );
   }
 }
