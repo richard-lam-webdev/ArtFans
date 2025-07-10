@@ -72,7 +72,7 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		subscriberID.String(),
 		30.00,
 		true,
-		map[string]interface{}{
+		map[string]any{
 			"creator_id": creatorID.String(),
 			"method":     "stripe",
 		},
