@@ -1,9 +1,14 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"strconv"
+	"strings"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -320,4 +325,110 @@ func (h *ContentHandler) UnlikeContent(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+func (h *ContentHandler) DownloadContent(c *gin.Context) {
+	// 1) Récupération de l'ID utilisateur depuis le contexte
+	userIDRaw, exists := c.Get("userID")
+	if !exists {
+		log.Printf("❌ DownloadContent: Pas d'userID dans le contexte")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
+	userID, err := uuid.Parse(userIDRaw.(string))
+	if err != nil {
+		log.Printf("❌ DownloadContent: userID invalide: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
+
+	// 2) Récupération de l'ID du contenu
+	contentIDParam := c.Param("id")
+	contentID, err := uuid.Parse(contentIDParam)
+	if err != nil {
+		log.Printf("❌ DownloadContent: contentID invalide: %s", contentIDParam)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID contenu invalide"})
+		return
+	}
+
+	log.Printf("🔄 DownloadContent: userID=%s, contentID=%s", userID, contentID)
+
+	// 3) On cherche le contenu pour obtenir son CreatorID ET son titre
+	content, err := h.service.GetContentByID(contentID)
+	if err != nil {
+		log.Printf("❌ DownloadContent: Contenu introuvable: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Contenu introuvable"})
+		return
+	}
+	creatorID := content.CreatorID
+	log.Printf("📝 DownloadContent: Contenu trouvé - titre='%s', creator=%s", content.Title, creatorID)
+
+	// 4) Vérification de l'abonnement sur le creatorID
+	canDownload := h.service.CanDownload(userID, creatorID)
+	log.Printf("🔐 DownloadContent: CanDownload=%t", canDownload)
+	if !canDownload {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Accès refusé"})
+		return
+	}
+
+	// 5) On récupère le chemin du fichier depuis le service
+	filePath, originalFilename, err := h.service.GetFilePath(contentID)
+	if err != nil {
+		log.Printf("❌ DownloadContent: Erreur GetFilePath: %v", err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Fichier introuvable"})
+		return
+	}
+
+	// 6) Nettoyage du titre pour créer un nom de fichier valide
+	cleanTitle := sanitizeFilename(content.Title)
+
+	// 7) Obtenir l'extension du fichier original
+	ext := filepath.Ext(originalFilename)
+
+	// 8) Créer le nouveau nom de fichier avec le titre nettoyé
+	downloadFilename := cleanTitle + ext
+
+	log.Printf("📁 DownloadContent: Envoi du fichier")
+	log.Printf("   - Chemin: %s", filePath)
+	log.Printf("   - Nom original: %s", originalFilename)
+	log.Printf("   - Nom téléchargement: %s", downloadFilename)
+
+	// 9) Envoi du fichier en téléchargement avec le titre comme nom
+	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, downloadFilename))
+	c.File(filePath)
+
+	log.Printf("✅ DownloadContent: Fichier envoyé avec succès")
+}
+
+func sanitizeFilename(title string) string {
+	// Remplacer les caractères interdits par des underscores
+	re := regexp.MustCompile(`[<>:"/\\|?*]`)
+	cleaned := re.ReplaceAllString(title, "_")
+
+	// Remplacer les espaces multiples par un seul underscore
+	spaceRe := regexp.MustCompile(`\s+`)
+	cleaned = spaceRe.ReplaceAllString(cleaned, "_")
+
+	// Supprimer les caractères de contrôle
+	cleaned = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, cleaned)
+
+	// Limiter la longueur (Windows a une limite de 255 caractères)
+	if len(cleaned) > 200 {
+		cleaned = cleaned[:200]
+	}
+
+	// Supprimer les underscores en début et fin
+	cleaned = strings.Trim(cleaned, "_")
+
+	// Si le nom est vide après nettoyage, utiliser un nom par défaut
+	if cleaned == "" {
+		cleaned = "contenu"
+	}
+
+	return cleaned
 }

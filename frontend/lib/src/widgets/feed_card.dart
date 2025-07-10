@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +10,8 @@ import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
 import 'comments_sheet.dart';
+// ignore: depend_on_referenced_packages
+import 'package:open_file/open_file.dart';
 
 class FeedCard extends StatefulWidget {
   final Map<String, dynamic> content;
@@ -28,6 +31,14 @@ class _FeedCardState extends State<FeedCard> {
   final ContentService _svc = ContentService();
   bool _isLoadingSubscription = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // AJOUT : Initialiser l'état local avec les données du provider
+    final creatorId = widget.content['creator_id']?.toString();
+    if (creatorId != null) {}
+  }
+
   Future<void> _toggleSubscribe() async {
     final subProv = context.read<SubscriptionProvider>();
     final creatorId = widget.content['creator_id']?.toString();
@@ -44,7 +55,7 @@ class _FeedCardState extends State<FeedCard> {
                 title: Text(
                   currentlySubscribed
                       ? 'Se désabonner de $creatorName'
-                      : 'S’abonner à $creatorName',
+                      : 'S\'abonner à $creatorName',
                 ),
                 content:
                     currentlySubscribed
@@ -138,6 +149,19 @@ class _FeedCardState extends State<FeedCard> {
         type: SnackBarType.success,
       );
       widget.onSubscribedChanged();
+      // MODIFICATION : Le provider se met à jour automatiquement dans ses méthodes
+      // Pas besoin de setSubscriptionStatus ici, c'est déjà fait dans le provider
+
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          currentlySubscribed
+              ? 'Vous êtes désabonné de $creatorName'
+              : 'Abonnement à $creatorName réussi !',
+          type: SnackBarType.success,
+        );
+        widget.onSubscribedChanged();
+      }
     } else {
       showCustomSnackBar(
         context,
@@ -196,6 +220,45 @@ class _FeedCardState extends State<FeedCard> {
     );
   }
 
+  // NOUVELLE MÉTHODE pour gérer le téléchargement sur web et mobile
+  Future<void> _downloadContent() async {
+    try {
+      final contentId = widget.content['id'] as String;
+      final localPath = await _svc.downloadContent(contentId);
+
+      if (kIsWeb) {
+        // Sur web, le fichier est téléchargé automatiquement
+        if (mounted) {
+          showCustomSnackBar(
+            context,
+            'Téléchargement terminé',
+            type: SnackBarType.success,
+          );
+        }
+      } else {
+        // Sur mobile, on peut ouvrir le fichier
+        if (localPath != null) {
+          await OpenFile.open(localPath);
+          if (mounted) {
+            showCustomSnackBar(
+              context,
+              'Ouverture du fichier…',
+              type: SnackBarType.success,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          'Erreur de téléchargement : $e',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
   Future<void> _reportContent() async {
     final reasons = ['Inapproprié', 'Spam', 'Autre'];
     final selected = await showDialog<String>(
@@ -240,6 +303,8 @@ class _FeedCardState extends State<FeedCard> {
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
+
+    // MODIFICATION IMPORTANTE : Utiliser le provider comme source de vérité
     final isSubscribed =
         creatorId != null
             ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
@@ -276,7 +341,9 @@ class _FeedCardState extends State<FeedCard> {
                     )
                     : TextButton(
                       onPressed: _toggleSubscribe,
-                      child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
+                      child: Text(
+                        isSubscribed ? 'Se désabonner' : 'S\'abonner',
+                      ),
                     ),
           ),
           AspectRatio(
@@ -307,6 +374,15 @@ class _FeedCardState extends State<FeedCard> {
                   ),
                   const SizedBox(width: 16),
                 ],
+
+                // BOUTON TÉLÉCHARGEMENT CORRIGÉ pour web et mobile
+                if (isSubscribed)
+                  IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    tooltip: 'Télécharger',
+                    onPressed: _downloadContent, // Utilise la nouvelle méthode
+                  ),
+
                 IconButton(
                   icon: const Icon(Icons.flag_outlined),
                   tooltip: 'Signaler',
@@ -316,6 +392,7 @@ class _FeedCardState extends State<FeedCard> {
               ],
             ),
           ),
+
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(

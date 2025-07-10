@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../services/content_service.dart';
 import '../providers/theme_provider.dart';
 import '../providers/message_provider.dart';
+import '../providers/subscription_provider.dart'; // AJOUT IMPORTANT
 import '../utils/snackbar_util.dart';
 import '../widgets/bottom_nav.dart';
 import '../services/metrics_service.dart';
@@ -43,6 +44,10 @@ class _FeedScreenState extends State<FeedScreen> {
     try {
       final result = await _contentService.fetchFeed();
       if (!mounted) return;
+      
+      // AJOUT IMPORTANT : Initialiser le provider avec les données du feed
+      context.read<SubscriptionProvider>().initializeFeedSubscriptions(result);
+      
       setState(() {
         _feed = result;
         _loading = false;
@@ -139,17 +144,20 @@ class _FeedScreenState extends State<FeedScreen> {
               ? const Center(child: CircularProgressIndicator())
               : _feed.isEmpty
               ? const Center(child: Text("Aucun contenu."))
-              : ListView.builder(
-                itemCount: _feed.length,
-                itemBuilder: (context, index) {
-                  final item = _feed[index];
-                  return FeedCard(
-                    key: ValueKey(item['id']),
-                    content: item,
-                    onSubscribedChanged: _fetchFeed,
-                  );
-                },
-              ),
+              : RefreshIndicator(
+                  onRefresh: _fetchFeed, // AJOUT : Possibilité de rafraîchir
+                  child: ListView.builder(
+                    itemCount: _feed.length,
+                    itemBuilder: (context, index) {
+                      final item = _feed[index];
+                      return FeedCard(
+                        key: ValueKey(item['id']),
+                        content: item,
+                        onSubscribedChanged: _fetchFeed,
+                      );
+                    },
+                  ),
+                ),
       bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }
