@@ -61,10 +61,6 @@ class BottomNav extends StatelessWidget {
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
     final isWide = MediaQuery.of(context).size.width > 480;
 
-    final chatEnabled = context.watch<FeatureFlagProvider>().features.any(
-      (f) => f.key == featureChat && f.enabled,
-    );
-
     // Items de base
     final items = <SalomonBottomBarItem>[
       SalomonBottomBarItem(
@@ -88,17 +84,6 @@ class BottomNav extends StatelessWidget {
         selectedColor: Colors.teal,
       ),
     ];
-
-    // Chat (messagerie) uniquement si activé
-    if (chatEnabled) {
-      items.add(
-        SalomonBottomBarItem(
-          icon: const Icon(Icons.chat),
-          title: isWide ? const Text('Messages') : const SizedBox.shrink(),
-          selectedColor: Colors.blue,
-        ),
-      );
-    }
 
     // Contenu créateur ou Admin
     if (isCreator) {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/logger"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
@@ -153,20 +154,36 @@ func ListContentsHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"contents": out})
 }
+
 func DeleteContentHandler(c *gin.Context) {
+	// 1) Parser l’ID du contenu
 	idStr := c.Param("id")
 	contentID, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID invalide"})
 		return
 	}
-	repo := repositories.NewContentRepository()
-	uploadPath := config.C.UploadPath
 
-	if err := repo.Delete(contentID, uploadPath); err != nil {
+	// 2) Supprimer d'abord tous les signalements associés
+	reportRepo := repositories.NewReportRepository()
+	if err := reportRepo.DeleteByContentID(contentID); err != nil {
+		logger.LogError(err, "delete_reports_failed", map[string]interface{}{
+			"content_id": contentID,
+		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de supprimer les signalements"})
+		return
+	}
+
+	// 3) Supprimer le contenu (et son fichier image)
+	contentRepo := repositories.NewContentRepository()
+	uploadPath := config.C.UploadPath
+	if err := contentRepo.Delete(contentID, uploadPath); err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Contenu non trouvé"})
 		} else {
+			logger.LogError(err, "delete_content_failed", map[string]interface{}{
+				"content_id": contentID,
+			})
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de supprimer le contenu"})
 		}
 		return

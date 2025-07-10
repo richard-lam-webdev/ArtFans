@@ -141,6 +141,7 @@ func main() {
 		protected.GET("/messages", messageHandler.GetConversations)
 		protected.GET("/messages/:userId", messageHandler.GetConversation)
 
+		protected.POST("/contents/:id/report", handlers.ReportContentHandler)
 	}
 
 	/* ---------- 11) Admin ---------- */
@@ -167,6 +168,7 @@ func main() {
 		admin.PUT("/features/:key", handlers.UpdateFeatureHandler)
 		admin.GET("/comments", adminCommentHandler.ListComments)
 		admin.DELETE("/comments/:id", adminCommentHandler.DeleteComment)
+		admin.GET("/reports", handlers.ListReportsHandler)
 	}
 
 	logger.LogBusinessEvent("application_started", map[string]interface{}{

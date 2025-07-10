@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/feature_flag_provider.dart';
+import '../providers/report_provider.dart'; // ← ajouté
 import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
@@ -195,6 +196,45 @@ class _FeedCardState extends State<FeedCard> {
     );
   }
 
+  Future<void> _reportContent() async {
+    final reasons = ['Inapproprié', 'Spam', 'Autre'];
+    final selected = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => SimpleDialog(
+            title: const Text('Signaler ce contenu'),
+            children:
+                reasons
+                    .map(
+                      (r) => SimpleDialogOption(
+                        child: Text(r),
+                        onPressed: () => Navigator.of(ctx).pop(r),
+                      ),
+                    )
+                    .toList(),
+          ),
+    );
+    if (selected == null || !mounted) return;
+
+    try {
+      await context.read<ReportProvider>().submitReport(
+        widget.content['id'] as String,
+        reason: selected,
+      );
+      showCustomSnackBar(
+        context,
+        'Merci, le contenu a été signalé.',
+        type: SnackBarType.success,
+      );
+    } catch (e) {
+      showCustomSnackBar(
+        context,
+        'Erreur lors du signalement : $e',
+        type: SnackBarType.error,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
@@ -265,6 +305,12 @@ class _FeedCardState extends State<FeedCard> {
                   ),
                   const SizedBox(width: 16),
                 ],
+                // ← ici le bouton “report”
+                IconButton(
+                  icon: const Icon(Icons.flag_outlined),
+                  tooltip: 'Signaler',
+                  onPressed: _reportContent,
+                ),
                 const Spacer(),
               ],
             ),

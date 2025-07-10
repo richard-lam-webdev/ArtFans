@@ -6,12 +6,13 @@ import '../providers/admin_provider.dart';
 import '../providers/admin_content_provider.dart';
 import '../providers/admin_stats_provider.dart';
 import '../providers/feature_flag_provider.dart';
+import '../providers/report_provider.dart';
 
 import '../widgets/bottom_nav.dart';
 import '../widgets/admin_dashboard_widgets.dart';
 
-// Écran de modération des commentaires
 import 'comments_moderation_screen.dart';
+import 'reports_moderation_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -35,6 +36,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       context.read<AdminContentProvider>().fetchContents();
       context.read<AdminStatsProvider>().fetchDashboard();
       context.read<FeatureFlagProvider>().loadFeatures();
+      context.read<ReportProvider>().fetchReports();
     });
   }
 
@@ -43,17 +45,18 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final auth = context.read<AuthProvider>();
 
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Back-office Admin'),
-          bottom: TabBar(
+          bottom: const TabBar(
             tabs: [
-              const Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
-              const Tab(text: 'Utilisateurs', icon: Icon(Icons.person)),
-              const Tab(text: 'Contenus', icon: Icon(Icons.article)),
-              const Tab(text: 'Commentaires', icon: Icon(Icons.comment)),
-              const Tab(text: 'Fonctionnalités', icon: Icon(Icons.extension)),
+              Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
+              Tab(text: 'Utilisateurs', icon: Icon(Icons.person)),
+              Tab(text: 'Contenus', icon: Icon(Icons.article)),
+              Tab(text: 'Commentaires', icon: Icon(Icons.comment)),
+              Tab(text: 'Signalements', icon: Icon(Icons.flag)),
+              Tab(text: 'Fonctionnalités', icon: Icon(Icons.extension)),
             ],
           ),
           actions: [
@@ -64,23 +67,23 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 context.read<AdminContentProvider>().fetchContents();
                 context.read<AdminStatsProvider>().refreshAll();
                 context.read<FeatureFlagProvider>().loadFeatures();
+                context.read<ReportProvider>().fetchReports();
               },
             ),
             IconButton(
               icon: const Icon(Icons.logout),
-              onPressed: () {
-                auth.logout();
-              },
+              onPressed: () => auth.logout(),
             ),
           ],
         ),
-        body: TabBarView(
+        body: const TabBarView(
           children: [
-            const _DashboardTab(),
-            const _UsersTab(),
-            const _ContentsTab(),
-            const CommentsModerationScreen(),
-            const _FeaturesTab(),
+            _DashboardTab(),
+            _UsersTab(),
+            _ContentsTab(),
+            CommentsModerationScreen(),
+            ReportsModerationScreen(),
+            _FeaturesTab(),
           ],
         ),
         bottomNavigationBar: const BottomNav(currentIndex: 4),
@@ -446,9 +449,9 @@ class _ContentsTab extends StatelessWidget {
   }
 }
 
-/// -------------------------------------------------
-/// Onglet “Fonctionnalités”
-/// -------------------------------------------------
+// -------------------------------------------------
+// Onglet “Fonctionnalités”
+// -------------------------------------------------
 class _FeaturesTab extends StatelessWidget {
   const _FeaturesTab();
 
@@ -486,11 +489,8 @@ class _FeaturesTab extends StatelessWidget {
                     trailing: Switch(
                       value: f.enabled,
                       onChanged: (v) async {
-                        // 1) capture du messenger **avant** l’await
                         final messenger = ScaffoldMessenger.of(context);
-                        // 2) appel asynchrone
                         final ok = await prov.updateFeature(f.key, v);
-                        // 3) affichage du snack sans réutiliser `context`
                         messenger.showSnackBar(
                           SnackBar(
                             content: Text(
