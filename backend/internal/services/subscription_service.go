@@ -92,7 +92,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 	return nil
 }
 
-// Unsubscribe met fin à un abonnement (change le statut au lieu de supprimer)
 func (s *SubscriptionService) Unsubscribe(subscriberID, creatorID uuid.UUID) error {
 	log.Printf("🔄 Début désabonnement: user=%s -> creator=%s", subscriberID, creatorID)
 
@@ -187,7 +186,6 @@ func (s *SubscriptionService) GetCreatorStats(creatorID uuid.UUID) (map[string]i
 			creatorID, models.SubscriptionStatusActive, now, now).
 		Count(&activeSubscriptions)
 
-	// Calculer le revenu total
 	database.DB.Model(&models.Subscription{}).
 		Where("creator_id = ? AND status = ?", creatorID, models.SubscriptionStatusActive).
 		Select("COALESCE(SUM(price), 0)").
