@@ -96,7 +96,7 @@ func main() {
 		protected.GET("/users/me", handlers.CurrentUserHandler)
 		protected.POST("/contents", contentHandler.CreateContent)
 		protected.GET("/search", searchHandler.Search)
-
+		protected.GET("/contents/:id/download", contentHandler.DownloadContent)
 		protected.GET("/contents/:id/image", contentHandler.GetContentImage)
 		protected.GET("/contents/:id", contentHandler.GetContentByID)
 		protected.PUT("/contents/:id", contentHandler.UpdateContent)
@@ -111,6 +111,7 @@ func main() {
 		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)     // Mes abonnements (IDs)
 		protected.GET("/subscriptions/my", subscriptionHandler.GetMySubscriptions)     // ✨ NOUVEAU : Mes abonnements détaillés
 		protected.GET("/creator/stats", subscriptionHandler.GetCreatorStats)
+		protected.GET("/subscriptions/:creatorID/status", subscriptionHandler.CheckSubscriptionStatus)
 		// Comments
 		protected.GET("/contents/:id/comments", commentHandler.GetComments)
 		protected.POST("/contents/:id/comments", commentHandler.PostComment)

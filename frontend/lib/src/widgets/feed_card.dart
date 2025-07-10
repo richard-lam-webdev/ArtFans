@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:frontend/src/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 import '../services/content_service.dart';
@@ -6,6 +8,7 @@ import '../providers/subscription_provider.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
 import 'comments_sheet.dart';
+import 'package:open_file/open_file.dart';
 
 class FeedCard extends StatefulWidget {
   final Map<String, dynamic> content;
@@ -24,6 +27,18 @@ class FeedCard extends StatefulWidget {
 class _FeedCardState extends State<FeedCard> {
   final ContentService _svc = ContentService();
   bool _isLoadingSubscription = false;
+  bool _isSubscribed = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // AJOUT : Initialiser l'état local avec les données du provider
+    final creatorId = widget.content['creator_id']?.toString();
+    if (creatorId != null) {
+      _isSubscribed = context.read<SubscriptionProvider>().isSubscribed(creatorId);
+    }
+  }
 
   Future<void> _toggleSubscribe() async {
     final subProv = context.read<SubscriptionProvider>();
@@ -45,7 +60,7 @@ class _FeedCardState extends State<FeedCard> {
                 title: Text(
                   currentlySubscribed
                       ? 'Se désabonner de $creatorName'
-                      : 'S’abonner à $creatorName',
+                      : 'S\'abonner à $creatorName',
                 ),
                 content:
                     currentlySubscribed
@@ -133,8 +148,9 @@ class _FeedCardState extends State<FeedCard> {
     if (!mounted) return;
 
     if (success) {
-      // Mise à jour du provider
-      subProv.setSubscriptionStatus(creatorId, !currentlySubscribed);
+      // MODIFICATION : Le provider se met à jour automatiquement dans ses méthodes
+      // Pas besoin de setSubscriptionStatus ici, c'est déjà fait dans le provider
+      
       if (mounted) {
         showCustomSnackBar(
           context,
@@ -210,13 +226,53 @@ class _FeedCardState extends State<FeedCard> {
     );
   }
 
+  // NOUVELLE MÉTHODE pour gérer le téléchargement sur web et mobile
+  Future<void> _downloadContent() async {
+    try {
+      final contentId = widget.content['id'] as String;
+      final localPath = await _svc.downloadContent(contentId);
+      
+      if (kIsWeb) {
+        // Sur web, le fichier est téléchargé automatiquement
+        if (mounted) {
+          showCustomSnackBar(
+            context,
+            'Téléchargement terminé',
+            type: SnackBarType.success,
+          );
+        }
+      } else {
+        // Sur mobile, on peut ouvrir le fichier
+        if (localPath != null) {
+          await OpenFile.open(localPath);
+          if (mounted) {
+            showCustomSnackBar(
+              context,
+              'Ouverture du fichier…',
+              type: SnackBarType.success,
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showCustomSnackBar(
+          context,
+          'Erreur de téléchargement : $e',
+          type: SnackBarType.error,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
-    final isSubscribed =
-        creatorId != null
-            ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
-            : false;
+    
+    // MODIFICATION IMPORTANTE : Utiliser le provider comme source de vérité
+    final isSubscribed = creatorId != null
+        ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
+        : false;
 
     final bool liked = widget.content['liked_by_user'] as bool? ?? false;
     final int likeCount = widget.content['likes_count'] as int? ?? 0;
@@ -245,7 +301,7 @@ class _FeedCardState extends State<FeedCard> {
                     )
                     : TextButton(
                       onPressed: _toggleSubscribe,
-                      child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
+                      child: Text(isSubscribed ? 'Se désabonner' : 'S\'abonner'),
                     ),
           ),
           AspectRatio(
@@ -257,26 +313,36 @@ class _FeedCardState extends State<FeedCard> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    liked ? Icons.favorite : Icons.favorite_border,
-                    color: liked ? Colors.red : null,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      liked ? Icons.favorite : Icons.favorite_border,
+                      color: liked ? Colors.red : null,
+                    ),
+                    onPressed: _toggleLike,
                   ),
-                  onPressed: _toggleLike,
-                ),
-                Text('$likeCount'),
-                const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.comment_outlined),
-                  onPressed: _openComments,
-                ),
-                const Spacer(),
-              ],
+                  Text('$likeCount'),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    icon: const Icon(Icons.comment_outlined),
+                    onPressed: _openComments,
+                  ),
+
+                  // BOUTON TÉLÉCHARGEMENT CORRIGÉ pour web et mobile
+                  if (isSubscribed) 
+                  IconButton(
+                    icon: const Icon(Icons.download_outlined),
+                    tooltip: 'Télécharger',
+                    onPressed: _downloadContent, // Utilise la nouvelle méthode
+                  ),  
+
+                  const Spacer(),
+                ],
+              ),
             ),
-          ),
+
           Padding(
             padding: const EdgeInsets.all(8),
             child: Text(

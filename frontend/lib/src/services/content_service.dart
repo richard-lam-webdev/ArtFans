@@ -1,9 +1,16 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:convert';
+// conditionnellement importé uniquement en Web :
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
+import 'package:path_provider/path_provider.dart';
+// n’ajoute ceci QUE si tu cibles le Web :
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class ContentService {
   final String _baseUrl;
@@ -261,4 +268,68 @@ class ContentService {
       throw Exception('Erreur postComment: ${resp.statusCode}');
     }
   }
+
+   Future<String?> downloadContent(String contentId) async {
+  final uri = Uri.parse('$_baseUrl/api/contents/$contentId/download');
+  final token = await _getToken();
+  
+  final resp = await http.get(uri, headers: {
+    'Authorization': 'Bearer $token',
+  });
+  
+  if (resp.statusCode != 200) {
+    throw Exception('Erreur ${resp.statusCode} lors du téléchargement');
+  }
+  
+  final bytes = resp.bodyBytes;
+  
+  // Extraire le nom de fichier depuis les headers de réponse
+  String filename = 'contenu.png'; // nom par défaut
+  final contentDisposition = resp.headers['content-disposition'];
+  if (contentDisposition != null) {
+    // Parser "attachment; filename="mon_titre.png""
+    final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
+    if (filenameMatch != null) {
+      filename = filenameMatch.group(1) ?? filename;
+    }
+  }
+
+  if (kIsWeb) {
+    // Web → crée un Blob + <a download>
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor = html.AnchorElement(href: url)
+      ..setAttribute('download', filename)
+      ..click();
+    html.Url.revokeObjectUrl(url);
+    return null;
+  }
+
+  // Mobile → écrit dans un fichier local
+  final dir = await getApplicationDocumentsDirectory();
+  final localPath = '${dir.path}/$filename';
+  final file = File(localPath);
+  await file.writeAsBytes(bytes, flush: true);
+  return localPath;
 }
+
+Future<bool> checkSubscriptionStatus(String creatorId) async {
+  final token = await _getToken();
+  final response = await http.get(
+    Uri.parse("$_baseUrl/api/subscriptions/$creatorId/status"),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    return data['subscribed'] == true;
+  }
+  
+  return false;
+}
+
+}
+

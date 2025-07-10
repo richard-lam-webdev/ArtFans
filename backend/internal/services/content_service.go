@@ -262,3 +262,56 @@ func (s *ContentService) LikeContent(userID, contentID uuid.UUID) error {
 func (s *ContentService) UnlikeContent(userID, contentID uuid.UUID) error {
 	return s.repo.DeleteLike(userID, contentID)
 }
+
+func (s *ContentService) CanDownload(userID, CreatorID uuid.UUID) bool {
+	isSub, _ := s.repo.IsUserSubscribedToCreator(userID, CreatorID)
+	println("CanDownload - isSub:", isSub)
+	return isSub
+}
+
+func (s *ContentService) GetFilePath(contentID uuid.UUID) (string, string, error) {
+	content, err := s.repo.FindByID(contentID)
+	if err != nil {
+		return "", "", fmt.Errorf("contenu introuvable: %v", err)
+	}
+
+	if content.FilePath == "" {
+		return "", "", fmt.Errorf("aucun fichier associé à ce contenu")
+	}
+
+	// CORRECTION : Le FilePath contient déjà le sous-dossier (ex: "createur/filename.png")
+	// Il faut construire le chemin complet avec uploadPath
+	fullPath := filepath.Join(s.uploadPath, content.FilePath)
+
+	// Debug : afficher les chemins pour comprendre
+	log.Printf("🔍 Debug GetFilePath:")
+	log.Printf("  - contentID: %s", contentID)
+	log.Printf("  - content.FilePath: %s", content.FilePath)
+	log.Printf("  - uploadPath: %s", s.uploadPath)
+	log.Printf("  - fullPath calculé: %s", fullPath)
+
+	// Vérifier que le fichier existe
+	if _, err := os.Stat(fullPath); err != nil {
+		log.Printf("❌ Fichier non trouvé: %s", fullPath)
+		log.Printf("   Erreur: %v", err)
+
+		// Essayer de lister le contenu du répertoire parent pour déboguer
+		parentDir := filepath.Dir(fullPath)
+		if files, listErr := os.ReadDir(parentDir); listErr == nil {
+			log.Printf("   Contenu du répertoire %s:", parentDir)
+			for _, file := range files {
+				log.Printf("     - %s", file.Name())
+			}
+		}
+
+		return "", "", fmt.Errorf("fichier non trouvé sur le disque: %s (erreur: %v)", fullPath, err)
+	}
+
+	// Extraire le nom de fichier original (juste le nom, sans le chemin)
+	originalFilename := filepath.Base(content.FilePath)
+
+	log.Printf("✅ Fichier trouvé: %s", fullPath)
+	log.Printf("   Nom original: %s", originalFilename)
+
+	return fullPath, originalFilename, nil
+}
