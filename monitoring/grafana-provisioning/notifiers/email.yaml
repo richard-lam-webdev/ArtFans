@@ -1,0 +1,12 @@
+apiVersion: 1
+
+notifiers:
+  - name: email-notifier
+    type: email
+    uid: email-channel
+    settings:
+      addresses: artfanseemi@gmail.com
+      singleEmail: true
+    sendReminder: true
+    frequency: 5m
+    isDefault: true

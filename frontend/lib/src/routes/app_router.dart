@@ -1,11 +1,13 @@
-// lib/src/routes/app_router.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/feature_flag_provider.dart';
+
+import '../constants/features.dart';
+
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/add_content_screen.dart';
@@ -16,7 +18,13 @@ import '../screens/feed_screen.dart';
 import '../screens/conversations_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/my_subscriptions_screen.dart';
-import '../screens/splash_screen.dart'; 
+import '../screens/splash_screen.dart';
+import '../screens/comments_moderation_screen.dart';
+import '../screens/content_detail_screen.dart';
+import '../screens/profile_screen.dart'; 
+
+
+
 
 import '../../main.dart';
 
@@ -24,17 +32,17 @@ class AppRouter {
   static GoRouter router(BuildContext context) {
     final auth = context.read<AuthProvider>();
     final userProv = context.read<UserProvider>();
+    final flags = context.read<FeatureFlagProvider>();
 
     return GoRouter(
-      initialLocation: '/splash', 
-      refreshListenable: Listenable.merge([auth, userProv]),
+      initialLocation: '/splash',
+      refreshListenable: Listenable.merge([auth, userProv, flags]),
       observers: [routeObserver],
 
       redirect: (BuildContext _, GoRouterState state) {
         final isAuthenticated = auth.status == AuthStatus.authenticated;
         final isLoading = auth.status == AuthStatus.loading;
         final isInitialized = auth.isInitialized;
-        
         final currentPath = state.uri.toString();
 
         if (!isInitialized || isLoading) {
@@ -49,7 +57,6 @@ class AppRouter {
         final goingToAdmin = currentPath == '/admin';
         final onSplash = currentPath == '/splash';
 
-        // ✨ Si on est sur le splash et initialisé, rediriger selon l'état
         if (onSplash && isInitialized) {
           return isAuthenticated ? '/home' : '/login';
         }
@@ -57,16 +64,16 @@ class AppRouter {
         if (!isAuthenticated && !loggingIn && !registering && !onSplash) {
           return '/login';
         }
-        
+
         if (isAuthenticated && (loggingIn || registering)) {
           return '/home';
         }
-        
+
         final role = userProv.user?['Role'] as String?;
         if (goingToAdmin && role != 'admin') {
           return '/home';
         }
-        
+
         return null;
       },
 
@@ -101,34 +108,75 @@ class AppRouter {
           name: 'admin',
           builder: (context, state) => const AdminHomeScreen(),
         ),
+
         GoRoute(
-          path: "/my-contents",
+          path: '/admin/moderation/comments',
+          name: 'admin-comments-moderation',
+          redirect: (ctx, state) {
+            final enabled = ctx.read<FeatureFlagProvider>().features.any(
+              (f) => f.key == featureComments && f.enabled,
+            );
+            return enabled ? null : '/admin';
+          },
+          builder: (context, state) => const CommentsModerationScreen(),
+        ),
+
+        GoRoute(
+          path: '/contents/:id',
+          name: 'content_detail',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return ContentDetailScreen(contentId: id);
+          },
+        ),
+        GoRoute(
+          path: '/my-contents',
+          name: 'my_contents',
           builder: (context, state) => const MyContentsScreen(),
         ),
         GoRoute(
-          path: "/my-subscriptions",
+          path: '/my-subscriptions',
           name: 'my_subscriptions',
           builder: (context, state) => const MySubscriptionsScreen(),
         ),
+
+        // conversations → gated
         GoRoute(
           path: '/messages',
           name: 'messages',
+          redirect: (ctx, state) {
+            final enabled = ctx.read<FeatureFlagProvider>().features.any(
+              (f) => f.key == featureChat && f.enabled,
+            );
+            return enabled ? null : '/home';
+          },
           builder: (context, state) => const ConversationsScreen(),
+        ),
+
+        GoRoute(
+          path: '/profile',
+          name: 'profile',
+          builder: (context, state) => const ProfileScreen(),
         ),
         GoRoute(
           path: '/chat/:userId',
           name: 'chat',
+          redirect: (ctx, state) {
+            final enabled = ctx.read<FeatureFlagProvider>().features.any(
+              (f) => f.key == featureChat && f.enabled,
+            );
+            return enabled ? null : '/home';
+          },
           builder: (context, state) {
             final userId = state.pathParameters['userId']!;
             final userName = state.extra as String? ?? 'Utilisateur';
-            return ChatScreen(
-              otherUserId: userId,
-              otherUserName: userName,
-            );
+            return ChatScreen(otherUserId: userId, otherUserName: userName);
           },
         ),
+
         GoRoute(
           path: '/edit-content/:id',
+          name: 'edit_content',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return EditContentScreen(contentId: id);

@@ -8,7 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/logger"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/sentry"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
@@ -20,34 +22,75 @@ func NewSubscriptionHandler(service *services.SubscriptionService) *Subscription
 	return &SubscriptionHandler{service: service}
 }
 
-// POST /api/subscriptions/:creatorID - S'abonner à un créateur (30€)
 func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 	subscriberIDRaw, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
 		return
 	}
-	subscriberID, _ := uuid.Parse(subscriberIDRaw.(string))
+	subscriberID, parseErr := uuid.Parse(subscriberIDRaw.(string))
+	if parseErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
+	}
 
+	// Récupération et parsing de l'ID du créateur
 	creatorIDParam := c.Param("creatorID")
-	creatorID, err := uuid.Parse(creatorIDParam)
-	if err != nil {
+	creatorID, parseErr := uuid.Parse(creatorIDParam)
+	if parseErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID créateur invalide"})
 		return
 	}
 
-	// Vérification faite dans le service
-	if err := h.service.Subscribe(creatorID, subscriberID); err != nil {
+	err := h.service.Subscribe(creatorID, subscriberID)
+	if err != nil {
+		// Log de l'échec de paiement
+		logger.LogPayment(
+			"subscription_failed",
+			subscriberID.String(),
+			30.00,
+			false,
+			map[string]interface{}{
+				"creator_id": creatorID.String(),
+				"error":      err.Error(),
+			},
+		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Réponse JSON de succès
 	c.JSON(http.StatusCreated, gin.H{
 		"message":    "Abonnement créé avec succès",
 		"price":      "30€",
 		"duration":   "30 jours",
 		"creator_id": creatorID.String(),
 	})
+
+	logger.LogPayment(
+		"subscription_created",
+		subscriberID.String(),
+		30.00,
+		true,
+		map[string]interface{}{
+			"creator_id": creatorID.String(),
+			"method":     "stripe",
+		},
+	)
+	if err != nil {
+		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]interface{}{
+			"creator_id": creatorID.String(),
+			"error":      err.Error(),
+		})
+
+		sentry.CapturePaymentError(err, subscriberID.String(), 30.00, map[string]any{
+			"creator_id":   creatorID.String(),
+			"stripe_error": err.Error(),
+		})
+
+		c.JSON(500, gin.H{"error": "Payment failed"})
+		return
+	}
 }
 
 // DELETE /api/subscriptions/:creatorID - Se désabonner

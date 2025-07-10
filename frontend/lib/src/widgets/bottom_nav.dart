@@ -5,12 +5,18 @@ import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/feature_flag_provider.dart';
+import '../constants/features.dart';
 
 class BottomNav extends StatelessWidget {
   final int currentIndex;
   const BottomNav({super.key, required this.currentIndex});
 
   void _onTap(BuildContext context, int index, bool isAdmin, bool isCreator) {
+    final chatEnabled = context.read<FeatureFlagProvider>().features.any(
+      (f) => f.key == featureChat && f.enabled,
+    );
+
     switch (index) {
       case 0:
         context.go('/home');
@@ -25,10 +31,21 @@ class BottomNav extends StatelessWidget {
         context.go('/profile');
         break;
       case 4:
-        if (isCreator) {
+        if (chatEnabled) {
+          context.go('/messages');
+        } else if (isCreator) {
           context.go('/my-contents');
         } else if (isAdmin) {
           context.go('/admin');
+        }
+        break;
+      case 5:
+        if (chatEnabled) {
+          if (isCreator) {
+            context.go('/my-contents');
+          } else if (isAdmin) {
+            context.go('/admin');
+          }
         }
         break;
     }
@@ -42,37 +59,53 @@ class BottomNav extends StatelessWidget {
         auth.status == AuthStatus.authenticated && user?['Role'] == 'admin';
     final isCreator =
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
-    final isWideScreen = MediaQuery.of(context).size.width > 480;
+    final isWide = MediaQuery.of(context).size.width > 480;
 
+    final chatEnabled = context.watch<FeatureFlagProvider>().features.any(
+      (f) => f.key == featureChat && f.enabled,
+    );
+
+    // Items de base
     final items = <SalomonBottomBarItem>[
       SalomonBottomBarItem(
         icon: const Icon(Icons.home),
-        title: isWideScreen ? const Text('Accueil') : const SizedBox.shrink(),
+        title: isWide ? const Text('Accueil') : const SizedBox.shrink(),
         selectedColor: Colors.deepPurple,
       ),
       SalomonBottomBarItem(
         icon: const Icon(Icons.add_box),
-        title: isWideScreen ? const Text('Ajouter') : const SizedBox.shrink(),
+        title: isWide ? const Text('Ajouter') : const SizedBox.shrink(),
         selectedColor: Colors.green,
       ),
       SalomonBottomBarItem(
         icon: const Icon(Icons.dynamic_feed),
-        title: isWideScreen ? const Text('Feed') : const SizedBox.shrink(),
+        title: isWide ? const Text('Abonnements') : const SizedBox.shrink(),
         selectedColor: Colors.indigo,
       ),
       SalomonBottomBarItem(
         icon: const Icon(Icons.person),
-        title: isWideScreen ? const Text('Profil') : const SizedBox.shrink(),
+        title: isWide ? const Text('Profil') : const SizedBox.shrink(),
         selectedColor: Colors.teal,
       ),
     ];
 
+    // Chat (messagerie) uniquement si activé
+    if (chatEnabled) {
+      items.add(
+        SalomonBottomBarItem(
+          icon: const Icon(Icons.chat),
+          title: isWide ? const Text('Messages') : const SizedBox.shrink(),
+          selectedColor: Colors.blue,
+        ),
+      );
+    }
+
+    // Contenu créateur ou Admin
     if (isCreator) {
       items.add(
         SalomonBottomBarItem(
           icon: const Icon(Icons.folder_copy),
-          title:
-              isWideScreen ? const Text('Contenus') : const SizedBox.shrink(),
+          title: isWide ? const Text('Contenus') : const SizedBox.shrink(),
           selectedColor: Colors.orange,
         ),
       );
@@ -80,7 +113,7 @@ class BottomNav extends StatelessWidget {
       items.add(
         SalomonBottomBarItem(
           icon: const Icon(Icons.admin_panel_settings),
-          title: isWideScreen ? const Text('Admin') : const SizedBox.shrink(),
+          title: isWide ? const Text('Admin') : const SizedBox.shrink(),
           selectedColor: Colors.red,
         ),
       );

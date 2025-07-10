@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'metrics_service.dart';
 
 class AuthService {
   final String _baseUrl;
@@ -19,57 +20,66 @@ class AuthService {
             }
           })();
 
-  Future<void> register({
-    required String username,
-    required String email,
-    required String password,
-  }) async {
-    final uri = Uri.parse('$_baseUrl/api/auth/register');
-    final payload = jsonEncode({
-      'username': username,
-      'email': email,
-      'password': password,
-      'confirmPassword': password,
-    });
+      Future<void> register({
+      required String username,
+      required String email,
+      required String password,
+    }) async {
+      final uri = Uri.parse('$_baseUrl/api/auth/register');
+      final payload = jsonEncode({
+        'username': username,
+        'email': email,
+        'password': password,
+        'confirmPassword': password,
+      });
 
-    final res = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: payload,
-    );
-
-    if (res.statusCode != 201) {
-      throw Exception(
-        _extractError(res.body) ??
-            'Erreur HTTP ${res.statusCode} à l’inscription',
+      final response = await _performRequest(
+        '/auth/register',
+        () => http.post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: payload,
+        ),
       );
-    }
-  }
 
-  Future<String> login({
-    required String email,
-    required String password,
-  }) async {
-    final uri = Uri.parse('$_baseUrl/api/auth/login');
-    final res = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
+      if (response.statusCode != 201) {
+        final err = _extractError(response.body) ??
+            'Erreur HTTP ${response.statusCode} à l’inscription';
+        throw Exception(err);
+      }
+    } 
 
-    if (res.statusCode != 200) {
-      throw Exception(
-        _extractError(res.body) ?? 'Erreur HTTP ${res.statusCode} au login',
+
+      Future<String> login({
+      required String email,
+      required String password,
+    }) async {
+      final uri = Uri.parse('$_baseUrl/api/auth/login');
+      final response = await _performRequest(
+        '/auth/login',
+        () => http.post(
+          uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'password': password}),
+        ),
       );
+
+      if (response.statusCode != 200) {
+        final err = _extractError(response.body) ??
+            'Erreur HTTP ${response.statusCode} au login';
+        throw Exception(err);
+      }
+
+      final map = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = map['token'] as String?;
+      if (token == null) {
+        throw Exception('Réponse sans token');
+      }
+
+      await _secureStorage.write(key: 'jwt_token', value: token);
+      return token;
     }
 
-    final map = jsonDecode(res.body) as Map<String, dynamic>;
-    final token = map['token'] as String?;
-    if (token == null) throw Exception('Réponse sans token');
-
-    await _secureStorage.write(key: 'jwt_token', value: token);
-    return token;
-  }
 
   Future<String?> getToken() => _secureStorage.read(key: 'jwt_token');
 
@@ -171,3 +181,30 @@ Future<String?> getUserId() async {
     }
   }
 }
+
+
+Future<http.Response> _performRequest(
+    String endpoint,
+    Future<http.Response> Function() request,
+  ) async {
+    final start = DateTime.now();
+    try {
+      final response = await request();
+      
+      // Mesurer la latence pour tous les appels
+      final latency = DateTime.now().difference(start).inMilliseconds;
+      MetricsService.reportAPILatency(endpoint, latency);
+      
+      // Reporter les erreurs HTTP
+      if (response.statusCode >= 500) {
+        MetricsService.reportError('http_5xx');
+      } else if (response.statusCode >= 400) {
+        MetricsService.reportError('http_4xx');
+      }
+      
+      return response;
+    } catch (e) {
+      MetricsService.reportError('network_error');
+      rethrow;
+    }
+  }

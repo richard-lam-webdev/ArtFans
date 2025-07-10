@@ -26,14 +26,12 @@ jobs:
             set -e
             cd /opt/artfans
 
-            # Si repo absent => clone, sinon pull
             if [ -d .git ]; then
               git pull origin main
             else
               git clone https://github.com/${{ github.repository }} .
             fi
 
-            # Construire et (re)lancer
             docker compose pull         # seulement postgres
             docker compose build        # reconstruit api + app
             docker compose up -d --remove-orphans

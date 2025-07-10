@@ -1,6 +1,7 @@
 // lib/src/screens/login_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:frontend/src/services/metrics_service.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,12 +19,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
   bool _isLoading = false;
+  late DateTime _pageLoadStart;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+    _pageLoadStart = DateTime.now();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final loadTime = DateTime.now().difference(_pageLoadStart).inMilliseconds;
+      MetricsService.reportPageLoad('login', loadTime);
+    });
   }
 
   Future<void> _submit() async {

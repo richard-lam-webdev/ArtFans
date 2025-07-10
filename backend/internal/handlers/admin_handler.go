@@ -1,16 +1,19 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
@@ -150,8 +153,6 @@ func ListContentsHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"contents": out})
 }
-
-// DeleteContentHandler DELETE /api/admin/contents/:id
 func DeleteContentHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	contentID, err := uuid.Parse(idStr)
@@ -160,7 +161,7 @@ func DeleteContentHandler(c *gin.Context) {
 		return
 	}
 	repo := repositories.NewContentRepository()
-	uploadPath := config.C.UploadPath // récupère le chemin d’upload depuis la config centrale
+	uploadPath := config.C.UploadPath
 
 	if err := repo.Delete(contentID, uploadPath); err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -170,6 +171,17 @@ func DeleteContentHandler(c *gin.Context) {
 		}
 		return
 	}
+
+	sentry.WithScope(func(scope *sentry.Scope) {
+		scope.SetLevel(sentry.LevelInfo)
+		scope.SetContext("admin_action", map[string]any{
+			"admin_id":   idStr,
+			"action":     "delete_content",
+			"content_id": contentID.String(),
+		})
+		sentry.CaptureMessage(fmt.Sprintf("Admin deleted content %s", contentID))
+	})
+
 	c.JSON(http.StatusOK, gin.H{"message": "Contenu supprimé"})
 }
 
@@ -211,4 +223,40 @@ func RejectContentHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Contenu rejeté"})
+}
+
+// ListFeaturesHandler GET /api/admin/features
+func ListFeaturesHandler(c *gin.Context) {
+	featRepo := repositories.NewFeatureRepository(database.DB)
+	feats, err := featRepo.List(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de récupérer les features"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"features": feats})
+}
+
+// UpdateFeatureHandler PUT /api/admin/features/:key
+func UpdateFeatureHandler(c *gin.Context) {
+	key := c.Param("key")
+	var body struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload invalide"})
+		return
+	}
+
+	featRepo := repositories.NewFeatureRepository(database.DB)
+	if err := featRepo.Update(c.Request.Context(), key, body.Enabled); err != nil {
+		switch err.Error() {
+		case "feature not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": "Feature non trouvée"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Impossible de mettre à jour la feature"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Feature mise à jour"})
 }

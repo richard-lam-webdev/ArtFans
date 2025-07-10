@@ -14,6 +14,8 @@ type Comment struct {
 	Text      string     `gorm:"not null"                                   json:"text"`
 	CreatedAt time.Time  `gorm:"column:created_at;autoCreateTime"           json:"created_at"`
 	ParentID  *uuid.UUID `gorm:"column:parent_id;type:uuid;index"           json:"parent_id"`
+	Author    User       `gorm:"foreignKey:AuthorID;references:ID"          json:"author"`
+	Content   Content    `gorm:"foreignKey:ContentID;references:ID"         json:"content"`
 }
 
 type CommentLike struct {

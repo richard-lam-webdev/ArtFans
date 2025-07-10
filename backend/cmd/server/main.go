@@ -1,4 +1,5 @@
 // backend/cmd/server/main.go
+
 package main
 
 import (
@@ -9,17 +10,20 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/config"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/handlers"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/logger"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/middleware"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/sentry"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/services"
 )
 
 func main() {
+
 	/* ---------- 1) Config + DB ---------- */
 	config.LoadEnv()
 	database.Init()
@@ -57,10 +61,17 @@ func main() {
 	messageHandler := handlers.NewMessageHandler(messageSvc)
 
 	adminStatsHandler := handlers.NewAdminStatsHandler()
+	adminCommentHandler := handlers.NewAdminCommentHandler(commentSvc)
+
+	if err := sentry.InitSentry(); err != nil {
+		log.Printf("⚠️ Impossible d'initialiser Sentry: %v", err)
+	}
 
 	/* ---------- 5) Gin ---------- */
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery())
+	r.Use(sentry.Middleware())
+	r.Use(logger.GinLogger(), gin.Recovery())
+	r.Use(middleware.PrometheusMiddleware())
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -69,6 +80,13 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	if os.Getenv("ENV") != "production" {
+		r.GET("/test/sentry", handlers.TestSentryHandler)
+		r.GET("/test/sentry-panic", handlers.TestSentryPanicHandler)
+		r.GET("/test/sentry-error", handlers.TestSentryErrorHandler)
+		r.GET("/test/sentry-payment", handlers.TestSentryPaymentHandler)
+	}
 
 	/* ---------- 6) Statique pour les uploads ---------- */
 	r.Static("/uploads", uploadPath)
@@ -86,7 +104,8 @@ func main() {
 	/* ---------- 9) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
+	r.POST("/api/metrics/client", handlers.ClientMetricsHandler)
+	/* ---------- 9) Routes protégées JWT ---------- */
 	/* ---------- 8b) Profil créateur public ---------- */
 	r.GET("/api/creators/:username", handlers.GetPublicCreatorProfileHandler)
 
@@ -145,12 +164,22 @@ func main() {
 		admin.GET("/flop-contents", adminStatsHandler.GetFlopContents)
 		admin.GET("/revenue-chart", adminStatsHandler.GetRevenueChart)
 		admin.GET("/quick-stats", adminStatsHandler.GetQuickStats)
+		admin.GET("/features", handlers.ListFeaturesHandler)
+		admin.PUT("/features/:key", handlers.UpdateFeatureHandler)
+		admin.GET("/comments", adminCommentHandler.ListComments)
+		admin.DELETE("/comments/:id", adminCommentHandler.DeleteComment)
 	}
+
+	logger.LogBusinessEvent("application_started", map[string]interface{}{
+		"port":        config.C.Port,
+		"environment": os.Getenv("ENV"),
+	})
 
 	/* ---------- 12) Start ---------- */
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Serveur sur %s…", addr)
 	if err := r.Run(addr); err != nil {
+		logger.LogError(err, "server_failed", nil)
 		log.Fatalf("❌ Erreur serveur : %v", err)
 	}
 }

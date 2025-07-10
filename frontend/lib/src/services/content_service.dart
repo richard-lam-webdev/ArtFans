@@ -8,9 +8,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:path_provider/path_provider.dart';
-// n’ajoute ceci QUE si tu cibles le Web :
+// n'ajoute ceci QUE si tu cibles le Web :
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
+import 'metrics_service.dart';
 
 class ContentService {
   final String _baseUrl;
@@ -34,14 +35,16 @@ class ContentService {
 
   Future<Map<String, dynamic>?> getContentById(String id) async {
     final token = await _getToken();
-    final response = await http.get(
-      Uri.parse("$_baseUrl/api/contents/$id"),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
+    final response = await _performRequest(
+      '/contents/$id',
+      () => http.get(
+        Uri.parse('$_baseUrl/api/contents/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ),
     );
-
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return Map<String, dynamic>.from(data);
@@ -119,14 +122,13 @@ class ContentService {
     String? filePath,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/contents');
-    final request =
-        http.MultipartRequest('POST', uri)
-          ..headers['Authorization'] = 'Bearer $token'
-          ..fields['username'] = username
-          ..fields['role'] = role
-          ..fields['title'] = title.trim()
-          ..fields['body'] = body.trim()
-          ..fields['price'] = price.trim();
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..fields['username'] = username
+      ..fields['role'] = role
+      ..fields['title'] = title.trim()
+      ..fields['body'] = body.trim()
+      ..fields['price'] = price.trim();
 
     if (UniversalPlatform.isWeb || filePath == null) {
       if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
@@ -139,10 +141,25 @@ class ContentService {
       );
     }
 
-    final streamed = await request.send();
-    if (streamed.statusCode != 201) {
-      final respBody = await streamed.stream.bytesToString();
-      throw Exception('Erreur ${streamed.statusCode} : $respBody');
+    final start = DateTime.now();
+    late http.StreamedResponse streamed;
+    try {
+      streamed = await request.send();
+      final latency = DateTime.now().difference(start).inMilliseconds;
+      MetricsService.reportAPILatency('/contents (multipart)', latency);
+
+      if (streamed.statusCode != 201) {
+        if (streamed.statusCode >= 500) {
+          MetricsService.reportError('http_5xx');
+        } else {
+          MetricsService.reportError('http_4xx');
+        }
+        final respBody = await streamed.stream.bytesToString();
+        throw Exception('Erreur ${streamed.statusCode} : $respBody');
+      }
+    } catch (e) {
+      MetricsService.reportError('network_error');
+      rethrow;
     }
   }
 
@@ -164,6 +181,24 @@ class ContentService {
     if (feed is! List) return [];
 
     return List<Map<String, dynamic>>.from(feed);
+  }
+
+  // AJOUT : Méthode pour feed paginé
+  Future<Map<String, dynamic>> fetchFeedPaginated({int page = 1, int limit = 10}) async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse("$_baseUrl/api/feed?page=$page&limit=$limit"),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    
+    if (response.statusCode != 200) {
+      throw Exception("Erreur ${response.statusCode} : ${response.body}");
+    }
+
+    return jsonDecode(response.body);
   }
 
   Future<void> subscribe(String creatorId) async {
@@ -269,67 +304,111 @@ class ContentService {
     }
   }
 
-   Future<String?> downloadContent(String contentId) async {
-  final uri = Uri.parse('$_baseUrl/api/contents/$contentId/download');
-  final token = await _getToken();
-  
-  final resp = await http.get(uri, headers: {
-    'Authorization': 'Bearer $token',
-  });
-  
-  if (resp.statusCode != 200) {
-    throw Exception('Erreur ${resp.statusCode} lors du téléchargement');
+  Future<Map<String, dynamic>> getContentDetailById(String id) async {
+    // On récupère d'abord le JSON brut
+    final raw = (await getContentById(id))!;
+
+    // On extrait et met en forme :
+    final author = raw['author'] as Map<String, dynamic>? ?? {};
+    return {
+      'id': raw['id'],
+      'title': raw['title'],
+      'body': raw['body'],
+      'price': raw['price'],
+      'image_url': raw['image_url'],
+      'created_at': raw['created_at'],
+      'author_id': author['id'],
+      'author_name': author['username'],
+    };
   }
-  
-  final bytes = resp.bodyBytes;
-  
-  // Extraire le nom de fichier depuis les headers de réponse
-  String filename = 'contenu.png'; // nom par défaut
-  final contentDisposition = resp.headers['content-disposition'];
-  if (contentDisposition != null) {
-    // Parser "attachment; filename="mon_titre.png""
-    final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
-    if (filenameMatch != null) {
-      filename = filenameMatch.group(1) ?? filename;
+
+  Future<http.Response> _performRequest(
+    String endpoint,
+    Future<http.Response> Function() request,
+  ) async {
+    final start = DateTime.now();
+    try {
+      final response = await request();
+      
+      // Mesurer la latence pour tous les appels
+      final latency = DateTime.now().difference(start).inMilliseconds;
+      MetricsService.reportAPILatency(endpoint, latency);
+      
+      // Reporter les erreurs HTTP
+      if (response.statusCode >= 500) {
+        MetricsService.reportError('http_5xx');
+      } else if (response.statusCode >= 400) {
+        MetricsService.reportError('http_4xx');
+      }
+      
+      return response;
+    } catch (e) {
+      MetricsService.reportError('network_error');
+      rethrow;
     }
   }
 
-  if (kIsWeb) {
-    // Web → crée un Blob + <a download>
-    final blob = html.Blob([bytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..setAttribute('download', filename)
-      ..click();
-    html.Url.revokeObjectUrl(url);
-    return null;
-  }
-
-  // Mobile → écrit dans un fichier local
-  final dir = await getApplicationDocumentsDirectory();
-  final localPath = '${dir.path}/$filename';
-  final file = File(localPath);
-  await file.writeAsBytes(bytes, flush: true);
-  return localPath;
-}
-
-Future<bool> checkSubscriptionStatus(String creatorId) async {
-  final token = await _getToken();
-  final response = await http.get(
-    Uri.parse("$_baseUrl/api/subscriptions/$creatorId/status"),
-    headers: {
+  // CORRECTION : Méthode à l'intérieur de la classe
+  Future<String?> downloadContent(String contentId) async {
+    final uri = Uri.parse('$_baseUrl/api/contents/$contentId/download');
+    final token = await _getToken();
+    
+    final resp = await http.get(uri, headers: {
       'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    },
-  );
+    });
+    
+    if (resp.statusCode != 200) {
+      throw Exception('Erreur ${resp.statusCode} lors du téléchargement');
+    }
+    
+    final bytes = resp.bodyBytes;
+    
+    // Extraire le nom de fichier depuis les headers de réponse
+    String filename = 'contenu.png'; // nom par défaut
+    final contentDisposition = resp.headers['content-disposition'];
+    if (contentDisposition != null) {
+      // Parser "attachment; filename="mon_titre.png""
+      final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
+      if (filenameMatch != null) {
+        filename = filenameMatch.group(1) ?? filename;
+      }
+    }
 
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return data['subscribed'] == true;
+    if (kIsWeb) {
+      // Web → crée un Blob + <a download>
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', filename)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      return null;
+    }
+
+    // Mobile → écrit dans un fichier local
+    final dir = await getApplicationDocumentsDirectory();
+    final localPath = '${dir.path}/$filename';
+    final file = File(localPath);
+    await file.writeAsBytes(bytes, flush: true);
+    return localPath;
   }
-  
-  return false;
-}
 
-}
+  // CORRECTION : Méthode à l'intérieur de la classe
+  Future<bool> checkSubscriptionStatus(String creatorId) async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse("$_baseUrl/api/subscriptions/$creatorId/status"),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
 
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['subscribed'] == true;
+    }
+    
+    return false;
+  }
+} // FIN DE LA CLASSE ContentService

@@ -13,6 +13,8 @@ services:
       timeout: 5s
       retries: 5
     restart: always
+    networks:
+      - artfans-network
 
   api:
     build: ./backend
@@ -24,12 +26,23 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - uploads_data:/uploads         
+      - uploads_data:/uploads
+      - ./logs:/logs  
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
       retries: 5
     restart: always
+    networks:
+      - artfans-network
+    labels:
+      - "promtail=true"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=api"
 
   app:
     build: ./frontend
@@ -40,15 +53,50 @@ services:
     ports:
       - "3000:80"
     restart: always
-  
+    networks:
+      - artfans-network
+
   prometheus:
     image: prom/prometheus:latest
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
     ports:
       - "9090:9090"
+    networks:
+      - artfans-network
+    restart: always
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - artfans-network
+    restart: always
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./monitoring/promtail-config.yaml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./logs:/logs
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - artfans-network
+    restart: always
 
   grafana:
     image: grafana/grafana:latest
@@ -56,14 +104,25 @@ services:
       - "3001:3000"
     depends_on:
       - prometheus
+      - loki
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
       - grafana_data:/var/lib/grafana
-
+      - ./monitoring/grafana-provisioning:/etc/grafana/provisioning
+    networks:
+      - artfans-network
+    restart: always
 
 volumes:
   db_data:
-  uploads_data:    
+  uploads_data:
   grafana_data:
-                  
+  prometheus_data:
+  loki_data:
+
+networks:
+  artfans-network:
+    driver: bridge
