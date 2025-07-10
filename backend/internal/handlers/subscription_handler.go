@@ -22,76 +22,40 @@ func NewSubscriptionHandler(service *services.SubscriptionService) *Subscription
 	return &SubscriptionHandler{service: service}
 }
 
-func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
-	log.Printf("🔄 Début abonnement: user=%s -> creator=%s", userID, creatorID)
+func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
+	rawID, ok := c.Get("userID")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
+		return
+	}
 
-	// Vérifier si l'utilisateur n'est pas déjà abonné
-	isSubscribed, err := s.IsSubscribed(userID, creatorID)
+	subscriberID, err := uuid.Parse(rawID.(string))
 	if err != nil {
-		log.Printf("❌ Erreur vérification abonnement: %v", err)
-		return err
-	}
-	if isSubscribed {
-		log.Printf("⚠️ Utilisateur déjà abonné")
-		return errors.New("vous êtes déjà abonné à ce créateur")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
+		return
 	}
 
-	// Vérifier que l'utilisateur ne s'abonne pas à lui-même
-	if userID == creatorID {
-		log.Printf("⚠️ Tentative auto-abonnement")
-		return errors.New("impossible de s'abonner à soi-même")
+	creatorID, err := uuid.Parse(c.Param("creatorID"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID créateur invalide"})
+		return
 	}
 
-	now := time.Now()
+	// Appel unique au service
+	if err := h.service.Subscribe(creatorID, subscriberID); err != nil {
+		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
+			"creator_id": creatorID.String(),
+			"error":      err.Error(),
+		})
+		sentry.CapturePaymentError(err, subscriberID.String(), 30.00, map[string]any{
+			"creator_id": creatorID.String(),
+		})
 
-	// CORRECTION : Transaction pour éviter les doubles entrées
-	tx := database.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// Créer l'abonnement d'abord
-	sub := &models.Subscription{
-		CreatorID:    creatorID,
-		SubscriberID: userID,
-		StartDate:    now,
-		EndDate:      now.AddDate(0, 0, models.SubscriptionDurationDays),
-		Price:        models.SubscriptionPriceCents,
-		Status:       models.SubscriptionStatusActive,
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Payment failed"})
+		return
 	}
 
-	if err := tx.Create(sub).Error; err != nil {
-		tx.Rollback()
-		log.Printf("❌ Erreur création abonnement: %v", err)
-		return err
-	}
-
-	// Créer le paiement avec l'ID de subscription
-	payment := &models.Payment{
-		SubscriptionID: sub.ID,
-		Amount:         models.SubscriptionPriceCents,
-		PaidAt:         now,
-		Status:         "succeeded",
-	}
-
-	if err := tx.Create(payment).Error; err != nil {
-		tx.Rollback()
-		log.Printf("❌ Erreur création paiement: %v", err)
-		return err
-	}
-
-	// Valider la transaction
-	if err := tx.Commit().Error; err != nil {
-		log.Printf("❌ Erreur commit transaction: %v", err)
-		return err
-	}
-
-	log.Printf("✅ Abonnement créé avec succès: subscription=%s, payment=%s", sub.ID, payment.ID)
-	return nil
-}
-
+	// Succès
 	logger.LogPayment("subscription_created", subscriberID.String(), 30.00, true, map[string]any{
 		"creator_id": creatorID.String(),
 		"method":     "stripe",
