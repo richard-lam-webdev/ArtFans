@@ -77,15 +77,16 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 			"method":     "stripe",
 		},
 	)
-	if err != nil {
+	subErr := h.service.Subscribe(creatorID, subscriberID)
+	if subErr != nil {
 		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
 			"creator_id": creatorID.String(),
-			"error":      err.Error(),
+			"error":      subErr.Error(),
 		})
 
-		sentry.CapturePaymentError(err, subscriberID.String(), 30.00, map[string]any{
+		sentry.CapturePaymentError(subErr, subscriberID.String(), 30.00, map[string]any{
 			"creator_id":   creatorID.String(),
-			"stripe_error": err.Error(),
+			"stripe_error": subErr.Error(),
 		})
 
 		c.JSON(500, gin.H{"error": "Payment failed"})
