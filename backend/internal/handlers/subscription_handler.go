@@ -23,75 +23,45 @@ func NewSubscriptionHandler(service *services.SubscriptionService) *Subscription
 }
 
 func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
-	subscriberIDRaw, exists := c.Get("userID")
-	if !exists {
+	rawID, ok := c.Get("userID")
+	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
 		return
 	}
-	subscriberID, parseErr := uuid.Parse(subscriberIDRaw.(string))
-	if parseErr != nil {
+	subscriberID, err := uuid.Parse(rawID.(string))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID utilisateur invalide"})
 		return
 	}
-
-	// Récupération et parsing de l'ID du créateur
-	creatorIDParam := c.Param("creatorID")
-	creatorID, parseErr := uuid.Parse(creatorIDParam)
-	if parseErr != nil {
+	creatorID, err := uuid.Parse(c.Param("creatorID"))
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID créateur invalide"})
 		return
 	}
 
-	err := h.service.Subscribe(creatorID, subscriberID)
-	if err != nil {
-		// Log de l'échec de paiement
-		logger.LogPayment(
-			"subscription_failed",
-			subscriberID.String(),
-			30.00,
-			false,
-			map[string]interface{}{
-				"creator_id": creatorID.String(),
-				"error":      err.Error(),
-			},
-		)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := h.service.Subscribe(creatorID, subscriberID); err != nil {
+		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
+			"creator_id": creatorID.String(),
+			"error":      err.Error(),
+		})
+		sentry.CapturePaymentError(err, subscriberID.String(), 30.00, map[string]any{
+			"creator_id": creatorID.String(),
+		})
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Payment failed"})
 		return
 	}
 
-	// Réponse JSON de succès
+	logger.LogPayment("subscription_created", subscriberID.String(), 30.00, true, map[string]any{
+		"creator_id": creatorID.String(),
+		"method":     "stripe",
+	})
 	c.JSON(http.StatusCreated, gin.H{
 		"message":    "Abonnement créé avec succès",
 		"price":      "30€",
 		"duration":   "30 jours",
 		"creator_id": creatorID.String(),
 	})
-
-	logger.LogPayment(
-		"subscription_created",
-		subscriberID.String(),
-		30.00,
-		true,
-		map[string]any{
-			"creator_id": creatorID.String(),
-			"method":     "stripe",
-		},
-	)
-	subErr := h.service.Subscribe(creatorID, subscriberID)
-	if subErr != nil {
-		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
-			"creator_id": creatorID.String(),
-			"error":      subErr.Error(),
-		})
-
-		sentry.CapturePaymentError(subErr, subscriberID.String(), 30.00, map[string]any{
-			"creator_id":   creatorID.String(),
-			"stripe_error": subErr.Error(),
-		})
-
-		c.JSON(500, gin.H{"error": "Payment failed"})
-		return
-	}
 }
 
 // DELETE /api/subscriptions/:creatorID - Se désabonner
