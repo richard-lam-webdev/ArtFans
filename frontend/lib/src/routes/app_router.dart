@@ -1,11 +1,12 @@
-// lib/src/routes/app_router.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/feature_flag_provider.dart';
+
+import '../constants/features.dart';
 
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
@@ -31,10 +32,11 @@ class AppRouter {
   static GoRouter router(BuildContext context) {
     final auth = context.read<AuthProvider>();
     final userProv = context.read<UserProvider>();
+    final flags = context.read<FeatureFlagProvider>();
 
     return GoRouter(
       initialLocation: '/splash',
-      refreshListenable: Listenable.merge([auth, userProv]),
+      refreshListenable: Listenable.merge([auth, userProv, flags]),
       observers: [routeObserver],
 
       redirect: (BuildContext _, GoRouterState state) {
@@ -42,18 +44,19 @@ class AppRouter {
         final isLoading = auth.status == AuthStatus.loading;
         final isInitialized = auth.isInitialized;
         final currentPath = state.uri.toString();
+
         if (!isInitialized || isLoading) {
           if (currentPath != '/splash') {
             return '/splash';
           }
           return null;
         }
+
         final loggingIn = currentPath == '/login';
         final registering = currentPath == '/register';
         final goingToAdmin = currentPath == '/admin';
         final onSplash = currentPath == '/splash';
 
-        // ✨ Si on est sur le splash et initialisé, rediriger selon l'état
         if (onSplash && isInitialized) {
           return isAuthenticated ? '/home' : '/login';
         }
@@ -109,8 +112,15 @@ class AppRouter {
         GoRoute(
           path: '/admin/moderation/comments',
           name: 'admin-comments-moderation',
+          redirect: (ctx, state) {
+            final enabled = ctx.read<FeatureFlagProvider>().features.any(
+              (f) => f.key == featureComments && f.enabled,
+            );
+            return enabled ? null : '/admin';
+          },
           builder: (context, state) => const CommentsModerationScreen(),
         ),
+
         GoRoute(
           path: '/contents/:id',
           name: 'content_detail',
@@ -120,19 +130,29 @@ class AppRouter {
           },
         ),
         GoRoute(
-          path: "/my-contents",
+          path: '/my-contents',
+          name: 'my_contents',
           builder: (context, state) => const MyContentsScreen(),
         ),
         GoRoute(
-          path: "/my-subscriptions",
+          path: '/my-subscriptions',
           name: 'my_subscriptions',
           builder: (context, state) => const MySubscriptionsScreen(),
         ),
+
+        // conversations → gated
         GoRoute(
           path: '/messages',
           name: 'messages',
+          redirect: (ctx, state) {
+            final enabled = ctx.read<FeatureFlagProvider>().features.any(
+              (f) => f.key == featureChat && f.enabled,
+            );
+            return enabled ? null : '/home';
+          },
           builder: (context, state) => const ConversationsScreen(),
         ),
+
         GoRoute(
           path: '/profile',
           name: 'profile',
@@ -141,14 +161,22 @@ class AppRouter {
         GoRoute(
           path: '/chat/:userId',
           name: 'chat',
+          redirect: (ctx, state) {
+            final enabled = ctx.read<FeatureFlagProvider>().features.any(
+              (f) => f.key == featureChat && f.enabled,
+            );
+            return enabled ? null : '/home';
+          },
           builder: (context, state) {
             final userId = state.pathParameters['userId']!;
             final userName = state.extra as String? ?? 'Utilisateur';
             return ChatScreen(otherUserId: userId, otherUserName: userName);
           },
         ),
+
         GoRoute(
           path: '/edit-content/:id',
+          name: 'edit_content',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return EditContentScreen(contentId: id);

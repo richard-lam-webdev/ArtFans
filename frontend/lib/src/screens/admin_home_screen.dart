@@ -1,5 +1,3 @@
-// lib/src/screens/admin_home_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -7,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/admin_provider.dart';
 import '../providers/admin_content_provider.dart';
 import '../providers/admin_stats_provider.dart';
+import '../providers/feature_flag_provider.dart';
 
 import '../widgets/bottom_nav.dart';
 import '../widgets/admin_dashboard_widgets.dart';
@@ -35,6 +34,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       context.read<AdminProvider>().fetchUsers();
       context.read<AdminContentProvider>().fetchContents();
       context.read<AdminStatsProvider>().fetchDashboard();
+      context.read<FeatureFlagProvider>().loadFeatures();
     });
   }
 
@@ -43,16 +43,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     final auth = context.read<AuthProvider>();
 
     return DefaultTabController(
-      length: 4, // Dashboard, Utilisateurs, Contenus, Commentaires
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Back-office Admin'),
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
-              Tab(text: 'Utilisateurs', icon: Icon(Icons.person)),
-              Tab(text: 'Contenus', icon: Icon(Icons.article)),
-              Tab(text: 'Commentaires', icon: Icon(Icons.comment)),
+              const Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
+              const Tab(text: 'Utilisateurs', icon: Icon(Icons.person)),
+              const Tab(text: 'Contenus', icon: Icon(Icons.article)),
+              const Tab(text: 'Commentaires', icon: Icon(Icons.comment)),
+              const Tab(text: 'Fonctionnalités', icon: Icon(Icons.extension)),
             ],
           ),
           actions: [
@@ -62,6 +63,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 context.read<AdminProvider>().fetchUsers();
                 context.read<AdminContentProvider>().fetchContents();
                 context.read<AdminStatsProvider>().refreshAll();
+                context.read<FeatureFlagProvider>().loadFeatures();
               },
             ),
             IconButton(
@@ -73,12 +75,12 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ],
         ),
         body: TabBarView(
-          // pas de const : CommentsModerationScreen n'est pas const
           children: [
-            _DashboardTab(),
-            _UsersTab(),
-            _ContentsTab(),
-            CommentsModerationScreen(),
+            const _DashboardTab(),
+            const _UsersTab(),
+            const _ContentsTab(),
+            const CommentsModerationScreen(),
+            const _FeaturesTab(),
           ],
         ),
         bottomNavigationBar: const BottomNav(currentIndex: 4),
@@ -440,6 +442,73 @@ class _ContentsTab extends StatelessWidget {
               );
             }).toList(),
       ),
+    );
+  }
+}
+
+/// -------------------------------------------------
+/// Onglet “Fonctionnalités”
+/// -------------------------------------------------
+class _FeaturesTab extends StatelessWidget {
+  const _FeaturesTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<FeatureFlagProvider>(
+      builder: (_, prov, __) {
+        if (prov.loading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (prov.error != null) {
+          return Center(child: Text('Erreur : ${prov.error}'));
+        }
+        return LayoutBuilder(
+          builder: (ctx, constraints) {
+            final cols = constraints.maxWidth > 600 ? 2 : 1;
+            return GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 5,
+              ),
+              itemCount: prov.features.length,
+              itemBuilder: (ctx, i) {
+                final f = prov.features[i];
+                return Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListTile(
+                    title: Text(f.key),
+                    subtitle: Text(f.description),
+                    trailing: Switch(
+                      value: f.enabled,
+                      onChanged: (v) async {
+                        // 1) capture du messenger **avant** l’await
+                        final messenger = ScaffoldMessenger.of(context);
+                        // 2) appel asynchrone
+                        final ok = await prov.updateFeature(f.key, v);
+                        // 3) affichage du snack sans réutiliser `context`
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              ok
+                                  ? 'Mise à jour réussie'
+                                  : 'Erreur de mise à jour',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

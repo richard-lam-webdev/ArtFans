@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/feature_flag_provider.dart';
+import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
 import 'comments_sheet.dart';
@@ -30,13 +32,9 @@ class _FeedCardState extends State<FeedCard> {
     final creatorId = widget.content['creator_id']?.toString();
     final creatorName =
         widget.content['creator_name']?.toString() ?? 'ce créateur';
-
     if (creatorId == null) return;
 
-    // On lit l'état actuel dans le provider
     final currentlySubscribed = subProv.isSubscribed(creatorId);
-
-    // Confirmation
     final confirmed =
         await showDialog<bool>(
           context: context,
@@ -118,47 +116,36 @@ class _FeedCardState extends State<FeedCard> {
         ) ??
         false;
 
-    // Si le widget a été démonté ou si l'utilisateur annule, on arrête
     if (!mounted || !confirmed) return;
 
     setState(() => _isLoadingSubscription = true);
 
-    // Exécution de l'action
     final success =
         currentlySubscribed
             ? await subProv.unsubscribeFromCreator(creatorId)
             : await subProv.subscribeToCreator(creatorId);
 
-    // Vérification après l'appel async
     if (!mounted) return;
 
     if (success) {
-      // Mise à jour du provider
       subProv.setSubscriptionStatus(creatorId, !currentlySubscribed);
-      if (mounted) {
-        showCustomSnackBar(
-          context,
-          currentlySubscribed
-              ? 'Vous êtes désabonné de $creatorName'
-              : 'Abonnement à $creatorName réussi !',
-          type: SnackBarType.success,
-        );
-        widget.onSubscribedChanged();
-      }
+      showCustomSnackBar(
+        context,
+        currentlySubscribed
+            ? 'Vous êtes désabonné de $creatorName'
+            : 'Abonnement à $creatorName réussi !',
+        type: SnackBarType.success,
+      );
+      widget.onSubscribedChanged();
     } else {
-      if (mounted) {
-        showCustomSnackBar(
-          context,
-          subProv.errorMessage ?? 'Erreur lors de la mise à jour',
-          type: SnackBarType.error,
-        );
-      }
+      showCustomSnackBar(
+        context,
+        subProv.errorMessage ?? 'Erreur lors de la mise à jour',
+        type: SnackBarType.error,
+      );
     }
 
-    // Désactivation du loader si toujours monté
-    if (mounted) {
-      setState(() => _isLoadingSubscription = false);
-    }
+    if (mounted) setState(() => _isLoadingSubscription = false);
   }
 
   Future<void> _toggleLike() async {
@@ -182,7 +169,6 @@ class _FeedCardState extends State<FeedCard> {
         await _svc.unlikeContent(widget.content['id'] as String);
       }
     } catch (e) {
-      // En cas d'erreur, rollback et afficher un SnackBar
       if (!mounted) return;
       setState(() {
         widget.content['liked_by_user'] = currentlyLiked;
@@ -195,7 +181,6 @@ class _FeedCardState extends State<FeedCard> {
   }
 
   void _openComments() {
-    // Pas d'await, utilisation synchrone du context
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -220,6 +205,10 @@ class _FeedCardState extends State<FeedCard> {
 
     final bool liked = widget.content['liked_by_user'] as bool? ?? false;
     final int likeCount = widget.content['likes_count'] as int? ?? 0;
+
+    final commentEnabled = context.watch<FeatureFlagProvider>().features.any(
+      (f) => f.key == featureComments && f.enabled,
+    );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -269,10 +258,13 @@ class _FeedCardState extends State<FeedCard> {
                 ),
                 Text('$likeCount'),
                 const SizedBox(width: 16),
-                IconButton(
-                  icon: const Icon(Icons.comment_outlined),
-                  onPressed: _openComments,
-                ),
+                if (commentEnabled) ...[
+                  IconButton(
+                    icon: const Icon(Icons.comment_outlined),
+                    onPressed: _openComments,
+                  ),
+                  const SizedBox(width: 16),
+                ],
                 const Spacer(),
               ],
             ),

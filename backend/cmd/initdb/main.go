@@ -101,6 +101,14 @@ type Report struct {
 	CreatedAt       time.Time `gorm:"column:created_at;autoCreateTime"`
 }
 
+type Feature struct {
+	Key         string    `gorm:"type:varchar(255);primaryKey"`
+	Description string    `gorm:"type:text;not null"`
+	Enabled     bool      `gorm:"not null;default:false"`
+	CreatedAt   time.Time `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt   time.Time `gorm:"column:updated_at;autoUpdateTime"`
+}
+
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
@@ -278,8 +286,29 @@ func main() {
 		&Like{},         // Puis les likes
 		&Message{},      // Puis les messages
 		&Report{},       // Enfin les reports
+		&Feature{},      // ← Feature
 	); err != nil {
 		log.Fatalf("AutoMigrate failed: %v", err)
+	}
+	var featureCount int64
+	db.Model(&Feature{}).Count(&featureCount)
+	const (
+		featureChat     = "MESSAGERIE"
+		featureComments = "COMMENTAIRES"
+		featureSearch   = "RECHERCHE"
+	)
+	if featureCount == 0 {
+		seeds := []Feature{
+			{Key: featureChat, Description: "Activer ou désactiver la messagerie entre utilisateurs"},
+			{Key: featureComments, Description: "Activer ou désactiver les commentaires sur les contenus"},
+			{Key: featureSearch, Description: "Activer ou désactiver la recherche"},
+		}
+		for _, f := range seeds {
+			if err := db.Create(&f).Error; err != nil {
+				log.Fatalf("Seed feature '%s' failed: %v", f.Key, err)
+			}
+		}
+		log.Printf("✅ Seeded %d feature-flags\n", len(seeds))
 	}
 
 	// 🔑 Seed admin
