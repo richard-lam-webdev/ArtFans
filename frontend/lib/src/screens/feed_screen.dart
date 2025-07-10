@@ -13,10 +13,10 @@ import '../widgets/bottom_nav.dart';
 import '../services/metrics_service.dart';
 import '../widgets/feed_card.dart';
 import 'search_screen.dart';
+import '../providers/auth_provider.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
-  
 
   @override
   State<FeedScreen> createState() => _FeedScreenState();
@@ -35,7 +35,8 @@ class _FeedScreenState extends State<FeedScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final loadTime = DateTime.now().difference(_pageLoadStart).inMilliseconds;
       MetricsService.reportPageLoad('feed', loadTime);
-    });    _fetchFeed();
+    });
+    _fetchFeed();
   }
 
   Future<void> _fetchFeed() async {
@@ -61,6 +62,7 @@ class _FeedScreenState extends State<FeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthProvider>();
     return Scaffold(
       appBar: AppBar(
         title: const Text("Fil d'actualité"),
@@ -127,6 +129,13 @@ class _FeedScreenState extends State<FeedScreen> {
                   ),
                   onPressed: () => theme.toggleTheme(!theme.isDarkMode),
                 ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              auth.logout();
+              // GoRouter redirigera vers /login
+            },
           ),
         ],
       ),

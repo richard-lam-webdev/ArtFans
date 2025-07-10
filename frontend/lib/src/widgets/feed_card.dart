@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/feature_flag_provider.dart';
+import '../providers/report_provider.dart';
 import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
@@ -35,8 +36,7 @@ class _FeedCardState extends State<FeedCard> {
     super.initState();
     // AJOUT : Initialiser l'état local avec les données du provider
     final creatorId = widget.content['creator_id']?.toString();
-    if (creatorId != null) {
-    }
+    if (creatorId != null) {}
   }
 
   Future<void> _toggleSubscribe() async {
@@ -151,7 +151,7 @@ class _FeedCardState extends State<FeedCard> {
       widget.onSubscribedChanged();
       // MODIFICATION : Le provider se met à jour automatiquement dans ses méthodes
       // Pas besoin de setSubscriptionStatus ici, c'est déjà fait dans le provider
-      
+
       if (mounted) {
         showCustomSnackBar(
           context,
@@ -225,7 +225,7 @@ class _FeedCardState extends State<FeedCard> {
     try {
       final contentId = widget.content['id'] as String;
       final localPath = await _svc.downloadContent(contentId);
-      
+
       if (kIsWeb) {
         // Sur web, le fichier est téléchargé automatiquement
         if (mounted) {
@@ -259,14 +259,56 @@ class _FeedCardState extends State<FeedCard> {
     }
   }
 
+  Future<void> _reportContent() async {
+    final reasons = ['Inapproprié', 'Spam', 'Autre'];
+    final selected = await showDialog<String>(
+      context: context,
+      builder:
+          (ctx) => SimpleDialog(
+            title: const Text('Signaler ce contenu'),
+            children:
+                reasons
+                    .map(
+                      (r) => SimpleDialogOption(
+                        child: Text(r),
+                        onPressed: () => Navigator.of(ctx).pop(r),
+                      ),
+                    )
+                    .toList(),
+          ),
+    );
+    if (selected == null || !mounted) return;
+
+    try {
+      await context.read<ReportProvider>().submitReport(
+        widget.content['id'] as String,
+        reason: selected,
+      );
+      if (!mounted) return;
+      showCustomSnackBar(
+        context,
+        'Merci, le contenu a été signalé.',
+        type: SnackBarType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showCustomSnackBar(
+        context,
+        'Erreur lors du signalement : $e',
+        type: SnackBarType.error,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
-    
+
     // MODIFICATION IMPORTANTE : Utiliser le provider comme source de vérité
-    final isSubscribed = creatorId != null
-        ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
-        : false;
+    final isSubscribed =
+        creatorId != null
+            ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
+            : false;
 
     final bool liked = widget.content['liked_by_user'] as bool? ?? false;
     final int likeCount = widget.content['likes_count'] as int? ?? 0;
@@ -299,7 +341,9 @@ class _FeedCardState extends State<FeedCard> {
                     )
                     : TextButton(
                       onPressed: _toggleSubscribe,
-                      child: Text(isSubscribed ? 'Se désabonner' : 'S\'abonner'),
+                      child: Text(
+                        isSubscribed ? 'Se désabonner' : 'S\'abonner',
+                      ),
                     ),
           ),
           AspectRatio(
@@ -311,38 +355,43 @@ class _FeedCardState extends State<FeedCard> {
             ),
           ),
           Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      liked ? Icons.favorite : Icons.favorite_border,
-                      color: liked ? Colors.red : null,
-                    ),
-                    onPressed: _toggleLike,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? Colors.red : null,
                   ),
-                  Text('$likeCount'),
-                  const SizedBox(width: 16),
+                  onPressed: _toggleLike,
+                ),
+                Text('$likeCount'),
+                const SizedBox(width: 16),
                 if (commentEnabled) ...[
-                    IconButton(
-                      icon: const Icon(Icons.comment_outlined),
-                      onPressed: _openComments,
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.comment_outlined),
+                    onPressed: _openComments,
+                  ),
                   const SizedBox(width: 16),
                 ],
 
-                  // BOUTON TÉLÉCHARGEMENT CORRIGÉ pour web et mobile
-                  if (isSubscribed) 
+                // BOUTON TÉLÉCHARGEMENT CORRIGÉ pour web et mobile
+                if (isSubscribed)
                   IconButton(
                     icon: const Icon(Icons.download_outlined),
                     tooltip: 'Télécharger',
                     onPressed: _downloadContent, // Utilise la nouvelle méthode
-                  ),  
+                  ),
 
-                  const Spacer(),
-                ],
-              ),
+                IconButton(
+                  icon: const Icon(Icons.flag_outlined),
+                  tooltip: 'Signaler',
+                  onPressed: _reportContent,
+                ),
+                const Spacer(),
+              ],
             ),
+          ),
 
           Padding(
             padding: const EdgeInsets.all(8),
