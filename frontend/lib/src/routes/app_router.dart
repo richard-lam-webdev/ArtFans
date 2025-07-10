@@ -16,6 +16,8 @@ import '../screens/feed_screen.dart';
 import '../screens/conversations_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/my_subscriptions_screen.dart';
+import '../screens/creator_profile_screen.dart';
+
 
 
 import '../../main.dart';
@@ -102,6 +104,14 @@ class AppRouter {
             );
           },
         ),
+        GoRoute(
+          path: '/creator/:username',
+          name: 'creator_profile',
+          builder: (context, state) {
+            final username = state.pathParameters['username']!;
+            return CreatorProfileScreen(username: username);
+          },
+        ),       
         GoRoute(
           path: '/edit-content/:id',
           builder: (context, state) {
