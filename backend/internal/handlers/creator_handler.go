@@ -1,4 +1,3 @@
-// backend/internal/handlers/creator_handler.go
 package handlers
 
 import (
@@ -54,6 +53,7 @@ func GetPublicCreatorProfileHandler(c *gin.Context) {
 
 	// 4) On prépare la réponse
 	response := gin.H{
+		"id":               user.ID, // 🆕 Ajouté ici
 		"username":         user.Username,
 		"created_at":       user.CreatedAt,
 		"subscriber_count": subCount,
