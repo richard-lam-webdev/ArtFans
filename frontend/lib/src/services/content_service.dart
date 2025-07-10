@@ -1,15 +1,17 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:convert';
-// conditionnellement importé uniquement en Web :
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:path_provider/path_provider.dart';
-// ignore: deprecated_member_use, avoid_web_libraries_in_flutter
-import 'dart:html' as html;
 import 'metrics_service.dart';
+
+// SOLUTION : Import conditionnel avec les deux implémentations
+import 'package:frontend/src/utils/web_download_stub.dart'
+    if (dart.library.html) 'package:frontend/src/utils/web_download_web.dart';
 
 class ContentService {
   final String _baseUrl;
@@ -181,7 +183,6 @@ class ContentService {
     return List<Map<String, dynamic>>.from(feed);
   }
 
-  // AJOUT : Méthode pour feed paginé
   Future<Map<String, dynamic>> fetchFeedPaginated({int page = 1, int limit = 10}) async {
     final token = await _getToken();
     final response = await http.get(
@@ -245,7 +246,6 @@ class ContentService {
     throw Exception("Erreur ${response.statusCode}");
   }
 
-  // — Likes
   Future<void> likeContent(String contentId) async {
     final token = await _getToken();
     final resp = await http.post(
@@ -268,7 +268,6 @@ class ContentService {
     }
   }
 
-  // — Commentaires
   Future<List<Map<String, dynamic>>> fetchComments(String contentId) async {
     final token = await _getToken();
     final resp = await http.get(
@@ -303,10 +302,8 @@ class ContentService {
   }
 
   Future<Map<String, dynamic>> getContentDetailById(String id) async {
-    // On récupère d'abord le JSON brut
     final raw = (await getContentById(id))!;
 
-    // On extrait et met en forme :
     final author = raw['author'] as Map<String, dynamic>? ?? {};
     return {
       'id': raw['id'],
@@ -328,11 +325,9 @@ class ContentService {
     try {
       final response = await request();
       
-      // Mesurer la latence pour tous les appels
       final latency = DateTime.now().difference(start).inMilliseconds;
       MetricsService.reportAPILatency(endpoint, latency);
       
-      // Reporter les erreurs HTTP
       if (response.statusCode >= 500) {
         MetricsService.reportError('http_5xx');
       } else if (response.statusCode >= 400) {
@@ -346,7 +341,7 @@ class ContentService {
     }
   }
 
-  // CORRECTION : Méthode à l'intérieur de la classe
+  // SOLUTION : Méthode downloadContent qui marche vraiment
   Future<String?> downloadContent(String contentId) async {
     final uri = Uri.parse('$_baseUrl/api/contents/$contentId/download');
     final token = await _getToken();
@@ -362,10 +357,9 @@ class ContentService {
     final bytes = resp.bodyBytes;
     
     // Extraire le nom de fichier depuis les headers de réponse
-    String filename = 'contenu.png'; // nom par défaut
+    String filename = 'contenu.png';
     final contentDisposition = resp.headers['content-disposition'];
     if (contentDisposition != null) {
-      // Parser "attachment; filename="mon_titre.png""
       final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
       if (filenameMatch != null) {
         filename = filenameMatch.group(1) ?? filename;
@@ -373,22 +367,21 @@ class ContentService {
     }
 
     if (kIsWeb) {
-      // Web → crée un Blob + <a download>
-      final blob = html.Blob([bytes]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.Url.revokeObjectUrl(url);
+      // CORRECTION : Utilise la fonction importée conditionnellement
+      print('🌐 Téléchargement Web: $filename (${bytes.length} bytes)');
+      downloadFileWeb(bytes, filename);
       return null;
+    } else {
+      // Mobile → écrit dans un fichier local
+      final dir = await getApplicationDocumentsDirectory();
+      final localPath = '${dir.path}/$filename';
+      final file = File(localPath);
+      await file.writeAsBytes(bytes, flush: true);
+      print('📱 Téléchargement Mobile: $localPath');
+      return localPath;
     }
-
-    // Mobile → écrit dans un fichier local
-    final dir = await getApplicationDocumentsDirectory();
-    final localPath = '${dir.path}/$filename';
-    final file = File(localPath);
-    await file.writeAsBytes(bytes, flush: true);
-    return localPath;
   }
 
-  // CORRECTION : Méthode à l'intérieur de la classe
   Future<bool> checkSubscriptionStatus(String creatorId) async {
     final token = await _getToken();
     final response = await http.get(
@@ -406,4 +399,4 @@ class ContentService {
     
     return false;
   }
-} // FIN DE LA CLASSE ContentService
+}
