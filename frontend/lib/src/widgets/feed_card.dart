@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
@@ -35,84 +36,73 @@ class _FeedCardState extends State<FeedCard> {
     if (creatorId == null) return;
 
     final currentlySubscribed = subProv.isSubscribed(creatorId);
-    final confirmed =
-        await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
           context: context,
-          builder:
-              (ctx) => AlertDialog(
-                title: Text(
-                  currentlySubscribed
-                      ? 'Se désabonner de $creatorName'
-                      : 'S’abonner à $creatorName',
-                ),
-                content:
-                    currentlySubscribed
-                        ? const Text(
-                          'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
-                          'Vous perdrez l\'accès au contenu premium de ce créateur.',
-                        )
-                        : const Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Vous allez vous abonner pour :'),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(Icons.euro, color: Colors.green, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  '30€ par mois',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.schedule,
-                                  color: Colors.blue,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 8),
-                                Text('Durée : 30 jours'),
-                              ],
-                            ),
-                            SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.star,
-                                  color: Colors.orange,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 8),
-                                Text('Accès à tout le contenu'),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-                            Text('Confirmez-vous votre abonnement ?'),
-                          ],
-                        ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(false),
-                    child: const Text('Annuler'),
+          builder: (ctx) => AlertDialog(
+            title: Text(
+              currentlySubscribed
+                  ? 'Se désabonner de $creatorName'
+                  : 'S’abonner à $creatorName',
+            ),
+            content: currentlySubscribed
+                ? const Text(
+                    'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
+                    'Vous perdrez l\'accès au contenu premium de ce créateur.',
+                  )
+                : const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Vous allez vous abonner pour :'),
+                      SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.euro, color: Colors.green, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            '30€ par mois',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.schedule, color: Colors.blue, size: 20),
+                          SizedBox(width: 8),
+                          Text('Durée : 30 jours'),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.orange, size: 20),
+                          SizedBox(width: 8),
+                          Text('Accès à tout le contenu'),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      Text('Confirmez-vous votre abonnement ?'),
+                    ],
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: currentlySubscribed ? Colors.red : null,
-                      foregroundColor:
-                          currentlySubscribed ? Colors.white : null,
-                    ),
-                    onPressed: () => Navigator.of(ctx).pop(true),
-                    child: Text(
-                      currentlySubscribed ? 'Se désabonner' : 'Confirmer (30€)',
-                    ),
-                  ),
-                ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Annuler'),
               ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: currentlySubscribed ? Colors.red : null,
+                  foregroundColor:
+                      currentlySubscribed ? Colors.white : null,
+                ),
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(
+                  currentlySubscribed ? 'Se désabonner' : 'Confirmer (30€)',
+                ),
+              ),
+            ],
+          ),
         ) ??
         false;
 
@@ -120,10 +110,9 @@ class _FeedCardState extends State<FeedCard> {
 
     setState(() => _isLoadingSubscription = true);
 
-    final success =
-        currentlySubscribed
-            ? await subProv.unsubscribeFromCreator(creatorId)
-            : await subProv.subscribeToCreator(creatorId);
+    final success = currentlySubscribed
+        ? await subProv.unsubscribeFromCreator(creatorId)
+        : await subProv.subscribeToCreator(creatorId);
 
     if (!mounted) return;
 
@@ -174,9 +163,8 @@ class _FeedCardState extends State<FeedCard> {
         widget.content['liked_by_user'] = currentlyLiked;
         widget.content['likes_count'] = currentCount;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erreur like : $e')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Erreur like : $e')));
     }
   }
 
@@ -187,28 +175,26 @@ class _FeedCardState extends State<FeedCard> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder:
-          (_) => FractionallySizedBox(
-            heightFactor: 0.4,
-            child: CommentsSheet(contentId: widget.content['id'] as String),
-          ),
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.4,
+        child: CommentsSheet(contentId: widget.content['id'] as String),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
-    final isSubscribed =
-        creatorId != null
-            ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
-            : false;
+    final isSubscribed = creatorId != null
+        ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
+        : false;
 
     final bool liked = widget.content['liked_by_user'] as bool? ?? false;
     final int likeCount = widget.content['likes_count'] as int? ?? 0;
 
     final commentEnabled = context.watch<FeatureFlagProvider>().features.any(
-      (f) => f.key == featureComments && f.enabled,
-    );
+          (f) => f.key == featureComments && f.enabled,
+        );
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -224,18 +210,31 @@ class _FeedCardState extends State<FeedCard> {
                     'https://placehold.co/40x40',
               ),
             ),
-            title: Text(widget.content['creator_name'] ?? 'Créateur'),
-            trailing:
-                _isLoadingSubscription
-                    ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : TextButton(
-                      onPressed: _toggleSubscribe,
-                      child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
-                    ),
+            title: GestureDetector(
+              onTap: () {
+                final username = widget.content['creator_name']?.toString();
+                if (username != null) {
+                  context.push('/creators/$username');
+                }
+              },
+              child: Text(
+                widget.content['creator_name'] ?? 'Créateur',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            trailing: _isLoadingSubscription
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : TextButton(
+                    onPressed: _toggleSubscribe,
+                    child: Text(isSubscribed ? 'Se désabonner' : 'S’abonner'),
+                  ),
           ),
           AspectRatio(
             aspectRatio: 16 / 9,
