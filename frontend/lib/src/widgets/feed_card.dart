@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/feature_flag_provider.dart';
-import '../providers/report_provider.dart'; // ← ajouté
+import '../providers/report_provider.dart';
 import '../constants/features.dart';
 import '../utils/snackbar_util.dart';
 import 'protected_image.dart';
@@ -221,12 +221,14 @@ class _FeedCardState extends State<FeedCard> {
         widget.content['id'] as String,
         reason: selected,
       );
+      if (!mounted) return;
       showCustomSnackBar(
         context,
         'Merci, le contenu a été signalé.',
         type: SnackBarType.success,
       );
     } catch (e) {
+      if (!mounted) return;
       showCustomSnackBar(
         context,
         'Erreur lors du signalement : $e',
@@ -305,7 +307,6 @@ class _FeedCardState extends State<FeedCard> {
                   ),
                   const SizedBox(width: 16),
                 ],
-                // ← ici le bouton “report”
                 IconButton(
                   icon: const Icon(Icons.flag_outlined),
                   tooltip: 'Signaler',
