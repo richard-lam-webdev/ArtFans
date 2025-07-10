@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/bottom_nav.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil'),
+        title: const Text('Mon Profil'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -58,26 +58,27 @@ class _HomeScreenState extends State<HomeScreen> {
           final role = user['Role'] ?? '';
 
           return Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Icon(Icons.account_circle, size: 64),
+                const SizedBox(height: 16),
                 Text(
                   'Bienvenue, ${user['Username']}',
                   style: const TextStyle(
-                    fontSize: 24,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text('Email : ${user['Email']}'),
+                const SizedBox(height: 16),
+                Text('📧 Email : ${user['Email']}'),
                 const SizedBox(height: 8),
-                Text('Rôle : $role'),
+                Text('🛡️ Rôle : $role'),
                 const SizedBox(height: 8),
-                Text('Inscrit depuis : ${user['CreatedAt']}'),
-                const SizedBox(height: 24),
+                Text('📅 Inscrit depuis : ${user['CreatedAt']}'),
+                const SizedBox(height: 32),
 
-                // ✅ Bouton visible uniquement si creator
                 if (role == 'creator')
                   ElevatedButton.icon(
                     icon: const Icon(Icons.folder_copy),
@@ -89,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
           );
         }(),
       ),
-      bottomNavigationBar: const BottomNav(currentIndex: 0),
+      bottomNavigationBar: const BottomNav(currentIndex: 3),
     );
   }
 }

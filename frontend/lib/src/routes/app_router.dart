@@ -20,6 +20,10 @@ import '../screens/my_subscriptions_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/comments_moderation_screen.dart';
 import '../screens/content_detail_screen.dart';
+import '../screens/profile_screen.dart'; 
+
+
+
 
 import '../../main.dart';
 
@@ -128,6 +132,11 @@ class AppRouter {
           path: '/messages',
           name: 'messages',
           builder: (context, state) => const ConversationsScreen(),
+        ),
+        GoRoute(
+          path: '/profile',
+          name: 'profile',
+          builder: (context, state) => const ProfileScreen(),
         ),
         GoRoute(
           path: '/chat/:userId',
