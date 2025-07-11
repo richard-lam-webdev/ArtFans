@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 import '../providers/comment_moderation_provider.dart';
 
@@ -75,7 +74,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                 DataColumn(label: Text('Auteur')),
                 DataColumn(label: Text('Contenu')),
                 DataColumn(label: Text('Date')),
-                DataColumn(label: Text('Post')),
                 DataColumn(label: Text('Actions')),
               ],
               rows:
@@ -84,7 +82,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                     final authorName = c['author_name'] as String? ?? 'Anonyme';
                     final text = c['text'] as String? ?? '';
                     final date = c['created_at'] as String? ?? '';
-                    final contentId = c['content_id'] as String? ?? '';
 
                     return DataRow(
                       cells: [
@@ -100,17 +97,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                           ),
                         ),
                         DataCell(Text(date)),
-                        DataCell(
-                          InkWell(
-                            onTap: () => context.go('/contents/$contentId'),
-                            child: Text(
-                              'Voir',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ),
                         DataCell(
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
