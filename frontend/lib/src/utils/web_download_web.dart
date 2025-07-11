@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 // ignore: avoid_web_libraries_in_flutter
