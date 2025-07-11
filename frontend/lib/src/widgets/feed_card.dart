@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../services/content_service.dart';
 import '../providers/subscription_provider.dart';
@@ -12,6 +13,7 @@ import 'protected_image.dart';
 import 'comments_sheet.dart';
 // ignore: depend_on_referenced_packages
 import 'package:open_file/open_file.dart';
+
 
 class FeedCard extends StatefulWidget {
   final Map<String, dynamic> content;
@@ -173,7 +175,7 @@ class _FeedCardState extends State<FeedCard> {
     if (mounted) setState(() => _isLoadingSubscription = false);
   }
 
-  Future<void> _toggleLike() async {
+    Future<void> _toggleLike() async {
     final bool currentlyLiked =
         widget.content['liked_by_user'] as bool? ?? false;
     final int currentCount = widget.content['likes_count'] as int? ?? 0;
@@ -205,7 +207,8 @@ class _FeedCardState extends State<FeedCard> {
     }
   }
 
-  void _openComments() {
+
+	void _openComments() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -220,44 +223,39 @@ class _FeedCardState extends State<FeedCard> {
     );
   }
 
-  // NOUVELLE MÉTHODE pour gérer le téléchargement sur web et mobile
   Future<void> _downloadContent() async {
-    try {
-      final contentId = widget.content['id'] as String;
-      final localPath = await _svc.downloadContent(contentId);
-
-      if (kIsWeb) {
-        // Sur web, le fichier est téléchargé automatiquement
-        if (mounted) {
-          showCustomSnackBar(
-            context,
-            'Téléchargement terminé',
-            type: SnackBarType.success,
-          );
-        }
-      } else {
-        // Sur mobile, on peut ouvrir le fichier
-        if (localPath != null) {
-          await OpenFile.open(localPath);
-          if (mounted) {
-            showCustomSnackBar(
-              context,
-              'Ouverture du fichier…',
-              type: SnackBarType.success,
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        showCustomSnackBar(
-          context,
-          'Erreur de téléchargement : $e',
-          type: SnackBarType.error,
-        );
-      }
+  final contentId = widget.content['id'] as String;
+  
+  try {
+    // Appelle la nouvelle méthode
+    final localPath = await _svc.downloadContent(contentId);
+    
+    if (localPath == null) {
+      // version Web : le téléchargement a déjà été déclenché
+      showCustomSnackBar(
+        context,
+        'Téléchargement du fichier démarré dans votre navigateur.',
+        type: SnackBarType.info,
+      );
+    } else {
+      // version mobile : on a un chemin local
+      showCustomSnackBar(
+        context,
+        'Fichier enregistré : $localPath',
+        type: SnackBarType.success,
+      );
+      // Ouvre le fichier
+      await OpenFile.open(localPath);
     }
+  } catch (e) {
+    showCustomSnackBar(
+      context,
+      'Erreur de téléchargement : $e',
+      type: SnackBarType.error,
+    );
   }
+}
+
 
   Future<void> _reportContent() async {
     final reasons = ['Inapproprié', 'Spam', 'Autre'];
@@ -300,6 +298,30 @@ class _FeedCardState extends State<FeedCard> {
     }
   }
 
+  void _openChat() {
+    final creatorId = widget.content['creator_id']?.toString();
+    final creatorName = widget.content['creator_name']?.toString() ?? 'Créateur';
+    
+    if (creatorId == null) return;
+    
+    // Vérifier si la fonctionnalité de chat est activée
+    final chatEnabled = context.read<FeatureFlagProvider>().features.any(
+      (f) => f.key == featureChat && f.enabled,
+    );
+    
+    if (!chatEnabled) {
+      showCustomSnackBar(
+        context,
+        'La messagerie n\'est pas disponible pour le moment',
+        type: SnackBarType.info,
+      );
+      return;
+    }
+    
+    // Naviguer vers l'écran de chat
+    context.push('/chat/$creatorId', extra: creatorName);
+  }
+
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
@@ -315,6 +337,10 @@ class _FeedCardState extends State<FeedCard> {
 
     final commentEnabled = context.watch<FeatureFlagProvider>().features.any(
       (f) => f.key == featureComments && f.enabled,
+    );
+    
+    final chatEnabled = context.watch<FeatureFlagProvider>().features.any(
+      (f) => f.key == featureChat && f.enabled,
     );
 
     return Card(
@@ -332,19 +358,32 @@ class _FeedCardState extends State<FeedCard> {
               ),
             ),
             title: Text(widget.content['creator_name'] ?? 'Créateur'),
-            trailing:
-                _isLoadingSubscription
-                    ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                    : TextButton(
-                      onPressed: _toggleSubscribe,
-                      child: Text(
-                        isSubscribed ? 'Se désabonner' : 'S\'abonner',
-                      ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Bouton DM (Message)
+                if (chatEnabled)
+                  IconButton(
+                    onPressed: _openChat,
+                    icon: const Icon(Icons.message_outlined),
+                    tooltip: 'Envoyer un message',
+                  ),
+                // Bouton S'abonner/Se désabonner
+                if (_isLoadingSubscription)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  TextButton(
+                    onPressed: _toggleSubscribe,
+                    child: Text(
+                      isSubscribed ? 'Se désabonner' : 'S\'abonner',
                     ),
+                  ),
+              ],
+            ),
           ),
           AspectRatio(
             aspectRatio: 16 / 9,
