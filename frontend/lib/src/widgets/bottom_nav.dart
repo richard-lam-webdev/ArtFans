@@ -2,20 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:salomon_bottom_bar/salomon_bottom_bar.dart';
-
 import '../providers/auth_provider.dart';
 import '../providers/user_provider.dart';
-import '../providers/feature_flag_provider.dart';
-import '../constants/features.dart';
 
 class BottomNav extends StatelessWidget {
   final int currentIndex;
   const BottomNav({super.key, required this.currentIndex});
 
   void _onTap(BuildContext context, int index, bool isAdmin, bool isCreator) {
-    final chatEnabled = context.read<FeatureFlagProvider>().features.any(
-      (f) => f.key == featureChat && f.enabled,
-    );
 
     switch (index) {
       case 0:
@@ -31,21 +25,8 @@ class BottomNav extends StatelessWidget {
         context.go('/profile');
         break;
       case 4:
-        if (chatEnabled) {
-          context.go('/messages');
-        } else if (isCreator) {
-          context.go('/my-contents');
-        } else if (isAdmin) {
+        if (isAdmin) {
           context.go('/admin');
-        }
-        break;
-      case 5:
-        if (chatEnabled) {
-          if (isCreator) {
-            context.go('/my-contents');
-          } else if (isAdmin) {
-            context.go('/admin');
-          }
         }
         break;
     }

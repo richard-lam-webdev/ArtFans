@@ -1,14 +1,14 @@
-// services/subscription_service.go - Version corrigée
+// backend/internal/services/subscription_service.go
 
 package services
 
 import (
 	"errors"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/database"
+	"github.com/richard-lam-webdev/ArtFans/backend/internal/logger"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
@@ -23,36 +23,54 @@ func NewSubscriptionService(repo *repositories.SubscriptionRepository) *Subscrip
 
 // Subscribe permet à un abonné de s'abonner à un créateur (30€ fixe)
 func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
-	log.Printf("🔄 Début abonnement: user=%s -> creator=%s", userID, creatorID)
+	// Log structuré pour Grafana
+	logger.LogBusinessEvent("subscription_attempt", map[string]interface{}{
+		"subscriber_id": userID.String(),
+		"creator_id":    creatorID.String(),
+		"price_euros":   30,
+	})
 
 	// Vérifier si l'utilisateur n'est pas déjà abonné
 	isSubscribed, err := s.IsSubscribed(userID, creatorID)
 	if err != nil {
-		log.Printf("❌ Erreur vérification abonnement: %v", err)
+		logger.LogError(err, "subscription_check_failed", map[string]interface{}{
+			"subscriber_id": userID.String(),
+			"creator_id":    creatorID.String(),
+		})
 		return err
 	}
 	if isSubscribed {
-		log.Printf("⚠️ Utilisateur déjà abonné")
+		logger.LogBusinessEvent("subscription_already_exists", map[string]interface{}{
+			"subscriber_id": userID.String(),
+			"creator_id":    creatorID.String(),
+		})
 		return errors.New("vous êtes déjà abonné à ce créateur")
 	}
 
 	// Vérifier que l'utilisateur ne s'abonne pas à lui-même
 	if userID == creatorID {
-		log.Printf("⚠️ Tentative auto-abonnement")
+		logger.LogBusinessEvent("self_subscription_attempt", map[string]interface{}{
+			"user_id": userID.String(),
+		})
 		return errors.New("impossible de s'abonner à soi-même")
 	}
 
 	now := time.Now()
 
-	// CORRECTION : Transaction pour éviter les doubles entrées
+	// Transaction pour éviter les doubles entrées
 	tx := database.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
+			logger.LogError(errors.New("transaction panic"), "subscription_transaction_panic", map[string]interface{}{
+				"subscriber_id": userID.String(),
+				"creator_id":    creatorID.String(),
+				"panic":         r,
+			})
 		}
 	}()
 
-	// Créer l'abonnement d'abord
+	// Créer l'abonnement
 	sub := &models.Subscription{
 		CreatorID:    creatorID,
 		SubscriberID: userID,
@@ -64,11 +82,14 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 
 	if err := tx.Create(sub).Error; err != nil {
 		tx.Rollback()
-		log.Printf("❌ Erreur création abonnement: %v", err)
+		logger.LogError(err, "subscription_creation_failed", map[string]interface{}{
+			"subscriber_id": userID.String(),
+			"creator_id":    creatorID.String(),
+		})
 		return err
 	}
 
-	// Créer le paiement avec l'ID de subscription
+	// Créer le paiement
 	payment := &models.Payment{
 		SubscriptionID: sub.ID,
 		Amount:         models.SubscriptionPriceCents,
@@ -78,22 +99,49 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 
 	if err := tx.Create(payment).Error; err != nil {
 		tx.Rollback()
-		log.Printf("❌ Erreur création paiement: %v", err)
+		logger.LogError(err, "payment_creation_failed", map[string]interface{}{
+			"subscription_id": sub.ID.String(),
+			"amount_cents":    models.SubscriptionPriceCents,
+		})
 		return err
 	}
 
 	// Valider la transaction
 	if err := tx.Commit().Error; err != nil {
-		log.Printf("❌ Erreur commit transaction: %v", err)
+		logger.LogError(err, "transaction_commit_failed", map[string]interface{}{
+			"subscription_id": sub.ID.String(),
+			"payment_id":      payment.ID.String(),
+		})
 		return err
 	}
 
-	log.Printf("✅ Abonnement créé avec succès: subscription=%s, payment=%s", sub.ID, payment.ID)
+	// Log de succès pour Grafana
+	logger.LogBusinessEvent("subscription_created", map[string]interface{}{
+		"subscription_id": sub.ID.String(),
+		"payment_id":      payment.ID.String(),
+		"subscriber_id":   userID.String(),
+		"creator_id":      creatorID.String(),
+		"amount_euros":    30,
+		"duration_days":   models.SubscriptionDurationDays,
+		"end_date":        sub.EndDate,
+	})
+
+	// Log payment spécifique
+	logger.LogPayment("subscription_payment_success", userID.String(), 30.00, true, map[string]interface{}{
+		"creator_id":      creatorID.String(),
+		"subscription_id": sub.ID.String(),
+		"payment_id":      payment.ID.String(),
+		"payment_method":  "internal",
+	})
+
 	return nil
 }
 
 func (s *SubscriptionService) Unsubscribe(subscriberID, creatorID uuid.UUID) error {
-	log.Printf("🔄 Début désabonnement: user=%s -> creator=%s", subscriberID, creatorID)
+	logger.LogBusinessEvent("unsubscription_attempt", map[string]interface{}{
+		"subscriber_id": subscriberID.String(),
+		"creator_id":    creatorID.String(),
+	})
 
 	result := database.DB.
 		Where("subscriber_id = ? AND creator_id = ? AND status = ?",
@@ -101,16 +149,27 @@ func (s *SubscriptionService) Unsubscribe(subscriberID, creatorID uuid.UUID) err
 		Delete(&models.Subscription{})
 
 	if result.Error != nil {
-		log.Printf("❌ Erreur désabonnement: %v", result.Error)
+		logger.LogError(result.Error, "unsubscription_failed", map[string]interface{}{
+			"subscriber_id": subscriberID.String(),
+			"creator_id":    creatorID.String(),
+		})
 		return result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		log.Printf("⚠️ Aucun abonnement trouvé à supprimer")
+		logger.LogBusinessEvent("unsubscription_not_found", map[string]interface{}{
+			"subscriber_id": subscriberID.String(),
+			"creator_id":    creatorID.String(),
+		})
 		return errors.New("aucun abonnement actif trouvé")
 	}
 
-	log.Printf("✅ Désabonnement réussi: %d lignes affectées", result.RowsAffected)
+	logger.LogBusinessEvent("unsubscription_success", map[string]interface{}{
+		"subscriber_id": subscriberID.String(),
+		"creator_id":    creatorID.String(),
+		"rows_affected": result.RowsAffected,
+	})
+
 	return nil
 }
 
@@ -125,7 +184,11 @@ func (s *SubscriptionService) IsSubscribed(subscriberID, creatorID uuid.UUID) (b
 		Count(&count).Error
 
 	if err != nil {
-		log.Printf("❌ Erreur vérification abonnement: %v", err)
+		logger.LogError(err, "subscription_check_error", map[string]interface{}{
+			"subscriber_id": subscriberID.String(),
+			"creator_id":    creatorID.String(),
+		})
+		return false, err
 	}
 
 	return count > 0, err
@@ -158,6 +221,12 @@ func (s *SubscriptionService) GetFollowedCreatorIDs(subscriberID uuid.UUID) ([]u
 			subscriberID, models.SubscriptionStatusActive, now, now).
 		Pluck("creator_id", &ids).Error
 
+	if err != nil {
+		logger.LogError(err, "get_followed_creators_error", map[string]interface{}{
+			"subscriber_id": subscriberID.String(),
+		})
+	}
+
 	return ids, err
 }
 
@@ -171,6 +240,18 @@ func (s *SubscriptionService) GetUserSubscriptions(userID uuid.UUID) ([]models.S
 		userID, models.SubscriptionStatusActive, now,
 	).Find(&subscriptions).Error
 
+	if err != nil {
+		logger.LogError(err, "get_user_subscriptions_error", map[string]interface{}{
+			"user_id": userID.String(),
+		})
+	} else {
+		logger.LogBusinessEvent("user_subscriptions_retrieved", map[string]interface{}{
+			"user_id":     userID.String(),
+			"count":       len(subscriptions),
+			"total_value": len(subscriptions) * 30,
+		})
+	}
+
 	return subscriptions, err
 }
 
@@ -181,20 +262,32 @@ func (s *SubscriptionService) GetCreatorStats(creatorID uuid.UUID) (map[string]i
 	now := time.Now()
 
 	// Compter les abonnements actifs
-	database.DB.Model(&models.Subscription{}).
+	err := database.DB.Model(&models.Subscription{}).
 		Where("creator_id = ? AND status = ? AND start_date <= ? AND end_date > ?",
 			creatorID, models.SubscriptionStatusActive, now, now).
-		Count(&activeSubscriptions)
+		Count(&activeSubscriptions).Error
 
-	database.DB.Model(&models.Subscription{}).
-		Where("creator_id = ? AND status = ?", creatorID, models.SubscriptionStatusActive).
-		Select("COALESCE(SUM(price), 0)").
-		Scan(&totalRevenue)
+	if err != nil {
+		logger.LogError(err, "get_creator_stats_error", map[string]interface{}{
+			"creator_id": creatorID.String(),
+		})
+		return nil, err
+	}
 
-	return map[string]interface{}{
-		"active_subscribers": activeSubscriptions,
-		"total_revenue":      totalRevenue,
-		"monthly_revenue":    activeSubscriptions * models.SubscriptionPriceCents,
-		"price_per_month":    models.SubscriptionPriceEuros,
-	}, nil
+	// Calculer le revenu total
+	totalRevenue = activeSubscriptions * 30
+
+	stats := map[string]interface{}{
+		"active_subscriptions": activeSubscriptions,
+		"monthly_revenue":      totalRevenue,
+		"currency":             "EUR",
+	}
+
+	logger.LogBusinessEvent("creator_stats_retrieved", map[string]interface{}{
+		"creator_id":           creatorID.String(),
+		"active_subscriptions": activeSubscriptions,
+		"monthly_revenue":      totalRevenue,
+	})
+
+	return stats, nil
 }
