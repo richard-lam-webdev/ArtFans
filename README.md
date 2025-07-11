@@ -131,9 +131,8 @@ Ce projet est développé dans le cadre d'un PEC (Projet d'Étude de Cas) acadé
 ## 🔗 Liens Utiles
 
 - [Repository GitHub](https://github.com/richard-lam-webdev/ArtFans)
-- [Cahier des charges](./PEC%205A%20WD1.pdf)
-- [Demo Live](#) <!-- Ajouter l'URL de production -->
-
+- [Cahier des charges]
+fichier dans la racine du projet.
+- [Demo Live](#) (artfans.ddasilva.fr)
 ---
 
-*Projet réalisé par les étudiants de 5A WD1 dans le cadre du PEC 2024-2025*
