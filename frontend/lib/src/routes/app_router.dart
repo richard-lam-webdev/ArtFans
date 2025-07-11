@@ -21,10 +21,8 @@ import '../screens/my_subscriptions_screen.dart';
 import '../screens/splash_screen.dart';
 import '../screens/comments_moderation_screen.dart';
 import '../screens/content_detail_screen.dart';
-import '../screens/profile_screen.dart'; 
-
-
-
+import '../screens/profile_screen.dart';
+import '../screens/creator_profile_screen.dart'; // 👈 Import du nouvel écran
 
 import '../../main.dart';
 
@@ -140,7 +138,6 @@ class AppRouter {
           builder: (context, state) => const MySubscriptionsScreen(),
         ),
 
-        // conversations → gated
         GoRoute(
           path: '/messages',
           name: 'messages',
@@ -158,6 +155,7 @@ class AppRouter {
           name: 'profile',
           builder: (context, state) => const ProfileScreen(),
         ),
+
         GoRoute(
           path: '/chat/:userId',
           name: 'chat',
@@ -180,6 +178,16 @@ class AppRouter {
           builder: (context, state) {
             final id = state.pathParameters['id']!;
             return EditContentScreen(contentId: id);
+          },
+        ),
+
+        // ✅ ✨ NOUVELLE ROUTE : profil public d’un créateur
+        GoRoute(
+          path: '/creators/:username',
+          name: 'creator_profile',
+          builder: (context, state) {
+            final username = state.pathParameters['username']!;
+            return CreatorProfileScreen(username: username);
           },
         ),
       ],
