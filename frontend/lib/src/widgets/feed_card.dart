@@ -57,7 +57,7 @@ class _FeedCardState extends State<FeedCard> {
                 title: Text(
                   currentlySubscribed
                       ? 'Se désabonner de $creatorName'
-                      : 'S\'abonner à $creatorName',
+                      : 'S'abonner à $creatorName',
                 ),
                 content:
                     currentlySubscribed
@@ -325,8 +325,6 @@ class _FeedCardState extends State<FeedCard> {
   @override
   Widget build(BuildContext context) {
     final creatorId = widget.content['creator_id']?.toString();
-
-    // MODIFICATION IMPORTANTE : Utiliser le provider comme source de vérité
     final isSubscribed =
         creatorId != null
             ? context.watch<SubscriptionProvider>().isSubscribed(creatorId)
@@ -357,7 +355,21 @@ class _FeedCardState extends State<FeedCard> {
                     'https://placehold.co/40x40',
               ),
             ),
-            title: Text(widget.content['creator_name'] ?? 'Créateur'),
+            title: GestureDetector(
+              onTap: () {
+                final username = widget.content['creator_name']?.toString();
+                if (username != null) {
+                  context.push('/creators/$username');
+                }
+              },
+              child: Text(
+                widget.content['creator_name'] ?? 'Créateur',
+                style: const TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
