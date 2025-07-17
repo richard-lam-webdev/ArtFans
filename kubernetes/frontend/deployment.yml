@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artfans-web
+  namespace: artfans
+  labels:
+    app: artfans-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: artfans-web
+  template:
+    metadata:
+      labels:
+        app: artfans-web
+    spec:
+      containers:
+        - name: web
+          # Image construite et poussée dans Artifact Registry
+          image: europe-docker.pkg.dev/artfans-68ff4/artfans/artfans-web:v1.0.0
+          imagePullPolicy: IfNotPresent
+          # Récupère l'URL de l'API depuis votre ConfigMap
+          envFrom:
+            - configMapRef:
+                name: artfans-frontend-config
+          ports:
+            - containerPort: 80
+              name: http
+          # Probes pour s'assurer que le pod est prêt et sain
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
