@@ -8,21 +8,24 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 spec:
   tls:
-  - hosts: ["your-domain.com"]
-    secretName: tls-artfans
+    - hosts:
+        - your-domain.com
+      secretName: tls-artfans
   rules:
-  - host: your-domain.com
-    http:
-      paths:
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: artfans-api
-            port: { number: 8080 }
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: artfans-web
-            port: { number: 80 }
+    - host: your-domain.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: artfans-api
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: artfans-web
+                port:
+                  number: 80

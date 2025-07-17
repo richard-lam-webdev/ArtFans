@@ -6,33 +6,41 @@ metadata:
 spec:
   replicas: 2
   selector:
-    matchLabels: { app: artfans-api }
+    matchLabels:
+      app: artfans-api
   template:
     metadata:
-      labels: { app: artfans-api }
+      labels:
+        app: artfans-api
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-      - name: api
-        image: your-registry/onlyflick-api:v1.0.0
-        imagePullPolicy: IfNotPresent
-        envFrom:
-        - secretRef: { name: artfans-backend-secrets }
-        ports: [{ containerPort: 8080 }]
-        readinessProbe:
-          httpGet: { path: /health, port: 8080 }
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          httpGet: { path: /health, port: 8080 }
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        volumeMounts:
-        - name: uploads
-          mountPath: /uploads
+        - name: api
+          image: europe-docker.pkg.dev/artfans-68ff4/artfans/artfans-api:v1.0.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: artfans-backend-secrets
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: uploads
+              mountPath: /uploads
       volumes:
-      - name: uploads
-        persistentVolumeClaim:
-          claimName: uploads-pvc
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads-pvc

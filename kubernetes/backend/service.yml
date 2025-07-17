@@ -5,5 +5,10 @@ metadata:
   namespace: artfans
 spec:
   type: ClusterIP
-  ports: [{ port: 8080, targetPort: 8080 }]
-  selector: { app: artfans-api }
+  selector:
+    app: artfans-api
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
