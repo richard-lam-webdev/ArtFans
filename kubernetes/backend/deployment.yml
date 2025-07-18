@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: artfans-api
   namespace: artfans
+  labels:
+    app: artfans-api
 spec:
   replicas: 2
   selector:
@@ -16,31 +18,47 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
+
+      volumes:
+        - name: cloudsql-creds
+          secret:
+            secretName: gcs-credentials
+
       containers:
+        - name: cloud-sql-proxy
+          image: gcr.io/cloudsql-docker/gce-proxy:1.33.2
+          env:
+            - name: CLOUD_SQL_CONNECTION_NAME
+              value: "artfans-68ff4:europe-west1:artfans-pg"
+          command:
+            - "/cloud_sql_proxy"
+            - "-instances=$(CLOUD_SQL_CONNECTION_NAME)=tcp:5432"
+            - "-credential_file=/secrets/key.json"
+          volumeMounts:
+            - name: cloudsql-creds
+              mountPath: /secrets
+              readOnly: true
+
         - name: api
           image: europe-docker.pkg.dev/artfans-68ff4/artfans/artfans-api:v1.0.0
           imagePullPolicy: IfNotPresent
-          envFrom:
-            - secretRef:
-                name: artfans-backend-secrets
+          env:
+            - name: DATABASE_URL
+              value: "postgres://artfans:artfans_pass@127.0.0.1:5432/artfans_dev?sslmode=disable"
+            - name: GCS_BUCKET
+              value: "artfans-uploads"
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
           readinessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /health
-              port: 8080
+              port: http
             initialDelaySeconds: 15
             periodSeconds: 20
-          volumeMounts:
-            - name: uploads
-              mountPath: /uploads
-      volumes:
-        - name: uploads
-          persistentVolumeClaim:
-            claimName: uploads-pvc
