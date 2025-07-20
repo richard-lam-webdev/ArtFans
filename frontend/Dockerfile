@@ -8,7 +8,11 @@ RUN flutter pub get
 COPY . .
 RUN flutter build web --release
 
+
 FROM nginx:alpine
+
+RUN mkdir -p /var/cache/nginx/client_temp \
+ && chown -R nginx:nginx /var/cache/nginx
 
 COPY nginx.conf /etc/nginx/nginx.conf
 
