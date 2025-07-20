@@ -14,7 +14,7 @@ spec:
     metadata:
       labels:
         app: artfans-web
-  spec:
+    spec:                             
       containers:
         - name: web
           image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
@@ -37,13 +37,11 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 20
-
           volumeMounts:
             - name: nginx-cache
               mountPath: /var/cache/nginx
             - name: nginx-pid
               mountPath: /var/run
-
       volumes:
         - name: nginx-cache
           emptyDir: {}
