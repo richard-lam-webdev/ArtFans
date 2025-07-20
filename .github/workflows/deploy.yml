@@ -1,0 +1,63 @@
+name: Build and Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER_NAME }}
+  GKE_ZONE:    ${{ secrets.GKE_CLUSTER_ZONE }}
+  REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+
+jobs:
+  setup-build-publish-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY_URL }}
+
+      - name: Build Backend
+        run: |
+          cd backend
+          IMAGE="${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker tag "$IMAGE" "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:latest"
+
+      - name: Setup Kubectl
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location:     ${{ env.GKE_ZONE }}
+
+      - name: Deploy to GKE
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          kubectl set image deployment/artfans-api \
+            api=${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:${{ github.sha }} \
+            -n artfans
+          kubectl rollout status deployment/artfans-api -n artfans
