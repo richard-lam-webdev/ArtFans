@@ -25,6 +25,7 @@ frontend/.flutter-plugins
 frontend/.flutter-plugins-dependencies
 frontend/.metadata
 frontend/build/
+frontend/key.properties
 
 # IDE
 *.iml
