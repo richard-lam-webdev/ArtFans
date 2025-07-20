@@ -18,7 +18,7 @@ spec:
       containers:
         - name: web
           # Image construite et poussée dans Artifact Registry
-          image: europe-docker.pkg.dev/artfans-68ff4/artfans/artfans-web:v1.0.0
+          image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
           imagePullPolicy: IfNotPresent
           # Récupère l'URL de l'API depuis votre ConfigMap
           envFrom:

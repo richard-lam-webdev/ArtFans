@@ -18,7 +18,7 @@ spec:
         runAsUser: 1000
       containers:
         - name: api
-          image: europe-docker.pkg.dev/artfans-68ff4/artfans/artfans-api:v1.0.0
+          image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-api:latest
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
