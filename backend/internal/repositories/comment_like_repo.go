@@ -1,4 +1,3 @@
-// backend/internal/repositories/comment_like_repository.go
 package repositories
 
 import (

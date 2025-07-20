@@ -28,7 +28,6 @@ class FeatureGate extends StatelessWidget {
     if (f.enabled) {
       return builder(context);
     }
-    // si fallback non fourni, on renvoie juste rien
     return fallback?.call(context) ?? const SizedBox.shrink();
   }
 }

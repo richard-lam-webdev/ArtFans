@@ -92,9 +92,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 }
 
-// ----------------------
-// Onglet Dashboard
-// ----------------------
 class _DashboardTab extends StatelessWidget {
   const _DashboardTab();
 
@@ -259,9 +256,6 @@ class _DashboardTab extends StatelessWidget {
   }
 }
 
-// ----------------------------
-// Onglet Utilisateurs
-// ----------------------------
 class _UsersTab extends StatelessWidget {
   const _UsersTab();
 
@@ -362,9 +356,6 @@ class _UsersTab extends StatelessWidget {
   }
 }
 
-// ----------------------------
-// Onglet Contenus
-// ----------------------------
 class _ContentsTab extends StatelessWidget {
   const _ContentsTab();
 
@@ -449,9 +440,6 @@ class _ContentsTab extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------
-// Onglet “Fonctionnalités”
-// -------------------------------------------------
 class _FeaturesTab extends StatelessWidget {
   const _FeaturesTab();
 

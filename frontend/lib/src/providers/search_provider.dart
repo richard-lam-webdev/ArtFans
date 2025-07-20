@@ -1,5 +1,3 @@
-// lib/src/providers/search_provider.dart
-
 import 'dart:async';
 import 'dart:convert';
 
@@ -8,9 +6,6 @@ import 'package:http/http.dart' as http;
 
 import '../services/api_service.dart';
 
-// ---------------------------------------------------------------------------
-// Debouncer utilitaire (300 ms par défaut)
-// ---------------------------------------------------------------------------
 class _Debouncer {
   _Debouncer();
   final Duration _delay = const Duration(milliseconds: 300);
@@ -24,9 +19,6 @@ class _Debouncer {
   void dispose() => _timer?.cancel();
 }
 
-// ---------------------------------------------------------------------------
-// Modèles de données (créateurs & contenus) – IDs en String
-// ---------------------------------------------------------------------------
 class Creator {
   Creator({
     required this.id,
@@ -69,10 +61,6 @@ class Content {
   );
 }
 
-// ---------------------------------------------------------------------------
-// SearchProvider – logique principale
-// ---------------------------------------------------------------------------
-
 class SearchProvider extends ChangeNotifier {
   SearchProvider({required this.token, http.Client? client})
     : _client = client ?? http.Client();
@@ -81,14 +69,12 @@ class SearchProvider extends ChangeNotifier {
   final http.Client _client;
   final _debouncer = _Debouncer();
 
-  // --- état exposé ---
   bool isLoading = false;
   String query = '';
   String? error;
   List<Creator> creators = [];
   List<Content> contents = [];
 
-  /// Appelé à chaque frappe dans le champ de recherche
   void onQueryChanged(String q) {
     query = q;
     if (q.trim().isEmpty) {
@@ -100,7 +86,6 @@ class SearchProvider extends ChangeNotifier {
     _debouncer(_search);
   }
 
-  /// Interroge le backend (/api/search)
   Future<void> _search() async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
@@ -114,7 +99,6 @@ class SearchProvider extends ChangeNotifier {
         '${ApiService.baseUrl}/api/search',
       ).replace(queryParameters: {'q': trimmed, 'type': 'creators,contents'});
 
-      // 2) on injecte le token dans les headers
       final res = await _client
           .get(
             uri,

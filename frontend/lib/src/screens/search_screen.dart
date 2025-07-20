@@ -134,10 +134,6 @@ class _SearchView extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Widgets UI
-// ---------------------------------------------------------------------------
-
 class CreatorTile extends StatefulWidget {
   const CreatorTile({super.key, required this.creator});
 
@@ -165,7 +161,6 @@ class _CreatorTileState extends State<CreatorTile> {
 
     try {
       if (_isFollowed) {
-        // confirmation désabonnement
         final confirmed =
             await showDialog<bool>(
               context: context,
@@ -215,7 +210,6 @@ class _CreatorTileState extends State<CreatorTile> {
           );
         }
       } else {
-        // confirmation abonnement
         final confirmed =
             await showDialog<bool>(
               context: context,

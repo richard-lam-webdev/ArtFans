@@ -19,9 +19,6 @@ import (
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/repositories"
 )
 
-// =======================
-// Middleware Admin
-// =======================
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
@@ -65,10 +62,6 @@ func AdminMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-// =======================
-// Utilisateurs
-// =======================
 
 // ListUsersHandler GET /api/admin/users
 func ListUsersHandler(c *gin.Context) {
@@ -129,10 +122,6 @@ func ChangeUserRoleHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Utilisateur " + action})
 }
 
-// =======================
-// Contenus
-// =======================
-
 // ListContentsHandler GET /api/admin/contents
 func ListContentsHandler(c *gin.Context) {
 	repo := repositories.NewContentRepository()
@@ -156,7 +145,6 @@ func ListContentsHandler(c *gin.Context) {
 }
 
 func DeleteContentHandler(c *gin.Context) {
-	// 1) Parser l’ID du contenu
 	idStr := c.Param("id")
 	contentID, err := uuid.Parse(idStr)
 	if err != nil {
@@ -164,7 +152,6 @@ func DeleteContentHandler(c *gin.Context) {
 		return
 	}
 
-	// 2) Supprimer d'abord tous les signalements associés
 	reportRepo := repositories.NewReportRepository()
 	if err := reportRepo.DeleteByContentID(contentID); err != nil {
 		logger.LogError(err, "delete_reports_failed", map[string]interface{}{
@@ -174,7 +161,6 @@ func DeleteContentHandler(c *gin.Context) {
 		return
 	}
 
-	// 3) Supprimer le contenu (et son fichier image)
 	contentRepo := repositories.NewContentRepository()
 	uploadPath := config.C.UploadPath
 	if err := contentRepo.Delete(contentID, uploadPath); err != nil {

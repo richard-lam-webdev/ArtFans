@@ -21,7 +21,6 @@ func SetAuthService(s *services.AuthService) {
 	authService = s
 }
 
-// Struct de binding dédié à l’inscription
 type RegisterPayload struct {
 	Username        string `json:"username" binding:"required"`
 	Email           string `json:"email" binding:"required,email"`
@@ -33,7 +32,6 @@ type RegisterPayload struct {
 func RegisterHandler(c *gin.Context) {
 	var payload RegisterPayload
 
-	// 1. Liaison JSON → payload, interdiction des champs inconnus
 	decoder := json.NewDecoder(c.Request.Body)
 	decoder.DisallowUnknownFields()
 	if decodeErr := decoder.Decode(&payload); decodeErr != nil {
@@ -41,10 +39,8 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// 2. Forcer toujours le rôle à "subscriber"
 	role := models.RoleSubscriber
 
-	// 3. Appel au service d'inscription
 	user, registerErr := authService.Register(
 		payload.Username,
 		payload.Email,
@@ -52,7 +48,6 @@ func RegisterHandler(c *gin.Context) {
 		role,
 	)
 	if registerErr != nil {
-		// Log de l’échec d’inscription
 		logger.LogBusinessEvent("registration_failed", map[string]interface{}{
 			"email": payload.Email,
 			"ip":    c.ClientIP(),
@@ -62,10 +57,8 @@ func RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	// 4. Succès → 201 Created
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 
-	// Log de la réussite d’inscription
 	logger.LogBusinessEvent("user_registered", map[string]interface{}{
 		"user_id": user.ID,
 		"email":   user.Email,
@@ -73,7 +66,6 @@ func RegisterHandler(c *gin.Context) {
 	})
 }
 
-// Struct de binding dédié au login
 type LoginPayload struct {
 	Email    string `json:"email" binding:"required,email"`
 	Password string `json:"password" binding:"required"`
@@ -82,7 +74,6 @@ type LoginPayload struct {
 func LoginHandler(c *gin.Context) {
 	var payload LoginPayload
 
-	// 1. Liaison du JSON
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -91,14 +82,12 @@ func LoginHandler(c *gin.Context) {
 	email := payload.Email
 	ip := c.ClientIP()
 
-	// 2. Vérification des tentatives de connexion
 	mu.Lock()
 	attempts := loginAttempts[email]
 	loginAttempts[email] = attempts + 1
 	mu.Unlock()
 
 	if attempts >= 5 {
-		// trop de tentatives → bloquer
 		sentry.CaptureAuthError("multiple_failed_logins", email, ip, "too_many_attempts")
 		logger.LogSecurity("login_blocked", map[string]any{
 			"email":    email,
@@ -109,10 +98,8 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// 3. Tentative d’authentification
 	token, loginErr := authService.Login(email, payload.Password)
 	if loginErr != nil {
-		// Log de l’échec de connexion
 		logger.LogBusinessEvent("login_failed", map[string]any{
 			"email": email,
 			"ip":    ip,
@@ -122,19 +109,15 @@ func LoginHandler(c *gin.Context) {
 		return
 	}
 
-	// 4. Si on arrive ici, l'authent est réussie
 	success := true
 
-	// 5. Réponse JSON de succès
 	c.JSON(http.StatusOK, gin.H{"token": token})
 
-	// 6. Log de la réussite de connexion
 	logger.LogBusinessEvent("user_logged_in", map[string]any{
 		"email": email,
 		"ip":    ip,
 	})
 
-	// 7. Si c’était une réussite, on réinitialise le compteur
 	if success {
 		mu.Lock()
 		delete(loginAttempts, email)

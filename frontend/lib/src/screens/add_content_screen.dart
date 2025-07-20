@@ -68,22 +68,24 @@ class _AddContentScreenState extends State<AddContentScreen> {
         return;
       }
 
-      final String baseUrl = (() {
-        try {
-          return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-        } catch (_) {
-          return 'http://localhost:8080';
-        }
-      })();
+      final String baseUrl =
+          (() {
+            try {
+              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+            } catch (_) {
+              return 'http://localhost:8080';
+            }
+          })();
 
       final uri = Uri.parse('$baseUrl/api/contents');
-      final request = http.MultipartRequest('POST', uri)
-        ..headers['Authorization'] = 'Bearer $token'
-        ..fields['username'] = username
-        ..fields['role'] = role
-        ..fields['title'] = _titleCtrl.text.trim()
-        ..fields['body'] = _bodyCtrl.text.trim()
-        ..fields['price'] = _priceCtrl.text.trim();
+      final request =
+          http.MultipartRequest('POST', uri)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields['username'] = username
+            ..fields['role'] = role
+            ..fields['title'] = _titleCtrl.text.trim()
+            ..fields['body'] = _bodyCtrl.text.trim()
+            ..fields['price'] = _priceCtrl.text.trim();
 
       final fileName = _selectedFile?.name ?? 'file';
       if (UniversalPlatform.isWeb || _selectedFile?.path == null) {
@@ -153,7 +155,9 @@ class _AddContentScreenState extends State<AddContentScreen> {
           curve: Curves.ease,
           padding: const EdgeInsets.all(24),
           child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
             elevation: 8,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
@@ -164,7 +168,6 @@ class _AddContentScreenState extends State<AddContentScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Titre
                       TextFormField(
                         controller: _titleCtrl,
                         decoration: const InputDecoration(
@@ -172,10 +175,13 @@ class _AddContentScreenState extends State<AddContentScreen> {
                           prefixIcon: Icon(Icons.title_outlined),
                           border: OutlineInputBorder(),
                         ),
-                        validator: (v) => (v == null || v.isEmpty) ? 'Titre requis' : null,
+                        validator:
+                            (v) =>
+                                (v == null || v.isEmpty)
+                                    ? 'Titre requis'
+                                    : null,
                       ),
                       const SizedBox(height: 16),
-                      // Description
                       TextFormField(
                         controller: _bodyCtrl,
                         decoration: const InputDecoration(
@@ -184,10 +190,13 @@ class _AddContentScreenState extends State<AddContentScreen> {
                           border: OutlineInputBorder(),
                         ),
                         maxLines: 3,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Description requise' : null,
+                        validator:
+                            (v) =>
+                                (v == null || v.isEmpty)
+                                    ? 'Description requise'
+                                    : null,
                       ),
                       const SizedBox(height: 16),
-                      // Prix
                       TextFormField(
                         controller: _priceCtrl,
                         decoration: const InputDecoration(
@@ -196,19 +205,27 @@ class _AddContentScreenState extends State<AddContentScreen> {
                           border: OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.number,
-                        validator: (v) => (v == null || v.isEmpty) ? 'Prix requis' : null,
+                        validator:
+                            (v) =>
+                                (v == null || v.isEmpty) ? 'Prix requis' : null,
                       ),
                       const SizedBox(height: 18),
-                      // Sélecteur de fichier & preview
                       GestureDetector(
                         onTap: _isLoading ? null : _pickFile,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.secondary.withAlpha((0.07 * 255).round()), // Correction deprecation
+                            color: theme.colorScheme.secondary.withAlpha(
+                              (0.07 * 255).round(),
+                            ),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: theme.dividerColor.withAlpha((0.6 * 255).round()), // Correction deprecation
+                              color: theme.dividerColor.withAlpha(
+                                (0.6 * 255).round(),
+                              ),
                               width: 1,
                             ),
                           ),
@@ -238,38 +255,43 @@ class _AddContentScreenState extends State<AddContentScreen> {
                                   ),
                                 ),
                               if (_selectedFileBytes == null)
-                                const Icon(Icons.add_photo_alternate, color: Colors.grey),
+                                const Icon(
+                                  Icons.add_photo_alternate,
+                                  color: Colors.grey,
+                                ),
                             ],
                           ),
                         ),
                       ),
                       const SizedBox(height: 18),
-                      // Message d'erreur stylisé
                       if (_error != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 8),
                           child: Text(
                             _error!,
-                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         ),
-                      // Bouton Publier
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           onPressed: _isLoading ? null : _submit,
                           icon: const Icon(Icons.cloud_upload_outlined),
-                          label: _isLoading
-                              ? const SizedBox(
-                                  height: 24,
-                                  width: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Text('Publier'),
+                          label:
+                              _isLoading
+                                  ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  : const Text('Publier'),
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size.fromHeight(48),
                             shape: RoundedRectangleBorder(

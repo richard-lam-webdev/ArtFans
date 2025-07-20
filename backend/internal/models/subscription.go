@@ -1,5 +1,3 @@
-// backend/internal/models/subscription.go
-
 package models
 
 import (
@@ -9,13 +7,11 @@ import (
 )
 
 const (
-	// Prix fixe pour tous les abonnements
 	SubscriptionPriceEuros   = 30
-	SubscriptionPriceCents   = 3000 // 30€ en centimes
-	SubscriptionDurationDays = 30   // Durée en jours
+	SubscriptionPriceCents   = 3000
+	SubscriptionDurationDays = 30
 )
 
-// Subscription représente un abonnement d'un abonné à un créateur
 type Subscription struct {
 	ID           uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	CreatorID    uuid.UUID `gorm:"not null" json:"creator_id"`
@@ -23,19 +19,17 @@ type Subscription struct {
 	StartDate    time.Time `gorm:"not null" json:"start_date"`
 	EndDate      time.Time `gorm:"not null" json:"end_date"`
 	PaymentID    uuid.UUID `gorm:"type:uuid;not null" json:"payment_id"`
-	Price        int       `gorm:"column:price;default:3000;not null" json:"price"`       // ✨ NOUVEAU
-	Status       string    `gorm:"column:status;default:'active';not null" json:"status"` // ✨ NOUVEAU
-	CreatedAt    time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`    // ✨ NOUVEAU
+	Price        int       `gorm:"column:price;default:3000;not null" json:"price"`
+	Status       string    `gorm:"column:status;default:'active';not null" json:"status"`
+	CreatedAt    time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
 }
 
-// Statuts d'abonnement
 const (
 	SubscriptionStatusActive   = "active"
 	SubscriptionStatusExpired  = "expired"
 	SubscriptionStatusCanceled = "canceled"
 )
 
-// IsActive vérifie si l'abonnement est actif
 func (s *Subscription) IsActive() bool {
 	now := time.Now()
 	return s.Status == SubscriptionStatusActive &&
@@ -43,7 +37,6 @@ func (s *Subscription) IsActive() bool {
 		s.EndDate.After(now)
 }
 
-// DaysRemaining retourne le nombre de jours restants
 func (s *Subscription) DaysRemaining() int {
 	if !s.IsActive() {
 		return 0

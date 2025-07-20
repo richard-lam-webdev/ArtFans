@@ -1,5 +1,3 @@
-// lib/src/models/creator.dart
-
 class Creator {
   Creator({
     required this.id,

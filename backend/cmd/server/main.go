@@ -1,5 +1,3 @@
-// backend/cmd/server/main.go
-
 package main
 
 import (
@@ -24,21 +22,17 @@ import (
 
 func main() {
 
-	/* ---------- 1) Config + DB ---------- */
 	config.LoadEnv()
 	database.Init()
 
-	/* ---------- 2) Auth ---------- */
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
-	/* ---------- 2b) Repos pour profil créateur ---------- */
 	subRepo := repositories.NewSubscriptionRepository()
 	publicContentRepo := repositories.NewPublicContentRepository()
 	handlers.SetCreatorRepos(userRepo, subRepo, publicContentRepo)
 
-	/* ---------- 3) ContentService ---------- */
 	contentRepo := repositories.NewContentRepository()
 	uploadPath := config.C.UploadPath
 	if err := os.MkdirAll(uploadPath, 0o755); err != nil {
@@ -55,7 +49,6 @@ func main() {
 	commentHandler := handlers.NewCommentHandler(commentSvc)
 	searchHandler := handlers.NewSearchHandler(database.DB)
 
-	/* ---------- 4) Message Service ---------- */
 	messageRepo := repositories.NewMessageRepository()
 	messageSvc := services.NewMessageService(messageRepo, userRepo)
 	messageHandler := handlers.NewMessageHandler(messageSvc)
@@ -67,7 +60,6 @@ func main() {
 		log.Printf("⚠️ Impossible d'initialiser Sentry: %v", err)
 	}
 
-	/* ---------- 5) Gin ---------- */
 	r := gin.New()
 	r.Use(sentry.Middleware())
 	r.Use(logger.GinLogger(), gin.Recovery())
@@ -88,28 +80,21 @@ func main() {
 		r.GET("/test/sentry-payment", handlers.TestSentryPaymentHandler)
 	}
 
-	/* ---------- 6) Statique pour les uploads ---------- */
 	r.Static("/uploads", uploadPath)
 
-	/* ---------- 7) Health ---------- */
 	r.GET("/health", handlers.HealthCheck)
 
-	/* ---------- 8) Auth public ---------- */
 	{
 		auth := r.Group("/api/auth")
 		auth.POST("/register", handlers.RegisterHandler)
 		auth.POST("/login", handlers.LoginHandler)
 	}
 
-	/* ---------- 9) Contenus publics ---------- */
 	r.GET("/api/contents", contentHandler.GetAllContents)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.POST("/api/metrics/client", handlers.ClientMetricsHandler)
-	/* ---------- 9) Routes protégées JWT ---------- */
-	/* ---------- 8b) Profil créateur public ---------- */
 	r.GET("/api/creators/:username", handlers.GetPublicCreatorProfileHandler)
 
-	/* ---------- 9) Routes protégées JWT ---------- */
 	protected := r.Group("/api", middleware.JWTAuth())
 	{
 		protected.GET("/users/me", handlers.CurrentUserHandler)
@@ -123,21 +108,18 @@ func main() {
 		protected.POST("/contents/:id/like", contentHandler.LikeContent)
 		protected.DELETE("/contents/:id/like", contentHandler.UnlikeContent)
 		protected.GET("/feed", contentHandler.GetFeed)
-		//subscriptions
-		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)     // S'abonner (30€)
-		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe) // Se désabonner
-		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)   // Vérifier abonnement
-		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)     // Mes abonnements (IDs)
-		protected.GET("/subscriptions/my", subscriptionHandler.GetMySubscriptions)     // ✨ NOUVEAU : Mes abonnements détaillés
+		protected.POST("/subscriptions/:creatorID", subscriptionHandler.Subscribe)
+		protected.DELETE("/subscriptions/:creatorID", subscriptionHandler.Unsubscribe)
+		protected.GET("/subscriptions/:creatorID", subscriptionHandler.IsSubscribed)
+		protected.GET("/subscriptions", subscriptionHandler.GetFollowedCreatorIDs)
+		protected.GET("/subscriptions/my", subscriptionHandler.GetMySubscriptions)
 		protected.GET("/creator/stats", subscriptionHandler.GetCreatorStats)
 		protected.GET("/subscriptions/:creatorID/status", subscriptionHandler.CheckSubscriptionStatus)
-		// Comments
 		protected.GET("/contents/:id/comments", commentHandler.GetComments)
 		protected.POST("/contents/:id/comments", commentHandler.PostComment)
 		protected.POST("/comments/:commentID/like", commentHandler.LikeComment)
 		protected.DELETE("/comments/:commentID/like", commentHandler.UnlikeComment)
 
-		// Messages
 		protected.POST("/messages", messageHandler.SendMessage)
 		protected.GET("/messages", messageHandler.GetConversations)
 		protected.GET("/messages/:userId", messageHandler.GetConversation)
@@ -145,7 +127,6 @@ func main() {
 		protected.POST("/contents/:id/report", handlers.ReportContentHandler)
 	}
 
-	/* ---------- 11) Admin ---------- */
 	admin := r.Group("/api/admin",
 		middleware.JWTAuth(),
 		handlers.AdminMiddleware(),
@@ -177,7 +158,6 @@ func main() {
 		"environment": os.Getenv("ENV"),
 	})
 
-	/* ---------- 12) Start ---------- */
 	addr := fmt.Sprintf(":%s", config.C.Port)
 	log.Printf("🚀 Serveur sur %s…", addr)
 	if err := r.Run(addr); err != nil {

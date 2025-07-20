@@ -1,4 +1,3 @@
-// backend/internal/handlers/admin_comment_handler.go
 package handlers
 
 import (
@@ -24,7 +23,7 @@ func NewAdminCommentHandler(commentSvc *services.CommentService) *AdminCommentHa
 // ListComments renvoie la liste paginée de tous les commentaires
 // avec : auteur, contenu, date et lien vers le post parent
 func (h *AdminCommentHandler) ListComments(c *gin.Context) {
-	// pagination
+
 	page, _ := strconv.Atoi(c.Query("page"))
 	if page < 1 {
 		page = 1
@@ -52,13 +51,12 @@ func (h *AdminCommentHandler) ListComments(c *gin.Context) {
 			"created_at":  cm.CreatedAt.Format(time.RFC3339),
 			"parent_id":   cm.ParentID,
 			"author_name": cm.Author.Username,
-			"content": gin.H{ // <- on renvoie un sous-objet content
+			"content": gin.H{
 				"id":         cm.Content.ID.String(),
 				"title":      cm.Content.Title,
 				"created_at": cm.Content.CreatedAt.Format(time.RFC3339),
 			},
 
-			// URL vers l’API publique du post
 			"post_url": "/api/contents/" + cm.ContentID.String(),
 		}
 	}

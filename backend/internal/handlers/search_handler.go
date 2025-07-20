@@ -1,4 +1,3 @@
-// backend/internal/handlers/search_handler.go
 package handlers
 
 import (
@@ -8,9 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
-
-// DTOs pour JSON
-// ------------
 
 type CreatorDTO struct {
 	ID         string `json:"id"`
@@ -27,7 +23,6 @@ type ContentDTO struct {
 }
 
 // SearchHandler gère GET /api/search?q=…&type=creators,contents
-// utilise GORM pour interroger les tables "user", "subscription" et "content"
 type SearchHandler struct {
 	DB *gorm.DB
 }
@@ -46,7 +41,6 @@ func (h *SearchHandler) Search(c *gin.Context) {
 	}
 	types := strings.Split(c.Query("type"), ",")
 
-	// Récupère l'ID utilisateur si connecté (stocké en string ou uuid)
 	var uid string
 	if v, exists := c.Get("userID"); exists {
 		switch id := v.(type) {
@@ -57,11 +51,9 @@ func (h *SearchHandler) Search(c *gin.Context) {
 		}
 	}
 
-	// Initialisation pour JSON []
 	creators := make([]CreatorDTO, 0)
 	contents := make([]ContentDTO, 0)
 
-	// Requête créateurs
 	if contains(types, "creators") {
 		h.DB.Table(`"user" u`).
 			Select(`
@@ -70,7 +62,6 @@ func (h *SearchHandler) Search(c *gin.Context) {
 		  ''            AS avatar_url,
 		  CASE WHEN s.creator_id IS NOT NULL THEN true ELSE false END AS is_followed
 		`).
-			// columns in subscription: creator_id and subscriber_id
 			Joins(`
 		  LEFT JOIN subscription s
 		    ON s.creator_id::text   = u.id::text
@@ -82,7 +73,6 @@ func (h *SearchHandler) Search(c *gin.Context) {
 			Find(&creators)
 	}
 
-	// Requête contenus
 	if contains(types, "contents") {
 		h.DB.Table("content p").
 			Select(`
@@ -107,7 +97,6 @@ func (h *SearchHandler) Search(c *gin.Context) {
 	})
 }
 
-// contains vérifie si slice contient une valeur
 func contains(slice []string, s string) bool {
 	for _, v := range slice {
 		if v == s {

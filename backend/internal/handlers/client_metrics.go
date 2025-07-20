@@ -7,7 +7,6 @@ import (
 )
 
 var (
-	// Métriques client
 	clientPageLoad = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "client_page_load_duration_ms",
 		Help:    "Page load duration in milliseconds",

@@ -22,7 +22,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
     super.initState();
     _adminCommentService = AdminCommentService();
 
-    // Charge le contenu + commentaires dès la première frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<ContentDetailProvider>().load(widget.contentId);
@@ -41,13 +40,11 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
   Widget build(BuildContext context) {
     final prov = context.watch<ContentDetailProvider>();
 
-    // 1) Loading
     if (prov.status == ContentDetailStatus.initial ||
         prov.status == ContentDetailStatus.loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // 2) Erreur
     if (prov.status == ContentDetailStatus.error) {
       return Scaffold(
         appBar: AppBar(
@@ -61,7 +58,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
       );
     }
 
-    // 3) Chargé
     final c = prov.content!;
     final comments = prov.comments;
 
@@ -78,11 +74,9 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image protégée
             ProtectedImage(contentId: widget.contentId, isSubscribed: true),
             const SizedBox(height: 16),
 
-            // Titre
             Text(
               c['title'] as String,
               style: Theme.of(context).textTheme.headlineSmall,
@@ -90,7 +84,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
             const SizedBox(height: 24),
             const Divider(),
 
-            // Commentaires
             Text(
               'Commentaires',
               style: Theme.of(context).textTheme.headlineSmall,
@@ -120,12 +113,10 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                       icon: const Icon(Icons.delete, color: Colors.red),
                       tooltip: 'Supprimer le commentaire',
                       onPressed: () async {
-                        // 1. Capture les objets dépendants du contexte AVANT tout await
                         final messenger = ScaffoldMessenger.of(context);
                         final detailProv =
                             context.read<ContentDetailProvider>();
 
-                        // 2. Boîte de dialogue
                         final ok = await showDialog<bool>(
                           context: context,
                           builder:
@@ -152,17 +143,14 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                         if (ok != true) return;
 
                         try {
-                          // 3. Suppression côté API
                           await _adminCommentService.deleteComment(commentId);
 
-                          // 4. Feedback utilisateur (plus d’accès direct à context)
                           messenger.showSnackBar(
                             const SnackBar(
                               content: Text('Commentaire supprimé'),
                             ),
                           );
 
-                          // 5. Recharge les données
                           await detailProv.load(widget.contentId);
                         } catch (e) {
                           messenger.showSnackBar(
