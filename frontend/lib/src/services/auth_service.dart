@@ -1,4 +1,3 @@
-// lib/src/services/auth_service.dart
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -20,66 +19,66 @@ class AuthService {
             }
           })();
 
-      Future<void> register({
-      required String username,
-      required String email,
-      required String password,
-    }) async {
-      final uri = Uri.parse('$_baseUrl/api/auth/register');
-      final payload = jsonEncode({
-        'username': username,
-        'email': email,
-        'password': password,
-        'confirmPassword': password,
-      });
+  Future<void> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/auth/register');
+    final payload = jsonEncode({
+      'username': username,
+      'email': email,
+      'password': password,
+      'confirmPassword': password,
+    });
 
-      final response = await _performRequest(
-        '/auth/register',
-        () => http.post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: payload,
-        ),
-      );
+    final response = await _performRequest(
+      '/auth/register',
+      () => http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: payload,
+      ),
+    );
 
-      if (response.statusCode != 201) {
-        final err = _extractError(response.body) ??
-            'Erreur HTTP ${response.statusCode} à l’inscription';
-        throw Exception(err);
-      }
-    } 
+    if (response.statusCode != 201) {
+      final err =
+          _extractError(response.body) ??
+          'Erreur HTTP ${response.statusCode} à l’inscription';
+      throw Exception(err);
+    }
+  }
 
+  Future<String> login({
+    required String email,
+    required String password,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/auth/login');
+    final response = await _performRequest(
+      '/auth/login',
+      () => http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      ),
+    );
 
-      Future<String> login({
-      required String email,
-      required String password,
-    }) async {
-      final uri = Uri.parse('$_baseUrl/api/auth/login');
-      final response = await _performRequest(
-        '/auth/login',
-        () => http.post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'email': email, 'password': password}),
-        ),
-      );
-
-      if (response.statusCode != 200) {
-        final err = _extractError(response.body) ??
-            'Erreur HTTP ${response.statusCode} au login';
-        throw Exception(err);
-      }
-
-      final map = jsonDecode(response.body) as Map<String, dynamic>;
-      final token = map['token'] as String?;
-      if (token == null) {
-        throw Exception('Réponse sans token');
-      }
-
-      await _secureStorage.write(key: 'jwt_token', value: token);
-      return token;
+    if (response.statusCode != 200) {
+      final err =
+          _extractError(response.body) ??
+          'Erreur HTTP ${response.statusCode} au login';
+      throw Exception(err);
     }
 
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    final token = map['token'] as String?;
+    if (token == null) {
+      throw Exception('Réponse sans token');
+    }
+
+    await _secureStorage.write(key: 'jwt_token', value: token);
+    return token;
+  }
 
   Future<String?> getToken() => _secureStorage.read(key: 'jwt_token');
 
@@ -108,43 +107,41 @@ class AuthService {
     }
   }
 
-// À ajouter dans lib/services/auth_service.dart
+  Future<String?> getUserId() async {
+    final token = await getToken();
+    if (token == null) return null;
 
-Future<String?> getUserId() async {
-  final token = await getToken();
-  if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length == 3) {
+        final payload =
+            jsonDecode(
+                  utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+                )
+                as Map<String, dynamic>;
 
-  try {
-    final parts = token.split('.');
-    if (parts.length == 3) {
-      final payload = jsonDecode(
-        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
-      ) as Map<String, dynamic>;
+        const possibleClaims = ['sub', 'userId', 'user_id', 'uid', 'id'];
+        for (final k in possibleClaims) {
+          final v = payload[k];
+          if (v != null && (v as String).isNotEmpty) return v.toString();
+        }
+      }
+    } catch (_) {}
 
-      const possibleClaims = [
-        'sub', 'userId', 'user_id', 'uid', 'id', // ← ajoute ici si besoin
-      ];
-      for (final k in possibleClaims) {
-        final v = payload[k];
+    try {
+      final profile = await fetchProfile();
+      const fields = ['id', 'ID', 'userId', 'user_id', 'uid'];
+      for (final k in fields) {
+        final v = profile[k];
         if (v != null && (v as String).isNotEmpty) return v.toString();
       }
+    } catch (_) {
+      /* ignore */
     }
-  } catch (_) {/* JWT corrompu ? */}
 
-  try {
-    final profile = await fetchProfile();
-    const fields = ['id', 'ID', 'userId', 'user_id', 'uid'];
-    for (final k in fields) {
-      final v = profile[k];
-      if (v != null && (v as String).isNotEmpty) return v.toString();
-    }
-  } catch (_) {/* ignore */}
+    return null;
+  }
 
-  return null;
-}
-
-
-  
   Future<Map<String, dynamic>> fetchProfile() async {
     final token = await getToken();
     if (token == null) throw Exception('Pas de token');
@@ -182,29 +179,26 @@ Future<String?> getUserId() async {
   }
 }
 
-
 Future<http.Response> _performRequest(
-    String endpoint,
-    Future<http.Response> Function() request,
-  ) async {
-    final start = DateTime.now();
-    try {
-      final response = await request();
-      
-      // Mesurer la latence pour tous les appels
-      final latency = DateTime.now().difference(start).inMilliseconds;
-      MetricsService.reportAPILatency(endpoint, latency);
-      
-      // Reporter les erreurs HTTP
-      if (response.statusCode >= 500) {
-        MetricsService.reportError('http_5xx');
-      } else if (response.statusCode >= 400) {
-        MetricsService.reportError('http_4xx');
-      }
-      
-      return response;
-    } catch (e) {
-      MetricsService.reportError('network_error');
-      rethrow;
+  String endpoint,
+  Future<http.Response> Function() request,
+) async {
+  final start = DateTime.now();
+  try {
+    final response = await request();
+
+    final latency = DateTime.now().difference(start).inMilliseconds;
+    MetricsService.reportAPILatency(endpoint, latency);
+
+    if (response.statusCode >= 500) {
+      MetricsService.reportError('http_5xx');
+    } else if (response.statusCode >= 400) {
+      MetricsService.reportError('http_4xx');
     }
+
+    return response;
+  } catch (e) {
+    MetricsService.reportError('network_error');
+    rethrow;
   }
+}

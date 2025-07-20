@@ -1,4 +1,3 @@
-// backend/internal/repositories/public_content_repo.go
 package repositories
 
 import (

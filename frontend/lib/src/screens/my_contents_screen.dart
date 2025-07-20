@@ -41,7 +41,7 @@ class _MyContentsScreenState extends State<MyContentsScreen> with RouteAware {
 
   @override
   void didPopNext() {
-    _fetchContents(); // Rafraîchit les données quand on revient sur cet écran
+    _fetchContents();
   }
 
   Future<void> _fetchContents() async {

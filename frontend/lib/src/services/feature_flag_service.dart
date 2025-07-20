@@ -22,7 +22,6 @@ class FeatureFlagService {
             }
           })();
 
-  /// Récupère la liste des features
   Future<List<Feature>> getFeatures() async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
@@ -48,7 +47,6 @@ class FeatureFlagService {
         .toList();
   }
 
-  /// Active/désactive une feature
   Future<void> updateFeature(String key, bool enabled) async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');

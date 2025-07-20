@@ -1,5 +1,3 @@
-// lib/src/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:frontend/src/services/metrics_service.dart';
 import 'package:provider/provider.dart';
@@ -27,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordCtrl.dispose();
     super.dispose();
     _pageLoadStart = DateTime.now();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final loadTime = DateTime.now().difference(_pageLoadStart).inMilliseconds;
       MetricsService.reportPageLoad('login', loadTime);
@@ -56,7 +54,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (authProvider.status == AuthStatus.authenticated) {
-      // Charger le profil puis rediriger
       await context.read<UserProvider>().fetchUserProfile();
       if (!mounted) return;
       context.go('/home');
@@ -79,7 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Champ Email
                   TextFormField(
                     controller: _emailCtrl,
                     decoration: const InputDecoration(
@@ -99,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Champ Mot de passe
                   TextFormField(
                     controller: _passwordCtrl,
                     decoration: const InputDecoration(
@@ -115,7 +110,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  // Loader ou bouton
                   if (_isLoading || authProvider.status == AuthStatus.loading)
                     const CircularProgressIndicator()
                   else
@@ -127,7 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Se connecter'),
                     ),
                   const SizedBox(height: 12),
-                  // Message d’erreur si besoin
                   if (authProvider.status == AuthStatus.error &&
                       authProvider.errorMessage != null)
                     Text(
@@ -135,7 +128,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   const SizedBox(height: 16),
-                  // Lien vers Inscription
                   TextButton(
                     onPressed: () => context.go('/register'),
                     child: const Text('Pas de compte ? Inscription'),

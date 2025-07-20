@@ -1,5 +1,3 @@
-// lib/src/providers/content_detail_provider.dart
-
 import 'package:flutter/foundation.dart';
 import '../services/content_service.dart';
 import '../services/content_service.dart' show ContentService;
@@ -27,12 +25,10 @@ class ContentDetailProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get comments => _comments;
   String? get errorMessage => _errorMessage;
 
-  /// Charge le contenu + ses commentaires
   Future<void> load(String contentId) async {
     _status = ContentDetailStatus.loading;
     notifyListeners();
     try {
-      // Méthode aplatie pour l'écran détail
       final detail = await _contentService.getContentDetailById(contentId);
 
       final cms = await _commentService.fetchComments(contentId);

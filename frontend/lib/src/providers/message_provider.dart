@@ -9,9 +9,9 @@ class MessageProvider extends ChangeNotifier {
 
   final MessageService _messageService = MessageService();
 
- List<ConversationPreview> _conversations = [];
- final Map<String, List<MessageModel>> _messagesCache = {};
- final Map<String, DateTime> _lastReadAt = {};
+  List<ConversationPreview> _conversations = [];
+  final Map<String, List<MessageModel>> _messagesCache = {};
+  final Map<String, DateTime> _lastReadAt = {};
 
   bool _isLoading = false;
   Timer? _refreshTimer;
@@ -21,9 +21,9 @@ class MessageProvider extends ChangeNotifier {
 
   /* -------------------- getters publics ------------------ */
 
-  String?  get currentUserId   => _currentUserId;
+  String? get currentUserId => _currentUserId;
   List<ConversationPreview> get conversations => _conversations;
-  bool     get isLoading       => _isLoading;
+  bool get isLoading => _isLoading;
 
   int get totalUnreadCount {
     int count = 0;
@@ -38,16 +38,20 @@ class MessageProvider extends ChangeNotifier {
   bool hasUnreadMessages(String userId) {
     final conv = _conversations.firstWhere(
       (c) => c.otherUserId == userId,
-      orElse: () => ConversationPreview(
-        otherUserId: '', otherUserName: '', lastMessage: '',
-        lastMessageTime: DateTime.now(), lastMessageSender: '',
-      ),
+      orElse:
+          () => ConversationPreview(
+            otherUserId: '',
+            otherUserName: '',
+            lastMessage: '',
+            lastMessageTime: DateTime.now(),
+            lastMessageSender: '',
+          ),
     );
 
     final lastRead = _lastReadAt[userId];
     return _currentUserId != null &&
-           conv.lastMessageSender != _currentUserId &&
-           (lastRead == null || conv.lastMessageTime.isAfter(lastRead));
+        conv.lastMessageSender != _currentUserId &&
+        (lastRead == null || conv.lastMessageTime.isAfter(lastRead));
   }
 
   void markConversationAsRead(String userId) {
@@ -57,8 +61,7 @@ class MessageProvider extends ChangeNotifier {
 
   /* -------------------- API publique ---------------------- */
 
-  List<MessageModel> getMessages(String userId) =>
-      _messagesCache[userId] ?? [];
+  List<MessageModel> getMessages(String userId) => _messagesCache[userId] ?? [];
 
   Future<void> initialize() async {
     _currentUserId = await AuthService().getUserId();
@@ -94,7 +97,6 @@ class MessageProvider extends ChangeNotifier {
     try {
       _conversations = await _messageService.getConversations();
 
-      // ➜ si un message plus récent est arrivé, remettre la convo en “non lue”
       for (final c in _conversations) {
         final lastRead = _lastReadAt[c.otherUserId];
         final fromOther = c.lastMessageSender != _currentUserId;
@@ -118,8 +120,6 @@ class MessageProvider extends ChangeNotifier {
       final messages = await _messageService.getConversation(userId);
       _messagesCache[userId] = messages;
 
-      // Si on n’est PAS dans le chat ouvert et que le dernier message
-      // vient de l’autre utilisateur, on rallume le badge immédiatement.
       if (_currentChatUserId != userId &&
           messages.isNotEmpty &&
           messages.last.senderId != _currentUserId) {
@@ -127,21 +127,17 @@ class MessageProvider extends ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (_) {/* silencieux */}
+    } catch (_) {}
   }
 
   Future<void> sendMessage(String receiverId, String text) async {
     final msg = await _messageService.sendMessage(receiverId, text);
 
-    // mettre à jour le cache local
     _messagesCache.putIfAbsent(receiverId, () => []).add(msg);
     notifyListeners();
 
-    // rafraîchir la liste pour les badges/unread
     refreshConversations(silent: true);
   }
-
-  /* -------------------- cycle de vie ---------------------- */
 
   @override
   void dispose() {

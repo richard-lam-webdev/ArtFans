@@ -1,5 +1,3 @@
-// lib/src/models/content.dart
-
 class Content {
   Content({
     required this.id,

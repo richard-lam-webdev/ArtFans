@@ -1,9 +1,6 @@
-// lib/src/widgets/admin_dashboard_widgets.dart
-
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-/// Widget pour afficher une carte KPI
 class KpiCard extends StatelessWidget {
   final String title;
   final String value;
@@ -87,7 +84,6 @@ class KpiCard extends StatelessWidget {
   }
 }
 
-/// Widget pour le sélecteur de période
 class PeriodSelector extends StatelessWidget {
   final int selectedPeriod;
   final Function(int) onPeriodChanged;
@@ -139,7 +135,6 @@ class PeriodSelector extends StatelessWidget {
   }
 }
 
-/// Widget pour le graphique des revenus
 class RevenueChart extends StatelessWidget {
   final List<Map<String, dynamic>> data;
   final String title;
@@ -165,9 +160,7 @@ class RevenueChart extends StatelessWidget {
     final spots =
         data.asMap().entries.map((entry) {
           final index = entry.key.toDouble();
-          final amount =
-              (entry.value['amount'] as int) /
-              100; // Convertir centimes en euros
+          final amount = (entry.value['amount'] as int) / 100;
           return FlSpot(index, amount);
         }).toList();
 
@@ -258,7 +251,6 @@ class RevenueChart extends StatelessWidget {
   }
 }
 
-/// Widget pour le classement des créateurs
 class TopCreatorsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> creators;
   final String title;
@@ -343,7 +335,6 @@ class TopCreatorsWidget extends StatelessWidget {
   }
 }
 
-/// Widget pour une grille de KPI
 class KpiGrid extends StatelessWidget {
   final Map<String, dynamic> stats;
   final String Function(int) formatCurrency;

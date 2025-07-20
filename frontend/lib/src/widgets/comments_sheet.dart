@@ -1,4 +1,3 @@
-// lib/widgets/comments_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/comment_service.dart';
@@ -75,7 +74,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
       }
     } catch (e) {
       if (!mounted) return;
-      // rollback
       setState(() {
         c['liked_by_me'] = already;
         c['like_count'] = (c['like_count'] as int? ?? 0) + (already ? 1 : -1);
@@ -87,7 +85,6 @@ class _CommentsSheetState extends State<CommentsSheet> {
   }
 
   void _startReply(Map<String, dynamic> c) {
-    // récupère d'abord author_name, puis author_id, ou 'Inconnu'
     final rawName = c['author_name'] as String?;
     final rawId = c['author_id'] as String?;
     final name = rawName ?? rawId ?? 'Inconnu';
@@ -126,22 +123,18 @@ class _CommentsSheetState extends State<CommentsSheet> {
                   itemBuilder: (ctx, i) {
                     final c = _comments[i];
 
-                    // nom et initiale
                     final rawName = c['author_name'] as String?;
                     final rawId = c['author_id'] as String?;
                     final name = rawName ?? rawId ?? 'Inconnu';
                     final initial =
                         name.isNotEmpty ? name.substring(0, 1) : '?';
 
-                    // indentation si réponse
                     final indent = c['parent_id'] != null ? 24.0 : 0.0;
 
-                    // parse date
                     final createdAtRaw = c['created_at'] as String? ?? '';
                     final createdAt =
                         DateTime.tryParse(createdAtRaw) ?? DateTime.now();
 
-                    // likes
                     final likeCount = c['like_count'] as int? ?? 0;
                     final likedByMe = c['liked_by_me'] as bool? ?? false;
 

@@ -63,7 +63,6 @@ func CaptureError(err error, context map[string]interface{}) {
 			scope.SetExtra(key, value)
 		}
 
-		// Capturer l'erreur
 		gosentry.CaptureException(err)
 	})
 }

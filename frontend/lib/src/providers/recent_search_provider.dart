@@ -1,4 +1,3 @@
-// lib/src/providers/recent_search_provider.dart
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RecentSearchProvider {

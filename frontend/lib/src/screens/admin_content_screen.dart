@@ -1,5 +1,3 @@
-// lib/src/screens/admin_content_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/admin_content_provider.dart';
@@ -17,7 +15,6 @@ class _AdminContentsScreenState extends State<AdminContentsScreen> {
   @override
   void initState() {
     super.initState();
-    // Charge la liste des contenus dès que possible
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AdminContentProvider>().fetchContents();
     });
@@ -93,7 +90,6 @@ class _AdminContentsScreenState extends State<AdminContentsScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () {
               auth.logout();
-              // GoRouter redirigera vers /login
             },
           ),
         ],

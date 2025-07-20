@@ -19,15 +19,12 @@ class _ReportsModerationScreenState extends State<ReportsModerationScreen> {
   Widget build(BuildContext context) {
     final reportProv = context.watch<ReportProvider>();
 
-    // Chargement
     if (reportProv.loading) {
       return const Center(child: CircularProgressIndicator());
     }
-    // Erreur
     if (reportProv.error != null) {
       return Center(child: Text('Erreur : ${reportProv.error}'));
     }
-    // Données
     final reports = reportProv.reports;
 
     return LayoutBuilder(
@@ -107,11 +104,9 @@ class _ReportsModerationScreenState extends State<ReportsModerationScreen> {
     if (!mounted || !confirmed) return;
 
     try {
-      // Supprimer le contenu signalé
       await context.read<AdminContentProvider>().deleteContent(contentId);
       if (!mounted) return;
 
-      // Raffraîchir la liste des reports
       await context.read<ReportProvider>().fetchReports();
       if (!mounted) return;
 

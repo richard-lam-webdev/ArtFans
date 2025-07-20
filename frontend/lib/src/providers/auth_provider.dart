@@ -1,5 +1,3 @@
-// lib/src/providers/auth_provider.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/src/services/auth_service.dart';
@@ -10,17 +8,18 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   String? _token;
   String? _errorMessage;
-  AuthStatus _status = AuthStatus.loading; 
-  bool _isInitialized = false; 
+  AuthStatus _status = AuthStatus.loading;
+  bool _isInitialized = false;
 
-  AuthProvider({required AuthService authService}) : _authService = authService {
-    _initializeAuth(); 
+  AuthProvider({required AuthService authService})
+    : _authService = authService {
+    _initializeAuth();
   }
 
   AuthStatus get status => _status;
   String? get token => _token;
   String? get errorMessage => _errorMessage;
-  bool get isInitialized => _isInitialized; 
+  bool get isInitialized => _isInitialized;
 
   Future<void> _initializeAuth() async {
     try {
@@ -41,30 +40,27 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _validateToken(String token) async {
     try {
-      // Teste le token en récupérant le profil
       await _authService.fetchProfile();
       _token = token;
       _status = AuthStatus.authenticated;
       _errorMessage = null;
     } catch (e) {
-      // Token invalide ou expiré
       debugPrint('Token invalide: $e');
-      await _authService.logout(); // Supprime le token invalide
+      await _authService.logout();
       _token = null;
       _status = AuthStatus.unauthenticated;
     }
   }
 
   Future<void> checkAuthStatus() async {
-    if (_status == AuthStatus.loading) return; // Déjà en cours
-    
+    if (_status == AuthStatus.loading) return;
+
     _status = AuthStatus.loading;
     notifyListeners();
-    
+
     await _initializeAuth();
   }
 
-  /// Tente de se connecter ; en cas de succès on stocke le token
   Future<void> login({required String email, required String password}) async {
     _status = AuthStatus.loading;
     notifyListeners();
@@ -82,7 +78,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Inscription (on ne stocke pas de token ici)
   Future<bool> register({
     required String username,
     required String email,
@@ -98,7 +93,6 @@ class AuthProvider extends ChangeNotifier {
         password: password,
       );
       _status = AuthStatus.unauthenticated;
-      // L'inscription réussie redirigera vers login
       _errorMessage = null;
       notifyListeners();
       return true;
@@ -110,7 +104,6 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Déconnecte (supprime le token)
   Future<void> logout() async {
     _token = null;
     _status = AuthStatus.unauthenticated;

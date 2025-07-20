@@ -18,7 +18,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
   @override
   void initState() {
     super.initState();
-    // On attend la première frame pour charger les données
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _loadPage();
@@ -102,7 +101,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                             icon: const Icon(Icons.delete, color: Colors.red),
                             tooltip: 'Supprimer',
                             onPressed: () async {
-                              // Affiche la boîte de dialogue de confirmation
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder:
@@ -132,7 +130,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                                     ),
                               );
 
-                              // Vérifie que le widget est toujours monté
                               if (!mounted || confirm != true) return;
 
                               try {
@@ -165,7 +162,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
           ),
         ),
 
-        // Pagination
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(

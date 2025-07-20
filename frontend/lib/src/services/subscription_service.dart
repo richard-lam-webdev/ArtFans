@@ -1,5 +1,3 @@
-// lib/src/services/subscription_service.dart
-
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,16 +8,16 @@ class SubscriptionService {
   final FlutterSecureStorage _secureStorage;
 
   SubscriptionService()
-      : _secureStorage = const FlutterSecureStorage(),
-        _baseUrl = (() {
-          try {
-            return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-          } catch (_) {
-            return 'http://localhost:8080';
-          }
-        })();
+    : _secureStorage = const FlutterSecureStorage(),
+      _baseUrl =
+          (() {
+            try {
+              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+            } catch (_) {
+              return 'http://localhost:8080';
+            }
+          })();
 
-  /// S'abonner à un créateur (30€ fixe)
   Future<Map<String, dynamic>> subscribeToCreator(String creatorId) async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
@@ -41,7 +39,6 @@ class SubscriptionService {
     }
   }
 
-  /// Se désabonner d'un créateur
   Future<Map<String, dynamic>> unsubscribeFromCreator(String creatorId) async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
@@ -63,7 +60,6 @@ class SubscriptionService {
     }
   }
 
-  /// Vérifier si abonné à un créateur
   Future<Map<String, dynamic>> checkSubscription(String creatorId) async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
@@ -85,7 +81,6 @@ class SubscriptionService {
     }
   }
 
-  /// Obtenir mes abonnements détaillés
   Future<Map<String, dynamic>> getMySubscriptions() async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
@@ -107,7 +102,6 @@ class SubscriptionService {
     }
   }
 
-  /// Obtenir les IDs des créateurs suivis
   Future<List<String>> getFollowedCreatorIds() async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');
@@ -131,7 +125,6 @@ class SubscriptionService {
     }
   }
 
-  /// Obtenir les stats pour un créateur (si on est créateur)
   Future<Map<String, dynamic>> getCreatorStats() async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');

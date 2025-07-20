@@ -18,7 +18,6 @@ func NewMessageHandler(messageService *services.MessageService) *MessageHandler 
 	}
 }
 
-// SendMessagePayload structure pour l'envoi de message
 type SendMessagePayload struct {
 	ReceiverID string `json:"receiverId" binding:"required"`
 	Text       string `json:"text" binding:"required,min=1"`
@@ -26,7 +25,6 @@ type SendMessagePayload struct {
 
 // SendMessage gère POST /api/messages
 func (h *MessageHandler) SendMessage(c *gin.Context) {
-	// Récupérer l'ID de l'utilisateur connecté depuis le contexte JWT
 	userIDStr := c.GetString("userID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -34,21 +32,18 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	// Parser le payload
 	var payload SendMessagePayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Parser l'ID du destinataire
 	receiverID, err := uuid.Parse(payload.ReceiverID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID destinataire invalide"})
 		return
 	}
 
-	// Envoyer le message via le service
 	message, err := h.messageService.SendMessage(userID, receiverID, payload.Text)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -60,7 +55,6 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 
 // GetConversation gère GET /api/messages/:userId
 func (h *MessageHandler) GetConversation(c *gin.Context) {
-	// Récupérer l'ID de l'utilisateur connecté
 	userIDStr := c.GetString("userID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -68,7 +62,6 @@ func (h *MessageHandler) GetConversation(c *gin.Context) {
 		return
 	}
 
-	// Récupérer l'ID de l'autre utilisateur depuis l'URL
 	otherUserIDStr := c.Param("userId")
 	otherUserID, err := uuid.Parse(otherUserIDStr)
 	if err != nil {
@@ -76,7 +69,6 @@ func (h *MessageHandler) GetConversation(c *gin.Context) {
 		return
 	}
 
-	// Récupérer la conversation
 	messages, err := h.messageService.GetConversation(userID, otherUserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la récupération des messages"})
@@ -88,7 +80,6 @@ func (h *MessageHandler) GetConversation(c *gin.Context) {
 
 // GetConversations gère GET /api/messages
 func (h *MessageHandler) GetConversations(c *gin.Context) {
-	// Récupérer l'ID de l'utilisateur connecté
 	userIDStr := c.GetString("userID")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -96,7 +87,6 @@ func (h *MessageHandler) GetConversations(c *gin.Context) {
 		return
 	}
 
-	// Récupérer toutes les conversations
 	conversations, err := h.messageService.GetUserConversations(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erreur lors de la récupération des conversations"})

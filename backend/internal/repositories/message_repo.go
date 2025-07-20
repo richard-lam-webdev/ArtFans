@@ -50,9 +50,8 @@ func (r *MessageRepository) GetMessageByID(id uuid.UUID) (*models.Message, error
 
 func (r *MessageRepository) GetConversationPreviews(userID uuid.UUID) ([]models.ConversationPreview, error) {
 	var previews []models.ConversationPreview
-	uid := userID.String() // ← string une bonne fois pour toutes
+	uid := userID.String()
 
-	// Sous-requête : pour chaque partenaire, dernier timestamp
 	sub := r.db.
 		Table("message").
 		Select(`
@@ -65,7 +64,6 @@ func (r *MessageRepository) GetConversationPreviews(userID uuid.UUID) ([]models.
 		Where("sender_id::text = ? OR receiver_id::text = ?", uid, uid).
 		Group("partner_id")
 
-	// Requête finale
 	err := r.db.
 		Table("message AS m").
 		Select(`
@@ -91,7 +89,7 @@ func (r *MessageRepository) GetConversationPreviews(userID uuid.UUID) ([]models.
 }
 
 func (r *MessageRepository) MarkAsRead(messageID uuid.UUID) error {
-	return nil // champ ReadAt pas encore implémenté
+	return nil
 }
 
 func (r *MessageRepository) GetUnreadCount(userID uuid.UUID) (int64, error) {

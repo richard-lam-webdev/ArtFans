@@ -13,7 +13,6 @@ import (
 
 // ReportContentHandler POST /api/contents/:id/report
 func ReportContentHandler(c *gin.Context) {
-	// 1) Récupérer l'ID de l'utilisateur courant dans le contexte
 	userRaw, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Utilisateur non authentifié"})
@@ -30,7 +29,6 @@ func ReportContentHandler(c *gin.Context) {
 		return
 	}
 
-	// 2) Parser l'ID du contenu
 	idStr := c.Param("id")
 	contentID, err := uuid.Parse(idStr)
 	if err != nil {
@@ -38,13 +36,11 @@ func ReportContentHandler(c *gin.Context) {
 		return
 	}
 
-	// 3) Lire le JSON (raison optionnelle)
 	var payload struct {
 		Reason string `json:"reason"`
 	}
 	_ = c.ShouldBindJSON(&payload)
 
-	// 4) Construire et sauvegarder le report
 	report := &models.Report{
 		TargetContentID: contentID,
 		ReporterID:      reporterID,
@@ -69,7 +65,6 @@ func ListReportsHandler(c *gin.Context) {
 		return
 	}
 
-	// Formater la réponse
 	var out []gin.H
 	for _, r := range reports {
 		out = append(out, gin.H{
