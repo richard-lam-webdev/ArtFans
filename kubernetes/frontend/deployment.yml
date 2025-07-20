@@ -14,20 +14,17 @@ spec:
     metadata:
       labels:
         app: artfans-web
-    spec:
+  spec:
       containers:
         - name: web
-          # Image construite et poussée dans Artifact Registry
           image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
           imagePullPolicy: IfNotPresent
-          # Récupère l'URL de l'API depuis votre ConfigMap
           envFrom:
             - configMapRef:
                 name: artfans-frontend-config
           ports:
             - containerPort: 80
               name: http
-          # Probes pour s'assurer que le pod est prêt et sain
           readinessProbe:
             httpGet:
               path: /
@@ -40,3 +37,15 @@ spec:
               port: 80
             initialDelaySeconds: 15
             periodSeconds: 20
+
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-pid
+              mountPath: /var/run
+
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-pid
+          emptyDir: {}
