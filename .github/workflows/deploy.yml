@@ -26,14 +26,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ——————————————————————————————————————————
-      # 1) Installer Flutter
-      #    (nécessaire pour exécuter `flutter build web`)
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 'stable'
-
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -56,14 +48,6 @@ jobs:
           docker push "$IMAGE"
           docker tag "$IMAGE" "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:latest"
           docker push "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:latest"
-
-      # ——————————————————————————————————————————
-      # 2) Build Flutter Web AVANT le docker build du frontend
-      - name: Build Flutter Web
-        run: |
-          cd frontend
-          flutter pub get
-          flutter build web
 
       - name: Build and Push Frontend
         run: |
