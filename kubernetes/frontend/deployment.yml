@@ -42,6 +42,8 @@ spec:
               mountPath: /var/cache/nginx
             - name: nginx-pid
               mountPath: /var
+            - name: nginx-log
+              mountPath: /var/log/nginx
       volumes:
         - name: nginx-cache
           emptyDir: {}
