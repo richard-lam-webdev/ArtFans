@@ -124,6 +124,16 @@ docker-compose up -d
 # - Grafana: http://localhost:3001
 ```
 
+## 📱 APK Android
+
+Téléchargez l’APK Android signé ici :  
+[releases/android/app-release.apk](releases/android/app-release.apk)
+
+Pour l’installer sur un appareil connecté via ADB :
+
+```bash
+adb install releases/android/app-release.apk
+
 ## 📄 Licence
 
 Ce projet est développé dans le cadre d'un PEC (Projet d'Étude de Cas) académique.
