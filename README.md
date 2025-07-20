@@ -124,6 +124,29 @@ docker-compose up -d
 # - Grafana: http://localhost:3001
 ```
 
+### 📟 Prérequis ADB
+
+Pour installer l’APK via ADB, il faut :
+
+1. **Installer Android Platform-Tools**  
+   - **Windows** : téléchargez [platform-tools](https://developer.android.com/studio/releases/platform-tools) et ajoutez le dossier `platform-tools` à votre variable d’environnement `PATH`.  
+   - **macOS** :  
+     ```bash
+     brew install android-platform-tools
+     ```  
+   - **Linux** :  
+     ```bash
+     sudo apt install android-platform-tools
+     ```  
+
+2. **Activer le débogage USB** sur votre appareil Android  
+   - Paramètres → À propos du téléphone → tapez 7× sur Numéro de build → Options développeur → activer Débogage USB  
+
+3. **Vérifier la connexion**  
+   ```bash
+   adb devices
+
+
 ## 📱 APK Android
 
 Téléchargez l’APK Android signé ici :  
