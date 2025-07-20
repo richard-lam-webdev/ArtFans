@@ -40,18 +40,6 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGISTRY_URL }}
 
-      # ─── Étape de debug ───────────────────────────────────────────────
-      - name: Debug environment and image tag
-        run: |
-          echo "→ REGISTRY_URL = '$REGISTRY_URL'"
-          echo "→ PROJECT_ID   = '$PROJECT_ID'"
-          echo "→ GKE_CLUSTER  = '$GKE_CLUSTER'"
-          echo "→ GKE_ZONE     = '$GKE_ZONE'"
-          echo "→ GITHUB_SHA   = '${{ github.sha }}'"
-          IMAGE="${REGISTRY_URL}/${PROJECT_ID}/artfans/artfans-api:${GITHUB_SHA}"
-          echo "→ IMAGE to build = '$IMAGE'"
-      # ──────────────────────────────────────────────────────────────────
-
       - name: Build Backend
         run: |
           cd backend

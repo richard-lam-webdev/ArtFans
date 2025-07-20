@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.21.6-alpine3.20 AS builder
 
 WORKDIR /app
 
@@ -11,8 +11,8 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server/main.go
 
 # Final stage
-FROM alpine:3.19
-RUN apk --no-cache add ca-certificates tzdata
+FROM alpine:3.20
+RUN apk --no-cache upgrade && apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
