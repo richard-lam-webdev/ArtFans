@@ -1,9 +1,6 @@
-// lib/src/widgets/admin_dashboard_widgets.dart
-
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-/// Widget pour afficher une carte KPI
 class KpiCard extends StatelessWidget {
   final String title;
   final String value;
@@ -38,9 +35,9 @@ class KpiCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
                   ),
                 ),
               ],
@@ -57,9 +54,9 @@ class KpiCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ],
             if (trend != null) ...[
@@ -87,7 +84,6 @@ class KpiCard extends StatelessWidget {
   }
 }
 
-/// Widget pour le sélecteur de période
 class PeriodSelector extends StatelessWidget {
   final int selectedPeriod;
   final Function(int) onPeriodChanged;
@@ -112,24 +108,25 @@ class PeriodSelector extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Période',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Période', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Row(
-              children: periods.map((period) {
-                final isSelected = selectedPeriod == period['value'];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(period['label'] as String),
-                    selected: isSelected,
-                    onSelected: (_) => onPeriodChanged(period['value'] as int),
-                    selectedColor: Theme.of(context).primaryColor.withAlpha((0.2 * 255).round()),
-                  ),
-                );
-              }).toList(),
+              children:
+                  periods.map((period) {
+                    final isSelected = selectedPeriod == period['value'];
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(period['label'] as String),
+                        selected: isSelected,
+                        onSelected:
+                            (_) => onPeriodChanged(period['value'] as int),
+                        selectedColor: Theme.of(
+                          context,
+                        ).primaryColor.withAlpha((0.2 * 255).round()),
+                      ),
+                    );
+                  }).toList(),
             ),
           ],
         ),
@@ -138,7 +135,6 @@ class PeriodSelector extends StatelessWidget {
   }
 }
 
-/// Widget pour le graphique des revenus
 class RevenueChart extends StatelessWidget {
   final List<Map<String, dynamic>> data;
   final String title;
@@ -156,22 +152,25 @@ class RevenueChart extends StatelessWidget {
         child: Container(
           height: 300,
           padding: const EdgeInsets.all(16),
-          child: const Center(
-            child: Text('Aucune donnée disponible'),
-          ),
+          child: const Center(child: Text('Aucune donnée disponible')),
         ),
       );
     }
 
-    final spots = data.asMap().entries.map((entry) {
-      final index = entry.key.toDouble();
-      final amount = (entry.value['amount'] as int) / 100; // Convertir centimes en euros
-      return FlSpot(index, amount);
-    }).toList();
+    final spots =
+        data.asMap().entries.map((entry) {
+          final index = entry.key.toDouble();
+          final amount = (entry.value['amount'] as int) / 100;
+          return FlSpot(index, amount);
+        }).toList();
 
-    final maxY = data.isNotEmpty 
-        ? data.map((d) => (d['amount'] as int) / 100).reduce((a, b) => a > b ? a : b) * 1.2
-        : 100.0;
+    final maxY =
+        data.isNotEmpty
+            ? data
+                    .map((d) => (d['amount'] as int) / 100)
+                    .reduce((a, b) => a > b ? a : b) *
+                1.2
+            : 100.0;
 
     return Card(
       child: Padding(
@@ -179,10 +178,7 @@ class RevenueChart extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             SizedBox(
               height: 300,
@@ -218,8 +214,12 @@ class RevenueChart extends StatelessWidget {
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                   ),
                   borderData: FlBorderData(show: true),
                   minX: 0,
@@ -235,7 +235,9 @@ class RevenueChart extends StatelessWidget {
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: Theme.of(context).primaryColor.withAlpha((0.1 * 255).round()),
+                        color: Theme.of(
+                          context,
+                        ).primaryColor.withAlpha((0.1 * 255).round()),
                       ),
                     ),
                   ],
@@ -249,7 +251,6 @@ class RevenueChart extends StatelessWidget {
   }
 }
 
-/// Widget pour le classement des créateurs
 class TopCreatorsWidget extends StatelessWidget {
   final List<Map<String, dynamic>> creators;
   final String title;
@@ -268,15 +269,10 @@ class TopCreatorsWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             if (creators.isEmpty)
-              const Center(
-                child: Text('Aucun créateur trouvé'),
-              )
+              const Center(child: Text('Aucun créateur trouvé'))
             else
               ListView.separated(
                 shrinkWrap: true,
@@ -306,7 +302,9 @@ class TopCreatorsWidget extends StatelessWidget {
                       username,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: Text('$contentCount contenus • $subscribers abonnés'),
+                    subtitle: Text(
+                      '$contentCount contenus • $subscribers abonnés',
+                    ),
                     trailing: Text(
                       '${(revenue / 100).toStringAsFixed(0)}€',
                       style: TextStyle(
@@ -337,7 +335,6 @@ class TopCreatorsWidget extends StatelessWidget {
   }
 }
 
-/// Widget pour une grille de KPI
 class KpiGrid extends StatelessWidget {
   final Map<String, dynamic> stats;
   final String Function(int) formatCurrency;
@@ -383,7 +380,6 @@ class KpiGrid extends StatelessWidget {
         KpiCard(
           title: 'Contenus',
           value: formatNumber(stats['total_contents'] ?? 0),
-          subtitle: '${stats['pending_contents'] ?? 0} en attente',
           icon: Icons.article,
           color: Colors.purple,
         ),

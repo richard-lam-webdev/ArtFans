@@ -10,7 +10,6 @@ class BottomNav extends StatelessWidget {
   const BottomNav({super.key, required this.currentIndex});
 
   void _onTap(BuildContext context, int index, bool isAdmin, bool isCreator) {
-
     switch (index) {
       case 0:
         context.go('/home');
@@ -42,7 +41,6 @@ class BottomNav extends StatelessWidget {
         auth.status == AuthStatus.authenticated && user?['Role'] == 'creator';
     final isWide = MediaQuery.of(context).size.width > 480;
 
-    // Items de base
     final items = <SalomonBottomBarItem>[
       SalomonBottomBarItem(
         icon: const Icon(Icons.home),
@@ -66,7 +64,6 @@ class BottomNav extends StatelessWidget {
       ),
     ];
 
-    // Contenu créateur ou Admin
     if (isCreator) {
       items.add(
         SalomonBottomBarItem(

@@ -1,5 +1,3 @@
-// lib/src/services/report_service.dart
-
 import 'dart:convert';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -21,12 +19,6 @@ class ReportService {
             }
           })();
 
-  /// Signale un contenu donné.
-  ///
-  /// [contentId] : l'ID du contenu à signaler.
-  /// [reason]    : raison facultative du signalement.
-  ///
-  /// Lance une Exception en cas d'erreur.
   Future<void> reportContent(String contentId, {String? reason}) async {
     final token = await _secureStorage.read(key: 'jwt_token');
 
@@ -45,7 +37,6 @@ class ReportService {
     );
 
     if (res.statusCode != 201) {
-      // Tenter de récupérer le message d'erreur retourné par le backend
       String msg;
       try {
         final err = jsonDecode(res.body) as Map<String, dynamic>;
@@ -55,12 +46,8 @@ class ReportService {
       }
       throw Exception(msg);
     }
-    // En cas de succès, le backend renvoie { "message": "report created" }
   }
 
-  /// Récupère la liste des signalements pour l'admin.
-  ///
-  /// Lance une Exception en cas d'erreur.
   Future<List<Map<String, dynamic>>> fetchReports() async {
     final token = await _secureStorage.read(key: 'jwt_token');
     if (token == null) throw Exception('Pas de token');

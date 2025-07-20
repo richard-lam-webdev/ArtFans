@@ -1,5 +1,3 @@
-// lib/src/providers/subscription_provider.dart
-
 import 'package:flutter/foundation.dart';
 import '../services/subscription_service.dart';
 
@@ -17,36 +15,33 @@ class SubscriptionProvider extends ChangeNotifier {
   Map<String, dynamic>? _creatorStats;
   String? _errorMessage;
 
-  // Getters
   SubscriptionStatus get status => _status;
   List<Map<String, dynamic>> get mySubscriptions => _mySubscriptions;
   Map<String, dynamic>? get creatorStats => _creatorStats;
   String? get errorMessage => _errorMessage;
 
-  /// NOUVELLE MÉTHODE : Initialise le cache avec les données du feed
   void initializeFeedSubscriptions(List<Map<String, dynamic>> feedItems) {
     debugPrint('🔄 Initialisation des abonnements depuis le feed...');
     for (final item in feedItems) {
       final creatorId = item['creator_id']?.toString();
       final isSubscribed = item['is_subscribed'] as bool? ?? false;
-      
+
       if (creatorId != null) {
         _subscriptionCache[creatorId] = isSubscribed;
         debugPrint('📝 Cache: Creator $creatorId -> $isSubscribed');
       }
     }
-    debugPrint('✅ Cache initialisé avec ${_subscriptionCache.length} créateurs');
-    // Pas de notifyListeners() ici car on initialise juste
+    debugPrint(
+      '✅ Cache initialisé avec ${_subscriptionCache.length} créateurs',
+    );
   }
 
-  /// Met à jour manuellement l'état d'abonnement (utile après un fetch local)
   void setSubscriptionStatus(String creatorId, bool isSubscribed) {
     debugPrint('🔄 Mise à jour manuelle: Creator $creatorId -> $isSubscribed');
     _subscriptionCache[creatorId] = isSubscribed;
     notifyListeners();
   }
 
-  /// S'abonner à un créateur
   Future<bool> subscribeToCreator(String creatorId) async {
     debugPrint('📝 Tentative d\'abonnement à $creatorId');
     _status = SubscriptionStatus.loading;
@@ -55,15 +50,15 @@ class SubscriptionProvider extends ChangeNotifier {
     try {
       await _subscriptionService.subscribeToCreator(creatorId);
 
-      // Mettre à jour le cache IMMÉDIATEMENT
       _subscriptionCache[creatorId] = true;
-      debugPrint('✅ Abonnement réussi: Cache mis à jour pour $creatorId -> true');
+      debugPrint(
+        '✅ Abonnement réussi: Cache mis à jour pour $creatorId -> true',
+      );
 
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
 
-      // Rafraîchir la liste des abonnements en arrière-plan
       fetchMySubscriptions();
 
       return true;
@@ -76,7 +71,6 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Se désabonner d'un créateur
   Future<bool> unsubscribeFromCreator(String creatorId) async {
     debugPrint('📝 Tentative de désabonnement de $creatorId');
     _status = SubscriptionStatus.loading;
@@ -85,15 +79,15 @@ class SubscriptionProvider extends ChangeNotifier {
     try {
       await _subscriptionService.unsubscribeFromCreator(creatorId);
 
-      // Mettre à jour le cache IMMÉDIATEMENT
       _subscriptionCache[creatorId] = false;
-      debugPrint('✅ Désabonnement réussi: Cache mis à jour pour $creatorId -> false');
+      debugPrint(
+        '✅ Désabonnement réussi: Cache mis à jour pour $creatorId -> false',
+      );
 
       _status = SubscriptionStatus.loaded;
       _errorMessage = null;
       notifyListeners();
 
-      // Rafraîchir la liste des abonnements en arrière-plan
       fetchMySubscriptions();
 
       return true;
@@ -106,9 +100,7 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Vérifier si abonné à un créateur (avec cache)
   Future<bool> isSubscribedToCreator(String creatorId) async {
-    // Vérifier le cache d'abord
     if (_subscriptionCache.containsKey(creatorId)) {
       return _subscriptionCache[creatorId]!;
     }
@@ -117,9 +109,8 @@ class SubscriptionProvider extends ChangeNotifier {
       final result = await _subscriptionService.checkSubscription(creatorId);
       final isSubscribed = result['subscribed'] as bool? ?? false;
 
-      // Mettre en cache
       _subscriptionCache[creatorId] = isSubscribed;
-      notifyListeners(); // Notifier après mise en cache
+      notifyListeners();
 
       return isSubscribed;
     } catch (e) {
@@ -128,14 +119,12 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Lecture synchrone du cache pour l'état d'abonnement
   bool isSubscribed(String creatorId) {
     final result = _subscriptionCache[creatorId] ?? false;
     debugPrint('🔍 Vérification cache: Creator $creatorId -> $result');
     return result;
   }
 
-  /// Récupérer mes abonnements
   Future<void> fetchMySubscriptions() async {
     try {
       final result = await _subscriptionService.getMySubscriptions();
@@ -143,7 +132,6 @@ class SubscriptionProvider extends ChangeNotifier {
         result['subscriptions'] ?? [],
       );
 
-      // Mettre à jour le cache avec les abonnements actuels
       for (final subscription in _mySubscriptions) {
         final creatorId = subscription['creator_id'].toString();
         final isActive = subscription['is_active'] as bool? ?? false;
@@ -160,12 +148,11 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// NOUVELLE MÉTHODE : Force la vérification du statut pour un créateur spécifique
   Future<void> refreshSubscriptionStatus(String creatorId) async {
     try {
       final result = await _subscriptionService.checkSubscription(creatorId);
       final isSubscribed = result['subscribed'] as bool? ?? false;
-      
+
       if (_subscriptionCache[creatorId] != isSubscribed) {
         _subscriptionCache[creatorId] = isSubscribed;
         debugPrint('🔄 Refresh: Creator $creatorId -> $isSubscribed');
@@ -176,7 +163,6 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Récupérer les stats créateur (pour les créateurs)
   Future<void> fetchCreatorStats() async {
     try {
       final result = await _subscriptionService.getCreatorStats();
@@ -189,7 +175,6 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Vider le cache (utile lors de la déconnexion)
   void clearCache() {
     _subscriptionCache.clear();
     _mySubscriptions.clear();
@@ -199,7 +184,6 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Obtenir les détails d'un abonnement spécifique
   Map<String, dynamic>? getSubscriptionDetails(String creatorId) {
     try {
       return _mySubscriptions.firstWhere(
@@ -210,25 +194,21 @@ class SubscriptionProvider extends ChangeNotifier {
     }
   }
 
-  /// Calculer le coût total des abonnements
   int getTotalMonthlyCost() {
     return _mySubscriptions.where((sub) => sub['is_active'] == true).length *
         30;
   }
 
-  /// Obtenir le nombre d'abonnements actifs
   int getActiveSubscriptionCount() {
     return _mySubscriptions.where((sub) => sub['is_active'] == true).length;
   }
 
-  /// Formater les jours restants
   String formatDaysRemaining(int days) {
     if (days <= 0) return 'Expiré';
     if (days == 1) return '1 jour restant';
     return '$days jours restants';
   }
 
-  /// Formater la date de fin
   String formatEndDate(String endDateStr) {
     try {
       final endDate = DateTime.parse(endDateStr);

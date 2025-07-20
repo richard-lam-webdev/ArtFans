@@ -1,5 +1,3 @@
-// lib/services/message_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -11,13 +9,14 @@ class MessageService {
   final _storage = const FlutterSecureStorage();
 
   MessageService()
-      : _baseUrl = (() {
-          try {
-            return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-          } catch (_) {
-            return 'http://localhost:8080';
-          }
-        })();
+    : _baseUrl =
+          (() {
+            try {
+              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+            } catch (_) {
+              return 'http://localhost:8080';
+            }
+          })();
 
   Future<String?> _getToken() async {
     return await _storage.read(key: 'jwt_token');
@@ -33,10 +32,7 @@ class MessageService {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'receiverId': receiverId,
-        'text': text,
-      }),
+      body: jsonEncode({'receiverId': receiverId, 'text': text}),
     );
 
     if (response.statusCode == 201) {

@@ -101,7 +101,6 @@ func (s *ContentService) GetAllContents() ([]models.Content, error) {
 	return s.repo.FindAll()
 }
 
-// -------- Ajout : Protection d'accès à l'image (watermark ou original) ----------
 func (s *ContentService) ServeProtectedImage(
 	c *gin.Context,
 	contentID uuid.UUID,
@@ -184,7 +183,7 @@ func addWatermark(img image.Image, watermark string) image.Image {
 	rgba := image.NewRGBA(bounds)
 	draw.Draw(rgba, bounds, img, image.Point{}, draw.Src)
 
-	col := color.RGBA{255, 0, 0, 255} // Rouge vif
+	col := color.RGBA{255, 0, 0, 255}
 
 	d := &font.Drawer{
 		Dst:  rgba,
@@ -204,7 +203,6 @@ func addWatermark(img image.Image, watermark string) image.Image {
 	return rgba
 }
 
-// ---------- CRUD pour les contenus (utilisé par tes handlers) -----------
 func (s *ContentService) GetContentByID(id uuid.UUID) (*models.Content, error) {
 	return s.repo.FindByID(id)
 }
@@ -279,23 +277,18 @@ func (s *ContentService) GetFilePath(contentID uuid.UUID) (string, string, error
 		return "", "", fmt.Errorf("aucun fichier associé à ce contenu")
 	}
 
-	// CORRECTION : Le FilePath contient déjà le sous-dossier (ex: "createur/filename.png")
-	// Il faut construire le chemin complet avec uploadPath
 	fullPath := filepath.Join(s.uploadPath, content.FilePath)
 
-	// Debug : afficher les chemins pour comprendre
 	log.Printf("🔍 Debug GetFilePath:")
 	log.Printf("  - contentID: %s", contentID)
 	log.Printf("  - content.FilePath: %s", content.FilePath)
 	log.Printf("  - uploadPath: %s", s.uploadPath)
 	log.Printf("  - fullPath calculé: %s", fullPath)
 
-	// Vérifier que le fichier existe
 	if _, err := os.Stat(fullPath); err != nil {
 		log.Printf("❌ Fichier non trouvé: %s", fullPath)
 		log.Printf("   Erreur: %v", err)
 
-		// Essayer de lister le contenu du répertoire parent pour déboguer
 		parentDir := filepath.Dir(fullPath)
 		if files, listErr := os.ReadDir(parentDir); listErr == nil {
 			log.Printf("   Contenu du répertoire %s:", parentDir)

@@ -1,5 +1,3 @@
-// chemin : backend/internal/database/db.go
-
 package database
 
 import (
@@ -14,10 +12,8 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// DB est l’instance globale GORM, exportée pour être utilisée dans les repositories
 var DB *gorm.DB
 
-// Init ouvre la connexion et effectue l’AutoMigrate
 func Init() {
 	var err error
 	dsn := config.C.DatabaseURL
@@ -31,7 +27,6 @@ func Init() {
 		log.Fatalf("❌ Échec de connexion à la base de données : %v", err)
 	}
 
-	// Création d’extensions et d’énums Postgres
 	if err := DB.Exec(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`).Error; err != nil {
 		log.Fatalf("❌ Impossible de créer extension uuid-ossp : %v", err)
 	}
@@ -60,7 +55,6 @@ func Init() {
 		log.Fatalf("❌ Impossible de créer enum content_status : %v", err)
 	}
 
-	// AutoMigrate sur tous les modèles présents dans internal/models
 	if err := DB.AutoMigrate(
 		&models.User{},
 		&models.Subscription{},

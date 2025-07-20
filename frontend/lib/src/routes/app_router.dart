@@ -22,7 +22,7 @@ import '../screens/splash_screen.dart';
 import '../screens/comments_moderation_screen.dart';
 import '../screens/content_detail_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/creator_profile_screen.dart'; // 👈 Import du nouvel écran
+import '../screens/creator_profile_screen.dart';
 
 import '../../main.dart';
 
@@ -181,7 +181,6 @@ class AppRouter {
           },
         ),
 
-        // ✅ ✨ NOUVELLE ROUTE : profil public d’un créateur
         GoRoute(
           path: '/creators/:username',
           name: 'creator_profile',

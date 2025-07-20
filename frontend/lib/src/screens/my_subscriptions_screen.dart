@@ -1,5 +1,3 @@
-// lib/src/screens/my_subscriptions_screen.dart
-
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
@@ -33,8 +31,9 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                context.read<SubscriptionProvider>().fetchMySubscriptions(),
+            onPressed:
+                () =>
+                    context.read<SubscriptionProvider>().fetchMySubscriptions(),
           ),
         ],
       ),
@@ -49,11 +48,7 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red[300],
-                  ),
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
                   const SizedBox(height: 16),
                   Text(
                     'Erreur : ${provider.errorMessage}',
@@ -77,11 +72,7 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.star_outline,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.star_outline, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   const Text(
                     'Aucun abonnement',
@@ -111,14 +102,14 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .primaryColor
-                      .withAlpha((0.1 * 255).round()),
+                  color: Theme.of(
+                    context,
+                  ).primaryColor.withAlpha((0.1 * 255).round()),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Theme.of(context)
-                        .primaryColor
-                        .withAlpha((0.2 * 255).round()),
+                    color: Theme.of(
+                      context,
+                    ).primaryColor.withAlpha((0.2 * 255).round()),
                   ),
                 ),
                 child: Column(
@@ -127,8 +118,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                     Text(
                       'Résumé de vos abonnements',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -160,7 +151,10 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                   itemBuilder: (context, index) {
                     final subscription = subscriptions[index];
                     return _buildSubscriptionCard(
-                        context, subscription, provider);
+                      context,
+                      subscription,
+                      provider,
+                    );
                   },
                 ),
               ),
@@ -173,7 +167,11 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
   }
 
   Widget _buildSummaryItem(
-      String label, String value, IconData icon, Color color) {
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
@@ -186,16 +184,16 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
 
-  Widget _buildSubscriptionCard(BuildContext context,
-      Map<String, dynamic> subscription, SubscriptionProvider provider) {
+  Widget _buildSubscriptionCard(
+    BuildContext context,
+    Map<String, dynamic> subscription,
+    SubscriptionProvider provider,
+  ) {
     final creatorId = subscription['creator_id'].toString();
     final startDate = subscription['start_date'].toString();
     final endDate = subscription['end_date'].toString();
@@ -227,7 +225,9 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                       Text(
                         'Créateur ID: ${creatorId.substring(0, 8)}...',
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       Text(
                         provider.formatEndDate(endDate),
@@ -244,7 +244,9 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: isActive ? Colors.green : Colors.red,
                         borderRadius: BorderRadius.circular(12),
@@ -252,16 +254,19 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                       child: Text(
                         isActive ? 'Actif' : 'Expiré',
                         style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
                     const Text(
                       '30€',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
@@ -295,9 +300,10 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                   _buildDetailRow(
                     'Statut',
                     provider.formatDaysRemaining(daysRemaining),
-                    textColor: daysRemaining > 0
-                        ? Colors.green.shade700
-                        : Colors.red.shade700,
+                    textColor:
+                        daysRemaining > 0
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                     fontWeight: FontWeight.w600,
                   ),
                 ],
@@ -310,8 +316,12 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () =>
-                          _showUnsubscribeDialog(context, creatorId, provider),
+                      onPressed:
+                          () => _showUnsubscribeDialog(
+                            context,
+                            creatorId,
+                            provider,
+                          ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
@@ -351,14 +361,8 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(color: textColor, fontWeight: fontWeight),
-        ),
-        Text(
-          value,
-          style: TextStyle(color: textColor, fontWeight: fontWeight),
-        ),
+        Text(label, style: TextStyle(color: textColor, fontWeight: fontWeight)),
+        Text(value, style: TextStyle(color: textColor, fontWeight: fontWeight)),
       ],
     );
   }
@@ -379,27 +383,28 @@ class _MySubscriptionsScreenState extends State<MySubscriptionsScreen> {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer le désabonnement'),
-        content: const Text(
-          'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
-          'Vous perdrez l\'accès au contenu premium de ce créateur.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Confirmer le désabonnement'),
+            content: const Text(
+              'Êtes-vous sûr de vouloir vous désabonner ?\n\n'
+              'Vous perdrez l\'accès au contenu premium de ce créateur.',
             ),
-            child: const Text('Confirmer'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Confirmer'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true) {

@@ -1,5 +1,3 @@
-// backend/internal/handlers/subscription_handler.go
-
 package handlers
 
 import (
@@ -41,7 +39,6 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		return
 	}
 
-	// Appel unique au service
 	if err := h.service.Subscribe(creatorID, subscriberID); err != nil {
 		logger.LogPayment("subscription_failed", subscriberID.String(), 30.00, false, map[string]any{
 			"creator_id": creatorID.String(),
@@ -55,7 +52,6 @@ func (h *SubscriptionHandler) Subscribe(c *gin.Context) {
 		return
 	}
 
-	// Succès
 	logger.LogPayment("subscription_created", subscriberID.String(), 30.00, true, map[string]any{
 		"creator_id": creatorID.String(),
 		"method":     "stripe",
@@ -122,7 +118,6 @@ func (h *SubscriptionHandler) IsSubscribed(c *gin.Context) {
 		"duration":   "30 jours",
 	}
 
-	// Si abonné, ajouter les détails de l'abonnement
 	if isSubscribed {
 		subscription, err := h.service.GetActiveSubscription(subscriberID, creatorID)
 		if err == nil && subscription != nil {
@@ -172,7 +167,6 @@ func (h *SubscriptionHandler) GetMySubscriptions(c *gin.Context) {
 		return
 	}
 
-	// Enrichir les données pour le frontend
 	var enrichedSubscriptions []gin.H
 	for _, sub := range subscriptions {
 		enrichedSubscriptions = append(enrichedSubscriptions, gin.H{
@@ -215,7 +209,6 @@ func (h *SubscriptionHandler) GetCreatorStats(c *gin.Context) {
 }
 
 func (h *SubscriptionHandler) CheckSubscriptionStatus(c *gin.Context) {
-	// Récupération de l'ID utilisateur depuis le contexte
 	subscriberIDRaw, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "non autorisé"})
@@ -228,7 +221,6 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(c *gin.Context) {
 		return
 	}
 
-	// Récupération de l'ID créateur depuis les paramètres
 	creatorIDParam := c.Param("creatorID")
 	creatorID, err := uuid.Parse(creatorIDParam)
 	if err != nil {
@@ -236,7 +228,6 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(c *gin.Context) {
 		return
 	}
 
-	// Vérification du statut d'abonnement
 	isSubscribed, err := h.service.IsSubscribed(subscriberID, creatorID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -245,7 +236,6 @@ func (h *SubscriptionHandler) CheckSubscriptionStatus(c *gin.Context) {
 		return
 	}
 
-	// Réponse simple avec le statut
 	c.JSON(http.StatusOK, gin.H{
 		"subscribed": isSubscribed,
 		"creator_id": creatorID,

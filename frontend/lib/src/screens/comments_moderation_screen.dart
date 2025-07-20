@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 
 import '../providers/comment_moderation_provider.dart';
 
@@ -19,7 +18,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
   @override
   void initState() {
     super.initState();
-    // On attend la première frame pour charger les données
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _loadPage();
@@ -75,7 +73,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                 DataColumn(label: Text('Auteur')),
                 DataColumn(label: Text('Contenu')),
                 DataColumn(label: Text('Date')),
-                DataColumn(label: Text('Post')),
                 DataColumn(label: Text('Actions')),
               ],
               rows:
@@ -84,7 +81,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                     final authorName = c['author_name'] as String? ?? 'Anonyme';
                     final text = c['text'] as String? ?? '';
                     final date = c['created_at'] as String? ?? '';
-                    final contentId = c['content_id'] as String? ?? '';
 
                     return DataRow(
                       cells: [
@@ -101,22 +97,10 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                         ),
                         DataCell(Text(date)),
                         DataCell(
-                          InkWell(
-                            onTap: () => context.go('/contents/$contentId'),
-                            child: Text(
-                              'Voir',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                        DataCell(
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             tooltip: 'Supprimer',
                             onPressed: () async {
-                              // Affiche la boîte de dialogue de confirmation
                               final confirm = await showDialog<bool>(
                                 context: context,
                                 builder:
@@ -146,7 +130,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
                                     ),
                               );
 
-                              // Vérifie que le widget est toujours monté
                               if (!mounted || confirm != true) return;
 
                               try {
@@ -179,7 +162,6 @@ class _CommentsModerationScreenState extends State<CommentsModerationScreen> {
           ),
         ),
 
-        // Pagination
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(

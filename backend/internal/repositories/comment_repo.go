@@ -1,4 +1,3 @@
-// backend/internal/repositories/comment_repository.go
 package repositories
 
 import (
@@ -37,8 +36,8 @@ func (r *CommentRepository) Create(c *models.Comment) error {
 func (r *CommentRepository) ListAll(offset, limit int) ([]models.Comment, error) {
 	var comments []models.Comment
 	err := database.DB.
-		Preload("Author").  // charge l’auteur (User)
-		Preload("Content"). // charge le post parent si besoin
+		Preload("Author").
+		Preload("Content").
 		Order("created_at DESC").
 		Offset(offset).
 		Limit(limit).
@@ -51,7 +50,6 @@ func (r *CommentRepository) ListAll(offset, limit int) ([]models.Comment, error)
 
 // DeleteByID supprime un commentaire selon son ID.
 func (r *CommentRepository) DeleteByID(id uuid.UUID) error {
-	// On utilise id = ? pour filtrer sur le champ PK (uuid)
 	return database.DB.
 		Where("id = ?", id).
 		Delete(&models.Comment{}).

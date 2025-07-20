@@ -1,5 +1,3 @@
-// backend/internal/services/subscription_service.go
-
 package services
 
 import (
@@ -23,14 +21,12 @@ func NewSubscriptionService(repo *repositories.SubscriptionRepository) *Subscrip
 
 // Subscribe permet à un abonné de s'abonner à un créateur (30€ fixe)
 func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
-	// Log structuré pour Grafana
 	logger.LogBusinessEvent("subscription_attempt", map[string]interface{}{
 		"subscriber_id": userID.String(),
 		"creator_id":    creatorID.String(),
 		"price_euros":   30,
 	})
 
-	// Vérifier si l'utilisateur n'est pas déjà abonné
 	isSubscribed, err := s.IsSubscribed(userID, creatorID)
 	if err != nil {
 		logger.LogError(err, "subscription_check_failed", map[string]interface{}{
@@ -47,7 +43,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 		return errors.New("vous êtes déjà abonné à ce créateur")
 	}
 
-	// Vérifier que l'utilisateur ne s'abonne pas à lui-même
 	if userID == creatorID {
 		logger.LogBusinessEvent("self_subscription_attempt", map[string]interface{}{
 			"user_id": userID.String(),
@@ -57,7 +52,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 
 	now := time.Now()
 
-	// Transaction pour éviter les doubles entrées
 	tx := database.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -70,7 +64,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 		}
 	}()
 
-	// Créer l'abonnement
 	sub := &models.Subscription{
 		CreatorID:    creatorID,
 		SubscriberID: userID,
@@ -89,7 +82,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 		return err
 	}
 
-	// Créer le paiement
 	payment := &models.Payment{
 		SubscriptionID: sub.ID,
 		Amount:         models.SubscriptionPriceCents,
@@ -106,7 +98,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 		return err
 	}
 
-	// Valider la transaction
 	if err := tx.Commit().Error; err != nil {
 		logger.LogError(err, "transaction_commit_failed", map[string]interface{}{
 			"subscription_id": sub.ID.String(),
@@ -115,7 +106,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 		return err
 	}
 
-	// Log de succès pour Grafana
 	logger.LogBusinessEvent("subscription_created", map[string]interface{}{
 		"subscription_id": sub.ID.String(),
 		"payment_id":      payment.ID.String(),
@@ -126,7 +116,6 @@ func (s *SubscriptionService) Subscribe(creatorID, userID uuid.UUID) error {
 		"end_date":        sub.EndDate,
 	})
 
-	// Log payment spécifique
 	logger.LogPayment("subscription_payment_success", userID.String(), 30.00, true, map[string]interface{}{
 		"creator_id":      creatorID.String(),
 		"subscription_id": sub.ID.String(),
@@ -261,7 +250,6 @@ func (s *SubscriptionService) GetCreatorStats(creatorID uuid.UUID) (map[string]i
 	var totalRevenue int64
 	now := time.Now()
 
-	// Compter les abonnements actifs
 	err := database.DB.Model(&models.Subscription{}).
 		Where("creator_id = ? AND status = ? AND start_date <= ? AND end_date > ?",
 			creatorID, models.SubscriptionStatusActive, now, now).
@@ -274,7 +262,6 @@ func (s *SubscriptionService) GetCreatorStats(creatorID uuid.UUID) (map[string]i
 		return nil, err
 	}
 
-	// Calculer le revenu total
 	totalRevenue = activeSubscriptions * 30
 
 	stats := map[string]interface{}{

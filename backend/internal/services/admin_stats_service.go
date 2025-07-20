@@ -1,7 +1,3 @@
-// =============================================
-// CORRECTION FINALE : internal/services/admin_stats_service.go
-// =============================================
-
 package services
 
 import (
@@ -25,40 +21,33 @@ func (s *AdminStatsService) GetBasicStats(days int) (*models.AdminStatsSimple, e
 	var stats models.AdminStatsSimple
 	var subscriptionCount int64
 
-	// Période
 	endDate := time.Now()
 	startDate := endDate.AddDate(0, 0, -days)
 	stats.Period = fmt.Sprintf("%d days", days)
 	stats.StartDate = startDate
 	stats.EndDate = endDate
 
-	// Total Users dans la période
 	database.DB.Table("user").
 		Where("created_at >= ? AND created_at <= ?", startDate, endDate).
 		Count(&stats.TotalUsers)
 
-	// Total Creators dans la période
 	database.DB.Table("user").
 		Where("role = ? AND created_at >= ? AND created_at <= ?", "creator", startDate, endDate).
 		Count(&stats.TotalCreators)
 
-	// Total Contents dans la période
 	database.DB.Table("content").
 		Where("created_at >= ? AND created_at <= ?", startDate, endDate).
 		Count(&stats.TotalContents)
 
-	// Total Revenue (depuis les payments dans la période)
 	database.DB.Table("subscription").
 		Where("created_at >= ? AND created_at <= ?", startDate, endDate).
 		Count(&subscriptionCount)
-	stats.TotalRevenue = subscriptionCount * 3000 // 30€ en centimes par abonnement
+	stats.TotalRevenue = subscriptionCount * 3000
 
-	// Total Subscribers actifs
 	database.DB.Table("subscription").
 		Where("start_date <= ? AND end_date >= ?", endDate, startDate).
 		Count(&stats.TotalSubscribers)
 
-	// Contents par status
 	database.DB.Table("content").
 		Where("created_at >= ? AND created_at <= ? AND status = ?", startDate, endDate, "pending").
 		Count(&stats.PendingContents)
@@ -71,7 +60,6 @@ func (s *AdminStatsService) GetBasicStats(days int) (*models.AdminStatsSimple, e
 		Where("created_at >= ? AND created_at <= ? AND status = ?", startDate, endDate, "rejected").
 		Count(&stats.RejectedContents)
 
-	// Moyennes
 	if stats.TotalUsers > 0 {
 		stats.AvgRevenuePerUser = float64(stats.TotalRevenue) / float64(stats.TotalUsers)
 	}
@@ -85,15 +73,12 @@ func (s *AdminStatsService) GetBasicStats(days int) (*models.AdminStatsSimple, e
 	return &stats, nil
 }
 
-// GetTopCreators - Version corrigée avec les bons types UUID
-// GetTopCreators - Version corrigée avec les bons calculs
 func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.SimpleCreatorRank, error) {
 	var creators []models.SimpleCreatorRank
 
 	startDate := time.Now().AddDate(0, 0, -days)
 	endDate := time.Now()
 
-	// 1. Récupérer tous les créateurs d'abord
 	userQuery := `
 		SELECT 
 			id::text as creator_id,
@@ -121,7 +106,6 @@ func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.Simple
 			return nil, err
 		}
 
-		// Convertir string vers UUID
 		if parsedID, err := uuid.Parse(creatorIDStr); err == nil {
 			creator.CreatorID = parsedID
 		}
@@ -129,32 +113,26 @@ func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.Simple
 		allCreators = append(allCreators, creator)
 	}
 
-	// 2. Pour chaque créateur, calculer ses stats séparément
 	for i, creator := range allCreators {
-		// Nombre de contenus dans la période
 		database.DB.Table("content").
 			Where("creator_id = ? AND created_at >= ? AND created_at <= ?",
 				creator.CreatorID, startDate, endDate).
 			Count(&allCreators[i].ContentCount)
 
-		// Revenus totaux (nombre d'abonnements × 30€)
 		var subscriptionCount int64
 		database.DB.Table("subscription").
 			Where("creator_id = ? AND created_at >= ? AND created_at <= ?",
 				creator.CreatorID, startDate, endDate).
 			Count(&subscriptionCount)
 
-		allCreators[i].TotalRevenue = subscriptionCount * 3000 // 30€ en centimes
+		allCreators[i].TotalRevenue = subscriptionCount * 3000
 
-		// Nombre de nouveaux abonnés dans la période
 		allCreators[i].Subscribers = subscriptionCount
 
-		// DEBUG - Afficher les stats pour chaque créateur
 		fmt.Printf("DEBUG Creator %s (ID: %s): ContentCount=%d, SubscriptionCount=%d, Revenue=%d\n",
 			creator.Username, creator.CreatorID, allCreators[i].ContentCount, subscriptionCount, allCreators[i].TotalRevenue)
 	}
 
-	// 3. Trier par revenus D'ABORD (plus important), puis par nombre de contenus
 	sort.Slice(allCreators, func(i, j int) bool {
 		if allCreators[i].TotalRevenue != allCreators[j].TotalRevenue {
 			return allCreators[i].TotalRevenue > allCreators[j].TotalRevenue
@@ -162,12 +140,10 @@ func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.Simple
 		return allCreators[i].ContentCount > allCreators[j].ContentCount
 	})
 
-	// 4. Limiter et ajouter les rangs
 	if limit > len(allCreators) {
 		limit = len(allCreators)
 	}
 
-	// Ajouter TOUS les créateurs avec leurs stats, même si 0
 	for i := 0; i < len(allCreators) && i < limit; i++ {
 		allCreators[i].Rank = i + 1
 		creators = append(creators, allCreators[i])
@@ -178,7 +154,6 @@ func (s *AdminStatsService) GetTopCreators(limit int, days int) ([]models.Simple
 	return creators, nil
 }
 
-// GetTopContents - Version simplifiée sans sous-requête complexe
 func (s *AdminStatsService) GetTopContents(limit int, days int) ([]models.SimpleContentRank, error) {
 	var contents []models.SimpleContentRank
 
@@ -214,7 +189,6 @@ func (s *AdminStatsService) GetTopContents(limit int, days int) ([]models.Simple
 			&content.CreatorName, &content.Price, &content.Status, &content.CreatedAt); err != nil {
 			return nil, err
 		}
-		// Convertir string vers UUID
 		if parsedID, err := uuid.Parse(contentIDStr); err == nil {
 			content.ContentID = parsedID
 		}
@@ -224,7 +198,6 @@ func (s *AdminStatsService) GetTopContents(limit int, days int) ([]models.Simple
 	return contents, nil
 }
 
-// GetFlopContents - Version simplifiée
 func (s *AdminStatsService) GetFlopContents(limit int, days int) ([]models.SimpleContentRank, error) {
 	var contents []models.SimpleContentRank
 
@@ -260,7 +233,6 @@ func (s *AdminStatsService) GetFlopContents(limit int, days int) ([]models.Simpl
 			&content.CreatorName, &content.Price, &content.Status, &content.CreatedAt); err != nil {
 			return nil, err
 		}
-		// Convertir string vers UUID
 		if parsedID, err := uuid.Parse(contentIDStr); err == nil {
 			content.ContentID = parsedID
 		}
@@ -270,7 +242,6 @@ func (s *AdminStatsService) GetFlopContents(limit int, days int) ([]models.Simpl
 	return contents, nil
 }
 
-// GetRevenueByDay - Version simple sans problème de type
 func (s *AdminStatsService) GetRevenueByDay(days int) ([]models.RevenueByPeriod, error) {
 	var revenue []models.RevenueByPeriod
 
@@ -304,40 +275,33 @@ func (s *AdminStatsService) GetRevenueByDay(days int) ([]models.RevenueByPeriod,
 	return revenue, nil
 }
 
-// GetDashboard - Version qui évite les erreurs complexes
 func (s *AdminStatsService) GetDashboard(days int) (*models.AdminDashboard, error) {
 	dashboard := &models.AdminDashboard{}
 
-	// Stats principales (simple, sans JOIN)
 	stats, err := s.GetBasicStats(days)
 	if err != nil {
 		return nil, err
 	}
 	dashboard.Stats = *stats
 
-	// Top créateurs (gestion d'erreur séparée)
 	topCreators, err := s.GetTopCreators(5, days)
 	if err != nil {
-		// Si erreur, on continue avec une liste vide
 		topCreators = []models.SimpleCreatorRank{}
 	}
 	dashboard.TopCreators = topCreators
 
-	// Top contenus (gestion d'erreur séparée)
 	topContents, err := s.GetTopContents(5, days)
 	if err != nil {
 		topContents = []models.SimpleContentRank{}
 	}
 	dashboard.TopContents = topContents
 
-	// Flop contenus (gestion d'erreur séparée)
 	flopContents, err := s.GetFlopContents(5, days)
 	if err != nil {
 		flopContents = []models.SimpleContentRank{}
 	}
 	dashboard.FlopContents = flopContents
 
-	// Revenus récents (simple)
 	recentRevenue, err := s.GetRevenueByDay(7)
 	if err != nil {
 		recentRevenue = []models.RevenueByPeriod{}
@@ -347,22 +311,15 @@ func (s *AdminStatsService) GetDashboard(days int) (*models.AdminDashboard, erro
 	return dashboard, nil
 }
 
-// =============================================
-// VERSION ULTRA-SIMPLE POUR DEBUG
-// =============================================
-
-// Si tout échoue, utilisez cette version ultra-basique
 func (s *AdminStatsService) GetSimpleDashboard(days int) (*models.AdminDashboard, error) {
 	dashboard := &models.AdminDashboard{}
 
-	// Stats de base uniquement
 	stats, err := s.GetBasicStats(days)
 	if err != nil {
 		return nil, err
 	}
 	dashboard.Stats = *stats
 
-	// Listes vides pour éviter les erreurs
 	dashboard.TopCreators = []models.SimpleCreatorRank{}
 	dashboard.TopContents = []models.SimpleContentRank{}
 	dashboard.FlopContents = []models.SimpleContentRank{}

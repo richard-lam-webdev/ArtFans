@@ -11,8 +11,8 @@ import (
 	"github.com/richard-lam-webdev/ArtFans/backend/internal/models"
 )
 
-// InitTest initialise DB en mémoire et auto‐migrate tous les modèles.
-// À appeler uniquement depuis les tests d’intégration.
+// InitTest initialise une base de données SQLite en mémoire pour les tests
+// et effectue l'AutoMigrate uniquement pour le modèle User.
 func InitTest() *gorm.DB {
 	var err error
 	DB, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})

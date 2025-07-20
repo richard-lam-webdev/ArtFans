@@ -12,7 +12,6 @@ const (
 	ContentStatusRejected = "rejected"
 )
 
-// Content représente un contenu qu’un créateur met en vente
 type Content struct {
 	ID        uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	CreatorID uuid.UUID `gorm:"type:uuid;not null;index" json:"creator_id"`

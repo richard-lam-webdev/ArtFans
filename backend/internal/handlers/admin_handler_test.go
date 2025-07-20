@@ -23,7 +23,6 @@ import (
 // setupAdminTest initialise DB en mémoire, crée un admin et un subscriber,
 // génère leurs tokens, et retourne le router configuré ainsi que les tokens et IDs.
 func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, subToken string, subID uuid.UUID) {
-	// 1) DB en mémoire
 	d, err := gorm.Open(sqlite.Open("file::memory:?cache=private"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("Échec ouverture DB mémoire: %v", err)
@@ -33,12 +32,10 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 	}
 	database.DB = d
 
-	// 2) Préparer UserRepository & AuthService
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
 
-	// 3) Créer admin et subscriber en base
 	pass := "Password123!"
 	hashedPass, _ := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 
@@ -63,7 +60,6 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 		t.Fatalf("échec création subscriber: %v", err)
 	}
 
-	// 4) Générer tokens via AuthService.Login
 	var errLogin error
 	adminToken, errLogin = authSvc.Login(admin.Email, pass)
 	if errLogin != nil {
@@ -74,7 +70,6 @@ func setupAdminTest(t *testing.T) (router *gin.Engine, db *gorm.DB, adminToken, 
 		t.Fatalf("login sub échoué: %v", errLogin)
 	}
 
-	// 5) Configurer Gin et les routes admin
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -97,7 +92,6 @@ func TestPromote_Success(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Vérifier en base que le rôle a bien changé
 	var u models.User
 	err := db.First(&u, "id = ?", subID).Error
 	assert.NoError(t, err)
@@ -134,7 +128,6 @@ func TestPromote_NotFound(t *testing.T) {
 func TestPromote_DowngradeToSubscriber(t *testing.T) {
 	router, db, adminToken, _, subID := setupAdminTest(t)
 
-	// Demande explicite de rétrogradation
 	reqBody := []byte(`{"role":"subscriber"}`)
 	req, _ := http.NewRequest("PUT", "/api/admin/users/"+subID.String()+"/role", bytes.NewBuffer(reqBody))
 	req.Header.Set("Authorization", "Bearer "+adminToken)
@@ -144,7 +137,6 @@ func TestPromote_DowngradeToSubscriber(t *testing.T) {
 	router.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// On vérifie que le rôle a bien été rétrogradé
 	var u models.User
 	err := db.First(&u, "id = ?", subID).Error
 	assert.NoError(t, err)

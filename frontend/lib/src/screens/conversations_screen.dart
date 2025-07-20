@@ -18,7 +18,6 @@ class ConversationsScreen extends StatefulWidget {
 class _ConversationsScreenState extends State<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
-    // On wrappe tout le screen dans le FeatureGate CHAT
     return FeatureGate(
       featureKey: featureChat,
       fallback:
