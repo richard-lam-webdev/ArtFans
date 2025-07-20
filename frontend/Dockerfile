@@ -1,4 +1,3 @@
-# 1) Stage de build Flutter
 FROM --platform=linux/amd64 ghcr.io/cirruslabs/flutter:stable AS flutter_builder
 
 WORKDIR /app
@@ -8,6 +7,7 @@ RUN flutter pub get
 
 COPY . .
 RUN flutter build web --release
+
 
 FROM nginx:alpine
 
