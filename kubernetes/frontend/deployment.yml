@@ -47,3 +47,5 @@ spec:
           emptyDir: {}
         - name: nginx-pid
           emptyDir: {}
+        - name: nginx-log
+          emptyDir: {}  
