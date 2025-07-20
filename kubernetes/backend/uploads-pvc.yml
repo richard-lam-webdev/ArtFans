@@ -4,8 +4,9 @@ metadata:
   name: uploads-pvc
   namespace: artfans
 spec:
-  accessModes: ["ReadWriteMany"]
-  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard-rwo
   resources:
     requests:
-      storage: 1Gi
+      storage: 10Gi
