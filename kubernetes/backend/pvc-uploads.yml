@@ -5,8 +5,8 @@ metadata:
   namespace: artfans
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: standard-rwo
+    - ReadWriteOnce  
   resources:
     requests:
       storage: 10Gi
+  storageClassName: standard
