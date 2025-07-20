@@ -95,38 +95,32 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 1) Installer Java 17+
       - name: Setup Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 2) Installer les outils Android SDK (pour sdkmanager, adb, etc.)
-      - name: Install Android SDK Tools
-        run: |
-          yes | sdkmanager --install "cmdline-tools;latest" "platform-tools" "platforms;android-33"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 33
+          build-tools: '34.0.0'
+          cmake: '3.22.1'
+          ndk: '27.0.12077973'
 
-      # 3) Accepter les licences Android
-      - name: Accept Android licenses
-        run: yes | flutter doctor --android-licenses
-
-      # 4) Préparer .env
       - name: Copy dummy .env
         run: cp frontend/.env.example frontend/.env
 
-      # 5) Setup Flutter après avoir configuré Java
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.2'
 
-      # 6) Build Android APK
       - name: Build Android APK
         working-directory: frontend
         run: flutter build apk --release
 
-      # 7) Build Web bundle
       - name: Build Web bundle
         working-directory: frontend
         run: flutter build web --release
