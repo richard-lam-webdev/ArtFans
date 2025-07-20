@@ -35,3 +35,10 @@ frontend/build/
 .DS_Store
 Thumbs.db
 kubernetes/secrets.yml
+
+**/secrets.yml
+**/*-secrets.yml
+gcs-credentials.json
+**/gcs-credentials.json
+temp-secrets.env
+
