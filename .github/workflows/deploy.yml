@@ -12,7 +12,7 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   GKE_CLUSTER: ${{ secrets.GKE_CLUSTER_NAME }}
-  GKE_ZONE:    ${{ secrets.GKE_CLUSTER_ZONE }}
+  GKE_ZONE: ${{ secrets.GKE_CLUSTER_ZONE }}
   REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
 
 jobs:
@@ -40,24 +40,57 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGISTRY_URL }}
 
-      - name: Build Backend
+      - name: Build and Push Backend
         run: |
           cd backend
           IMAGE="${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:${{ github.sha }}"
           docker build -t "$IMAGE" .
+          docker push "$IMAGE"
           docker tag "$IMAGE" "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:latest"
+          docker push "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:latest"
+
+      - name: Build and Push Frontend
+        run: |
+          cd frontend
+          IMAGE="${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-web:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          docker tag "$IMAGE" "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-web:latest"
+          docker push "${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-web:latest"
 
       - name: Setup Kubectl
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: google-github-actions/get-gke-credentials@v1
         with:
           cluster_name: ${{ env.GKE_CLUSTER }}
-          location:     ${{ env.GKE_ZONE }}
+          location: ${{ env.GKE_ZONE }}
 
       - name: Deploy to GKE
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          # Créer le namespace si nécessaire
+          kubectl create namespace artfans --dry-run=client -o yaml | kubectl apply -f -
+          
+          # Appliquer toutes les configurations
+          kubectl apply -f kubernetes/configmap.yml
+          kubectl apply -f kubernetes/backend/uploads-pvc.yml
+          kubectl apply -f kubernetes/backend/deployment.yml
+          kubectl apply -f kubernetes/backend/service.yml
+          kubectl apply -f kubernetes/frontend/deployment.yml
+          kubectl apply -f kubernetes/frontend/service.yml
+          
+          # Attendre que les deployments existent
+          sleep 10
+          
+          # Mettre à jour les images
           kubectl set image deployment/artfans-api \
             api=${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-api:${{ github.sha }} \
             -n artfans
-          kubectl rollout status deployment/artfans-api -n artfans
+          
+          kubectl set image deployment/artfans-web \
+            web=${{ env.REGISTRY_URL }}/${{ env.PROJECT_ID }}/artfans/artfans-web:${{ github.sha }} \
+            -n artfans
+          
+          # Vérifier le status
+          kubectl rollout status deployment/artfans-api -n artfans --timeout=300s
+          kubectl rollout status deployment/artfans-web -n artfans --timeout=300s
