@@ -1,4 +1,3 @@
-// backend/internal/middleware/auth.go
 package middleware
 
 import (
@@ -21,7 +20,6 @@ func JWTAuth() gin.HandlerFunc {
 		}
 		tokenStr := parts[1]
 
-		// Parse le JWT
 		token, err := jwt.ParseWithClaims(tokenStr, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
 			return []byte(config.C.JwtSecret), nil
 		})
@@ -30,14 +28,12 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 
-		// Récupère les claims standard (dont le Subject = userID)
 		claims, ok := token.Claims.(*jwt.StandardClaims)
 		if !ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "claims invalides"})
 			return
 		}
 
-		// Stocke l’ID utilisateur dans le contexte Gin
 		c.Set("userID", claims.Subject)
 		c.Next()
 	}

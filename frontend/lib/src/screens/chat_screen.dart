@@ -29,7 +29,6 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
 
-    // Dès le premier frame, on place la conversation en « courante »
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<MessageProvider>();
       provider.setCurrentChat(widget.otherUserId);
@@ -64,9 +63,10 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isSending = true);
 
     try {
-      await context
-          .read<MessageProvider>()
-          .sendMessage(widget.otherUserId, text);
+      await context.read<MessageProvider>().sendMessage(
+        widget.otherUserId,
+        text,
+      );
       _messageController.clear();
       setState(() => _isSending = false);
       _scrollToBottom();
@@ -102,9 +102,10 @@ class _ChatScreenState extends State<ChatScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.surfaceContainerHighest,
+                color:
+                    isMe
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -127,8 +128,9 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Text(
                 time,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface
-                      .withAlpha((0.5 * 255).round()),
+                  color: theme.colorScheme.onSurface.withAlpha(
+                    (0.5 * 255).round(),
+                  ),
                 ),
               ),
             ),
@@ -153,12 +155,14 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: Consumer<MessageProvider>(
               builder: (context, messageProvider, child) {
-                final messages =
-                    messageProvider.getMessages(widget.otherUserId);
-                    final currentUserId = context.watch<MessageProvider>().currentUserId;
-                    if (currentUserId == null) {
-                      return const Center(child: CircularProgressIndicator());
-}
+                final messages = messageProvider.getMessages(
+                  widget.otherUserId,
+                );
+                final currentUserId =
+                    context.watch<MessageProvider>().currentUserId;
+                if (currentUserId == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (messages.isNotEmpty) {
@@ -174,23 +178,26 @@ class _ChatScreenState extends State<ChatScreen> {
                         Icon(
                           Icons.chat_bubble_outline,
                           size: 64,
-                          color: theme.colorScheme.onSurface
-                              .withAlpha((0.3 * 255).round()),
+                          color: theme.colorScheme.onSurface.withAlpha(
+                            (0.3 * 255).round(),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'Aucun message',
                           style: theme.textTheme.titleLarge?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withAlpha((0.6 * 255).round()),
+                            color: theme.colorScheme.onSurface.withAlpha(
+                              (0.6 * 255).round(),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Commencez la conversation !',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withAlpha((0.5 * 255).round()),
+                            color: theme.colorScheme.onSurface.withAlpha(
+                              (0.5 * 255).round(),
+                            ),
                           ),
                         ),
                       ],
@@ -255,16 +262,17 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     child: IconButton(
                       onPressed: _isSending ? null : _sendMessage,
-                      icon: _isSending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.send, color: Colors.white),
+                      icon:
+                          _isSending
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : const Icon(Icons.send, color: Colors.white),
                     ),
                   ),
                 ],

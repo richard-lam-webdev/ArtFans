@@ -1,4 +1,3 @@
-// lib/src/widgets/recent_searches.dart
 import 'package:flutter/material.dart';
 import '../providers/recent_search_provider.dart';
 

@@ -17,7 +17,6 @@ class AdminProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get users => _users;
   String? get errorMessage => _errorMessage;
 
-  /// Charge la liste des utilisateurs depuis l’API.
   Future<void> fetchUsers() async {
     _status = AdminStatus.loading;
     notifyListeners();
@@ -33,14 +32,12 @@ class AdminProvider extends ChangeNotifier {
   }
 
   /// Met à jour le rôle d’un utilisateur (creator <-> subscriber).
-  ///
   /// newRole doit être soit "creator" soit "subscriber".
   Future<void> updateRole(String userId, String newRole) async {
     _status = AdminStatus.loading;
     notifyListeners();
     try {
       await _adminService.updateUserRole(userId, newRole);
-      // Mise à jour locale pour UX instantanée
       final idx = _users.indexWhere((u) => u['ID'] == userId);
       if (idx != -1) {
         _users[idx]['Role'] = newRole;
@@ -50,7 +47,7 @@ class AdminProvider extends ChangeNotifier {
     } catch (e) {
       _status = AdminStatus.error;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
-      rethrow; // pour que l’UI puisse catcher et afficher un SnackBar
+      rethrow;
     } finally {
       notifyListeners();
     }

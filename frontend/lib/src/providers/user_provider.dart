@@ -1,5 +1,3 @@
-// lib/src/providers/user_provider.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/src/services/user_service.dart';
@@ -18,7 +16,6 @@ class UserProvider extends ChangeNotifier {
   Map<String, dynamic>? get user => _user;
   String? get errorMessage => _errorMessage;
 
-  /// Charge le profil de l’utilisateur connecté
   Future<void> fetchUserProfile() async {
     _status = UserStatus.loading;
     notifyListeners();

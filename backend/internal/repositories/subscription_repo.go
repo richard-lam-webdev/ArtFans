@@ -1,4 +1,3 @@
-// backend/internal/repositories/subscription_repo.go
 package repositories
 
 import (

@@ -1,5 +1,3 @@
-// lib/widgets/protected_image.dart
-
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/content_service.dart';
@@ -59,11 +57,7 @@ class _ProtectedImageState extends State<ProtectedImage> {
         }
         return SizedBox(
           height: 200,
-          child: Image.memory(
-            snap.data!,
-            fit: BoxFit.cover,
-            // plus besoin de Key ici si on l’a déjà mis sur le widget parent
-          ),
+          child: Image.memory(snap.data!, fit: BoxFit.cover),
         );
       },
     );

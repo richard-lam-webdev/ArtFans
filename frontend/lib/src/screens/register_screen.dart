@@ -1,5 +1,3 @@
-// lib/src/screens/register_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -45,7 +43,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    // On envoie systématiquement 'subscriber' au back-end
     final success = await authProvider.register(
       username: _usernameCtrl.text.trim(),
       email: _emailCtrl.text.trim(),
@@ -81,7 +78,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Champ Nom d'utilisateur
                   TextFormField(
                     controller: _usernameCtrl,
                     decoration: const InputDecoration(
@@ -96,7 +92,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  // Champ Email
                   TextFormField(
                     controller: _emailCtrl,
                     decoration: const InputDecoration(
@@ -116,7 +111,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  // Champ Mot de passe
                   TextFormField(
                     controller: _passwordCtrl,
                     decoration: const InputDecoration(
@@ -132,7 +126,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  // Champ Confirmer mot de passe
                   TextFormField(
                     controller: _confirmCtrl,
                     decoration: const InputDecoration(
@@ -148,7 +141,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  // Loader ou bouton
                   if (_isLoading || authProvider.status == AuthStatus.loading)
                     const CircularProgressIndicator()
                   else
@@ -160,7 +152,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: const Text('S’inscrire'),
                     ),
                   const SizedBox(height: 12),
-                  // Message d’erreur
                   if (authProvider.status == AuthStatus.error &&
                       authProvider.errorMessage != null)
                     Text(
@@ -168,7 +159,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: const TextStyle(color: Colors.red),
                     ),
                   const SizedBox(height: 16),
-                  // Lien vers Connexion
                   TextButton(
                     onPressed: () => context.go('/login'),
                     child: const Text('J’ai déjà un compte ? Connexion'),

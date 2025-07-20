@@ -26,7 +26,6 @@ func NewAuthService(repo *repositories.UserRepository) *AuthService {
 
 // Register crée un nouvel utilisateur avec un mot de passe hashé
 func (s *AuthService) Register(username, email, password string, role models.Role) (*models.User, error) {
-	// 1. Vérifier si l'utilisateur existe déjà
 	existing, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, err
@@ -35,13 +34,11 @@ func (s *AuthService) Register(username, email, password string, role models.Rol
 		return nil, errors.New("un utilisateur avec cet email existe déjà")
 	}
 
-	// 2. Hasher le mot de passe
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, errors.New("échec du hash du mot de passe")
 	}
 
-	// 3. Créer le nouvel utilisateur
 	user := &models.User{
 		Username:       username,
 		Email:          email,
@@ -49,12 +46,10 @@ func (s *AuthService) Register(username, email, password string, role models.Rol
 		Role:           role,
 	}
 
-	// 4. Sauvegarde en base
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
 
-	// 5. Ne pas renvoyer le hash au client
 	user.HashedPassword = ""
 	return user, nil
 }
@@ -69,12 +64,10 @@ func (s *AuthService) Login(email, password string) (string, error) {
 		return "", errors.New("identifiants invalides")
 	}
 
-	// 1. Vérification du mot de passe hashé
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(password)); err != nil {
 		return "", errors.New("identifiants invalides")
 	}
 
-	// 2. Génération du token JWT
 	expirationTime := time.Now().Add(72 * time.Hour)
 	claims := &jwt.StandardClaims{
 		Subject:   user.ID.String(),

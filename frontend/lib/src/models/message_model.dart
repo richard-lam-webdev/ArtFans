@@ -1,5 +1,3 @@
-// lib/models/message_model.dart
-
 class MessageModel {
   final String id;
   final String senderId;
@@ -21,7 +19,9 @@ class MessageModel {
       senderId: json['SenderID'] ?? json['senderId'] ?? '',
       receiverId: json['ReceiverID'] ?? json['receiverId'] ?? '',
       text: json['Text'] ?? json['text'] ?? '',
-      sentAt: DateTime.parse(json['SentAt'] ?? json['sentAt'] ?? DateTime.now().toIso8601String()),
+      sentAt: DateTime.parse(
+        json['SentAt'] ?? json['sentAt'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -56,7 +56,9 @@ class ConversationPreview {
       otherUserId: json['otherUserId'] ?? '',
       otherUserName: json['otherUserName'] ?? '',
       lastMessage: json['lastMessage'] ?? '',
-      lastMessageTime: DateTime.parse(json['lastMessageTime'] ?? DateTime.now().toIso8601String()),
+      lastMessageTime: DateTime.parse(
+        json['lastMessageTime'] ?? DateTime.now().toIso8601String(),
+      ),
       lastMessageSender: json['lastMessageSender'] ?? '',
     );
   }

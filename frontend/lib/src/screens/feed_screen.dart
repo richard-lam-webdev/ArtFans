@@ -1,5 +1,3 @@
-// lib/src/screens/feed_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../services/content_service.dart';
 import '../providers/theme_provider.dart';
 import '../providers/message_provider.dart';
-import '../providers/subscription_provider.dart'; // AJOUT IMPORTANT
+import '../providers/subscription_provider.dart';
 import '../utils/snackbar_util.dart';
 import '../widgets/bottom_nav.dart';
 import '../services/metrics_service.dart';
@@ -44,10 +42,9 @@ class _FeedScreenState extends State<FeedScreen> {
     try {
       final result = await _contentService.fetchFeed();
       if (!mounted) return;
-      
-      // AJOUT IMPORTANT : Initialiser le provider avec les données du feed
+
       context.read<SubscriptionProvider>().initializeFeedSubscriptions(result);
-      
+
       setState(() {
         _feed = result;
         _loading = false;
@@ -67,7 +64,6 @@ class _FeedScreenState extends State<FeedScreen> {
       appBar: AppBar(
         title: const Text("Fil d'actualité"),
         actions: [
-          // Icône Recherche
           IconButton(
             tooltip: 'Recherche',
             icon: const Icon(Icons.search_outlined),
@@ -77,50 +73,48 @@ class _FeedScreenState extends State<FeedScreen> {
               ).push(MaterialPageRoute(builder: (_) => const SearchScreen()));
             },
           ),
-          // Badge Messages
           Consumer<MessageProvider>(
             builder: (context, messageProvider, _) {
               final unreadCount = messageProvider.totalUnreadCount;
-                return IconButton(
-                  tooltip: "Messages",
-                  icon: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      const Icon(Icons.message_outlined),
-                      if (unreadCount > 0)
-                        Positioned(
-                          right: -8,
-                          top: -8,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.error,
-                              shape: BoxShape.circle,
+              return IconButton(
+                tooltip: "Messages",
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.message_outlined),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: -8,
+                        top: -8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 18,
+                            minHeight: 18,
+                          ),
+                          child: Text(
+                            unreadCount > 9 ? '9+' : '$unreadCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
-                            constraints: const BoxConstraints(
-                              minWidth: 18,
-                              minHeight: 18,
-                            ),
-                            child: Text(
-                              unreadCount > 9 ? '9+' : '$unreadCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
-                    ],
-                  ),
-                  onPressed: () {
-                    context.push('/messages');
-                  },
-                );
+                      ),
+                  ],
+                ),
+                onPressed: () {
+                  context.push('/messages');
+                },
+              );
             },
           ),
-          // Toggle Thème
           Consumer<ThemeProvider>(
             builder:
                 (ctx, theme, _) => IconButton(
@@ -136,7 +130,6 @@ class _FeedScreenState extends State<FeedScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () {
               auth.logout();
-              // GoRouter redirigera vers /login
             },
           ),
         ],
@@ -147,19 +140,19 @@ class _FeedScreenState extends State<FeedScreen> {
               : _feed.isEmpty
               ? const Center(child: Text("Aucun contenu."))
               : RefreshIndicator(
-                  onRefresh: _fetchFeed, // AJOUT : Possibilité de rafraîchir
-                  child: ListView.builder(
-                    itemCount: _feed.length,
-                    itemBuilder: (context, index) {
-                      final item = _feed[index];
-                      return FeedCard(
-                        key: ValueKey(item['id']),
-                        content: item,
-                        onSubscribedChanged: _fetchFeed,
-                      );
-                    },
-                  ),
+                onRefresh: _fetchFeed,
+                child: ListView.builder(
+                  itemCount: _feed.length,
+                  itemBuilder: (context, index) {
+                    final item = _feed[index];
+                    return FeedCard(
+                      key: ValueKey(item['id']),
+                      content: item,
+                      onSubscribedChanged: _fetchFeed,
+                    );
+                  },
                 ),
+              ),
       bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }

@@ -1,13 +1,9 @@
-// lib/src/services/admin_comment_service.dart
-
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/src/services/auth_service.dart';
 
-/// Service pour la modération des commentaires (admin).
 class AdminCommentService {
-  /// URL de base (définie dans .env)
   final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
   Future<Map<String, String>> _headers() async {
     final token = await AuthService().getToken();
@@ -17,8 +13,6 @@ class AdminCommentService {
     };
   }
 
-  /// Récupère la liste paginée des commentaires à modérer.
-  /// [page] commence à 1, [pageSize] taille de la page.
   Future<List<Map<String, dynamic>>> fetchComments({
     int page = 1,
     int pageSize = 20,

@@ -1,5 +1,3 @@
-// backend/internal/integration/auth_flow_test.go
-
 package integration
 
 import (
@@ -29,12 +27,10 @@ import (
 )
 
 func setupTestServer() (*gin.Engine, *gorm.DB) {
-	// 1) Éviter le log.Fatal de LoadEnv en provisionnant les vars requises en mémoire
 	os.Setenv("DATABASE_URL", "memory")
 	os.Setenv("JWT_SECRET", "testsecret")
 	config.LoadEnv()
 
-	// 2) Ouvrir SQLite en mémoire et injecter dans database.DB
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -44,12 +40,10 @@ func setupTestServer() (*gin.Engine, *gorm.DB) {
 		panic(err)
 	}
 
-	// 3) Initialiser le router Gin pour les tests
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// -- Auth routes --
 	userRepo := repositories.NewUserRepository()
 	authSvc := services.NewAuthService(userRepo)
 	handlers.SetAuthService(authSvc)
@@ -57,12 +51,10 @@ func setupTestServer() (*gin.Engine, *gorm.DB) {
 	r.POST("/api/auth/register", handlers.RegisterHandler)
 	r.POST("/api/auth/login", handlers.LoginHandler)
 
-	// -- Protected route --
 	protected := r.Group("/api")
 	protected.Use(middleware.JWTAuth())
 	protected.GET("/users/me", handlers.CurrentUserHandler)
 
-	// -- Admin routes --
 	admin := r.Group("/api/admin")
 	admin.Use(middleware.JWTAuth(), handlers.AdminMiddleware())
 	admin.PUT("/users/:id/role", handlers.ChangeUserRoleHandler)
@@ -73,12 +65,11 @@ func setupTestServer() (*gin.Engine, *gorm.DB) {
 func TestRegisterLoginGetProfile(t *testing.T) {
 	router, _ := setupTestServer()
 
-	// 1) Inscription
 	regBody := map[string]string{
 		"username":        "bob",
 		"email":           "bob@test.com",
 		"password":        "password123",
-		"confirmPassword": "password123", // bien nécessaire
+		"confirmPassword": "password123",
 	}
 	rb, _ := json.Marshal(regBody)
 	req1 := httptest.NewRequest("POST", "/api/auth/register", bytes.NewReader(rb))
@@ -87,7 +78,6 @@ func TestRegisterLoginGetProfile(t *testing.T) {
 	router.ServeHTTP(w1, req1)
 	assert.Equal(t, http.StatusCreated, w1.Code)
 
-	// 2) Connexion
 	loginBody := map[string]string{
 		"email":    "bob@test.com",
 		"password": "password123",
@@ -104,7 +94,6 @@ func TestRegisterLoginGetProfile(t *testing.T) {
 	token := lr["token"]
 	assert.NotEmpty(t, token)
 
-	// 3) Récupération du profil
 	req3 := httptest.NewRequest("GET", "/api/users/me", nil)
 	req3.Header.Set("Authorization", "Bearer "+token)
 	w3 := httptest.NewRecorder()
@@ -121,7 +110,6 @@ func TestRegisterLoginGetProfile(t *testing.T) {
 func TestAdminPromoteFlow(t *testing.T) {
 	router, db := setupTestServer()
 
-	// Seed un admin unique
 	unique := uuid.New().String()
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("adminpass"), bcrypt.DefaultCost)
 	adminUser := models.User{
@@ -136,7 +124,6 @@ func TestAdminPromoteFlow(t *testing.T) {
 		t.Fatalf("❌ seed admin user: %v", err)
 	}
 
-	// Seed un user normal
 	userID := uuid.New()
 	user := models.User{
 		ID:             userID,
@@ -150,7 +137,6 @@ func TestAdminPromoteFlow(t *testing.T) {
 		t.Fatalf("❌ seed normal user: %v", err)
 	}
 
-	// Login admin
 	loginBody := map[string]string{
 		"email":    adminUser.Email,
 		"password": "adminpass",
@@ -167,7 +153,6 @@ func TestAdminPromoteFlow(t *testing.T) {
 	token := loginResp["token"]
 	assert.NotEmpty(t, token)
 
-	// Promote user
 	promoteBody := map[string]string{"role": "creator"}
 	pb, _ := json.Marshal(promoteBody)
 	req2 := httptest.NewRequest(
@@ -181,7 +166,6 @@ func TestAdminPromoteFlow(t *testing.T) {
 	router.ServeHTTP(w2, req2)
 	assert.Equal(t, http.StatusOK, w2.Code)
 
-	// Vérifier la base
 	var updated models.User
 	if err := db.First(&updated, "id = ?", userID).Error; err != nil {
 		t.Fatalf("❌ fetch updated user: %v", err)

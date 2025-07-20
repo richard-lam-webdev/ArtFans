@@ -8,7 +8,6 @@ import 'package:universal_platform/universal_platform.dart';
 import 'package:path_provider/path_provider.dart';
 import 'metrics_service.dart';
 
-// SOLUTION : Import conditionnel avec les deux implémentations
 import 'package:frontend/src/utils/web_download_stub.dart'
     if (dart.library.html) 'package:frontend/src/utils/web_download_web.dart';
 
@@ -121,13 +120,14 @@ class ContentService {
     String? filePath,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/contents');
-    final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..fields['username'] = username
-      ..fields['role'] = role
-      ..fields['title'] = title.trim()
-      ..fields['body'] = body.trim()
-      ..fields['price'] = price.trim();
+    final request =
+        http.MultipartRequest('POST', uri)
+          ..headers['Authorization'] = 'Bearer $token'
+          ..fields['username'] = username
+          ..fields['role'] = role
+          ..fields['title'] = title.trim()
+          ..fields['body'] = body.trim()
+          ..fields['price'] = price.trim();
 
     if (UniversalPlatform.isWeb || filePath == null) {
       if (fileBytes == null) throw Exception('Impossible de lire le fichier.');
@@ -182,7 +182,10 @@ class ContentService {
     return List<Map<String, dynamic>>.from(feed);
   }
 
-  Future<Map<String, dynamic>> fetchFeedPaginated({int page = 1, int limit = 10}) async {
+  Future<Map<String, dynamic>> fetchFeedPaginated({
+    int page = 1,
+    int limit = 10,
+  }) async {
     final token = await _getToken();
     final response = await http.get(
       Uri.parse("$_baseUrl/api/feed?page=$page&limit=$limit"),
@@ -191,7 +194,7 @@ class ContentService {
         'Content-Type': 'application/json',
       },
     );
-    
+
     if (response.statusCode != 200) {
       throw Exception("Erreur ${response.statusCode} : ${response.body}");
     }
@@ -323,16 +326,16 @@ class ContentService {
     final start = DateTime.now();
     try {
       final response = await request();
-      
+
       final latency = DateTime.now().difference(start).inMilliseconds;
       MetricsService.reportAPILatency(endpoint, latency);
-      
+
       if (response.statusCode >= 500) {
         MetricsService.reportError('http_5xx');
       } else if (response.statusCode >= 400) {
         MetricsService.reportError('http_4xx');
       }
-      
+
       return response;
     } catch (e) {
       MetricsService.reportError('network_error');
@@ -340,26 +343,27 @@ class ContentService {
     }
   }
 
-  // SOLUTION : Méthode downloadContent qui marche vraiment
   Future<String?> downloadContent(String contentId) async {
     final uri = Uri.parse('$_baseUrl/api/contents/$contentId/download');
     final token = await _getToken();
-    
-    final resp = await http.get(uri, headers: {
-      'Authorization': 'Bearer $token',
-    });
-    
+
+    final resp = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
     if (resp.statusCode != 200) {
       throw Exception('Erreur ${resp.statusCode} lors du téléchargement');
     }
-    
+
     final bytes = resp.bodyBytes;
-    
-    // Extraire le nom de fichier depuis les headers de réponse
+
     String filename = 'contenu.png';
     final contentDisposition = resp.headers['content-disposition'];
     if (contentDisposition != null) {
-      final filenameMatch = RegExp(r'filename="([^"]+)"').firstMatch(contentDisposition);
+      final filenameMatch = RegExp(
+        r'filename="([^"]+)"',
+      ).firstMatch(contentDisposition);
       if (filenameMatch != null) {
         filename = filenameMatch.group(1) ?? filename;
       }
@@ -369,7 +373,6 @@ class ContentService {
       downloadFileWeb(bytes, filename);
       return null;
     } else {
-      // Mobile → écrit dans un fichier local
       final dir = await getApplicationDocumentsDirectory();
       final localPath = '${dir.path}/$filename';
       final file = File(localPath);
@@ -392,7 +395,7 @@ class ContentService {
       final data = jsonDecode(response.body);
       return data['subscribed'] == true;
     }
-    
+
     return false;
   }
 }

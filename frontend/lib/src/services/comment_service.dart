@@ -1,4 +1,3 @@
-// lib/services/comment_service.dart
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -6,19 +5,19 @@ import 'package:http/http.dart' as http;
 
 class CommentService {
   final _storage = const FlutterSecureStorage();
-  final String _baseUrl = (() {
-    try {
-      return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-    } catch (_) {
-      return 'http://localhost:8080';
-    }
-  })();
+  final String _baseUrl =
+      (() {
+        try {
+          return dotenv.env['API_URL'] ?? 'http://localhost:8080';
+        } catch (_) {
+          return 'http://localhost:8080';
+        }
+      })();
 
   String get baseUrl => _baseUrl;
 
   Future<String?> _getToken() => _storage.read(key: 'jwt_token');
 
-  /// Récupère la liste des commentaires pour un contenu
   Future<List<Map<String, dynamic>>> fetchComments(String contentId) async {
     final token = await _getToken();
     final resp = await http.get(
@@ -32,7 +31,6 @@ class CommentService {
     throw Exception('Erreur fetchComments: ${resp.statusCode}');
   }
 
-  /// Poste un nouveau commentaire (avec parent optionnel)
   Future<void> postComment(
     String contentId,
     String text, {
@@ -54,7 +52,6 @@ class CommentService {
     }
   }
 
-  /// Like / Unlike existants
   Future<void> likeComment(String commentId) async {
     final token = await _getToken();
     final resp = await http.post(

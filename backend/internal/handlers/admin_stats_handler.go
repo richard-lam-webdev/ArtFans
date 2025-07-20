@@ -1,5 +1,3 @@
-// internal/handlers/admin_stats_handler.go
-
 package handlers
 
 import (
@@ -22,7 +20,6 @@ func NewAdminStatsHandler() *AdminStatsHandler {
 
 // GetStats GET /api/admin/stats
 func (h *AdminStatsHandler) GetStats(c *gin.Context) {
-	// Période par défaut : 30 jours
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -47,7 +44,6 @@ func (h *AdminStatsHandler) GetStats(c *gin.Context) {
 
 // GetDashboard GET /api/admin/dashboard
 func (h *AdminStatsHandler) GetDashboard(c *gin.Context) {
-	// Période par défaut : 30 jours
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -72,7 +68,6 @@ func (h *AdminStatsHandler) GetDashboard(c *gin.Context) {
 
 // GetTopCreators GET /api/admin/top-creators
 func (h *AdminStatsHandler) GetTopCreators(c *gin.Context) {
-	// Limite par défaut : 10
 	limit := 10
 	if limitParam := c.Query("limit"); limitParam != "" {
 		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 50 {
@@ -80,7 +75,6 @@ func (h *AdminStatsHandler) GetTopCreators(c *gin.Context) {
 		}
 	}
 
-	// Période par défaut : 30 jours
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -88,7 +82,6 @@ func (h *AdminStatsHandler) GetTopCreators(c *gin.Context) {
 		}
 	}
 
-	// ✨ UTILISER LA VERSION ULTRA-SAFE
 	creators, err := h.service.GetTopCreators(limit, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -110,7 +103,6 @@ func (h *AdminStatsHandler) GetTopCreators(c *gin.Context) {
 
 // GetTopContents GET /api/admin/top-contents
 func (h *AdminStatsHandler) GetTopContents(c *gin.Context) {
-	// Limite par défaut : 10
 	limit := 10
 	if limitParam := c.Query("limit"); limitParam != "" {
 		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 50 {
@@ -118,7 +110,6 @@ func (h *AdminStatsHandler) GetTopContents(c *gin.Context) {
 		}
 	}
 
-	// Période par défaut : 30 jours
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -147,7 +138,6 @@ func (h *AdminStatsHandler) GetTopContents(c *gin.Context) {
 
 // GetFlopContents GET /api/admin/flop-contents
 func (h *AdminStatsHandler) GetFlopContents(c *gin.Context) {
-	// Limite par défaut : 10
 	limit := 10
 	if limitParam := c.Query("limit"); limitParam != "" {
 		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 50 {
@@ -155,7 +145,6 @@ func (h *AdminStatsHandler) GetFlopContents(c *gin.Context) {
 		}
 	}
 
-	// Période par défaut : 30 jours
 	days := 30
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 365 {
@@ -184,7 +173,6 @@ func (h *AdminStatsHandler) GetFlopContents(c *gin.Context) {
 
 // GetRevenueChart GET /api/admin/revenue-chart
 func (h *AdminStatsHandler) GetRevenueChart(c *gin.Context) {
-	// Période par défaut : 7 jours
 	days := 7
 	if daysParam := c.Query("days"); daysParam != "" {
 		if d, err := strconv.Atoi(daysParam); err == nil && d > 0 && d <= 90 {
@@ -220,7 +208,6 @@ func (h *AdminStatsHandler) GetQuickStats(c *gin.Context) {
 		return
 	}
 
-	// Version simplifiée pour l'affichage rapide
 	quickStats := gin.H{
 		"total_users":      stats.TotalUsers,
 		"total_revenue":    stats.TotalRevenue,

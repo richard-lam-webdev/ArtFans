@@ -22,7 +22,6 @@ class _CreatorTileState extends State<CreatorTile> {
     final name = widget.creator.username;
     final currentlyFollowed = subProv.isSubscribed(id);
 
-    // Confirmation dialog
     final confirmed =
         await showDialog<bool>(
           context: context,
@@ -82,7 +81,6 @@ class _CreatorTileState extends State<CreatorTile> {
     if (!mounted) return;
 
     if (success) {
-      // Met à jour le cache et affiche un SnackBar
       subProv.setSubscriptionStatus(id, !currentlyFollowed);
       showCustomSnackBar(
         context,

@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Comment représente un commentaire posté par un utilisateur sur un Content
 type Comment struct {
 	ID        uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	ContentID uuid.UUID  `gorm:"column:content_id;not null;index"           json:"content_id"`
