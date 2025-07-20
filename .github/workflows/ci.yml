@@ -109,6 +109,20 @@ jobs:
           cmake: '3.22.1'
           ndk: '27.0.12077973'
 
+      - name: Decode and restore Android keystore
+        run: |
+          mkdir -p frontend
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > frontend/artfans.jks
+
+      - name: Generate key.properties
+        run: |
+          cat <<EOF > frontend/key.properties
+          storeFile=artfans.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
       - name: Copy dummy .env
         run: cp frontend/.env.example frontend/.env
 
