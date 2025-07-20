@@ -111,8 +111,8 @@ jobs:
 
       - name: Decode and restore Android keystore
         run: |
-          mkdir -p frontend
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > frontend/artfans.jks
+          mkdir -p frontend/android/app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > frontend/android/app/artfans.jks
 
       - name: Generate key.properties
         run: |
