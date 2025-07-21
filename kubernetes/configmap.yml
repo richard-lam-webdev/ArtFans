@@ -4,4 +4,4 @@ metadata:
   name: artfans-frontend-config
   namespace: artfans
 data:
-  API_BASE_URL: "http://artfans-api.artfans.svc.cluster.local:8080"
+  API_URL: "http://artfans-api-service:8080"
