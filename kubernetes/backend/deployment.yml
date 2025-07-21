@@ -1,73 +1,66 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: artfans-api
+  name: artfans-web
   namespace: artfans
+  labels:
+    app: artfans-web
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: artfans-api
+      app: artfans-web
   template:
     metadata:
       labels:
-        app: artfans-api
+        app: artfans-web
     spec:
-      serviceAccountName: cloudsql-proxy
+      serviceAccountName: default
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
       containers:
-      - name: api
-        image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-api:latest
+      - name: web
+        image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
         imagePullPolicy: IfNotPresent
-        command: ["/bin/sh", "-c", "cd /root && ./main"]
         envFrom:
-        - secretRef:
-            name: artfans-backend-secrets
+        - configMapRef:
+            name: artfans-frontend-config
         ports:
-        - containerPort: 8080
+        - containerPort: 80
           name: http
         readinessProbe:
           httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 10
+            path: /
+            port: 80
+          initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
           httpGet:
-            path: /health
-            port: 8080
-          initialDelaySeconds: 20
+            path: /
+            port: 80
+          initialDelaySeconds: 15
           periodSeconds: 20
+        securityContext:
+          allowPrivilegeEscalation: false
         volumeMounts:
-        - name: uploads
-          mountPath: /uploads
-        securityContext:
-          runAsUser: 1000
-          runAsGroup: 1000
-          allowPrivilegeEscalation: false
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "100m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-      - name: cloud-sql-proxy
-        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.0
-        args:
-        - "--port=5432"
-        - "pure-karma-466322-v8:europe-west9:artfans-pg"
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 65532
-          allowPrivilegeEscalation: false
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-pid
+          mountPath: /var/run
+        - name: nginx-log
+          mountPath: /var/log/nginx
         resources:
           requests:
             memory: "128Mi"
-            cpu: "100m"
+            cpu: "50m"
           limits:
             memory: "256Mi"
             cpu: "200m"
       volumes:
-      - name: uploads
-        persistentVolumeClaim:
-          claimName: uploads-pvc
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-pid
+        emptyDir: {}
+      - name: nginx-log
+        emptyDir: {}
