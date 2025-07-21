@@ -50,6 +50,8 @@ spec:
           mountPath: /var/run
         - name: nginx-log
           mountPath: /var/log/nginx
+        - name: nginx-config          
+          mountPath: /etc/nginx/conf.d 
         resources:
           requests:
             memory: "128Mi"
@@ -64,3 +66,6 @@ spec:
         emptyDir: {}
       - name: nginx-log
         emptyDir: {}
+      - name: nginx-config
+        configMap:
+          name: nginx-config
