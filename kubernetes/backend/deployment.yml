@@ -40,6 +40,13 @@ spec:
         volumeMounts:
         - name: uploads
           mountPath: /uploads
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+              - NET_BIND_SERVICE
+            drop:
+              - ALL
       - name: cloud-sql-proxy
         image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest
         args:
