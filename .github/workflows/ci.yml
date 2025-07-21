@@ -95,11 +95,37 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # ← Crée un .env avant le build Flutter
+      - name: Setup Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 33
+          build-tools: '34.0.0'
+          cmake: '3.22.1'
+          ndk: '27.0.12077973'
+
+      - name: Decode and restore Android keystore
+        run: |
+          mkdir -p frontend/android/app
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > frontend/android/app/artfans.jks
+
+      - name: Generate key.properties
+        run: |
+          cat <<EOF > frontend/key.properties
+          storeFile=artfans.jks
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          EOF
+
       - name: Copy dummy .env
         run: cp frontend/.env.example frontend/.env
 
-      # Flutter build
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -112,6 +138,7 @@ jobs:
       - name: Build Web bundle
         working-directory: frontend
         run: flutter build web --release
+
 
       # Go build
       - name: Setup Go
