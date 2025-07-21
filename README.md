@@ -150,7 +150,7 @@ Pour installer l’APK via ADB, il faut :
 ## 📱 APK Android
 
 Téléchargez l’APK Android signé ici :  
-[releases/android/app-release.apk](releases/android/app-release.apk)
+[releases/android/app-release.apk](frontend/releases/android/app-release.apk)
 
 Pour l’installer sur un appareil connecté via ADB :
 
