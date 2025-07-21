@@ -14,41 +14,53 @@ spec:
     metadata:
       labels:
         app: artfans-web
-    spec:         
-      serviceAccountName: cloudsql-proxy                     
+    spec:
+      serviceAccountName: default
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
       containers:
-        - name: web
-          image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
-          imagePullPolicy: IfNotPresent
-          envFrom:
-            - configMapRef:
-                name: artfans-frontend-config
-          ports:
-            - containerPort: 80
-              name: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 15
-            periodSeconds: 20
-          volumeMounts:
-            - name: nginx-cache
-              mountPath: /var/cache/nginx
-            - name: nginx-pid
-              mountPath: /var
-            - name: nginx-log
-              mountPath: /var/log/nginx
-      volumes:
+      - name: web
+        image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - configMapRef:
+            name: artfans-frontend-config
+        ports:
+        - containerPort: 80
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
         - name: nginx-cache
-          emptyDir: {}
+          mountPath: /var/cache/nginx
         - name: nginx-pid
-          emptyDir: {}
+          mountPath: /var/run
         - name: nginx-log
-          emptyDir: {}  
+          mountPath: /var/log/nginx
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-pid
+        emptyDir: {}
+      - name: nginx-log
+        emptyDir: {}

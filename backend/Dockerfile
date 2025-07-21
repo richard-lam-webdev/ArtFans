@@ -2,28 +2,25 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Build
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/server/main.go
 
-# Final stage
-FROM alpine:3.20
-RUN apk --no-cache upgrade && apk --no-cache add ca-certificates tzdata
 
-WORKDIR /root/
+FROM alpine:3.18
+RUN apk --no-cache add ca-certificates tzdata
 
-# Copy binary
+WORKDIR /app
+
 COPY --from=builder /app/main .
 
-# Create uploads directory
-RUN mkdir -p /uploads
+RUN mkdir -p /uploads && \
+    chmod +x main && \
+    adduser -D -u 1000 appuser && \
+    chown -R appuser:appuser /app /uploads
 
-# Non-root user
-RUN adduser -D -u 1000 appuser
 USER appuser
 
 EXPOSE 8080

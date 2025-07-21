@@ -13,48 +13,60 @@ spec:
       labels:
         app: artfans-api
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
+      serviceAccountName: cloudsql-proxy
       containers:
       - name: api
         image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-api:latest
         imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c", "cd /root && ./main"]
         envFrom:
         - secretRef:
             name: artfans-backend-secrets
         ports:
         - containerPort: 8080
+          name: http
         readinessProbe:
           httpGet:
             path: /health
             port: 8080
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /health
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 20
           periodSeconds: 20
         volumeMounts:
         - name: uploads
           mountPath: /uploads
         securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
           allowPrivilegeEscalation: false
-          capabilities:
-            add:
-              - NET_BIND_SERVICE
-            drop:
-              - ALL
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
       - name: cloud-sql-proxy
-        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest
+        image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.0
         args:
-        - "--instance=pure-karma-466322-v8:europe-west9:artfans-pg"
         - "--port=5432"
+        - "pure-karma-466322-v8:europe-west9:artfans-pg"
         securityContext:
           runAsNonRoot: true
-          runAsUser: 2
+          runAsUser: 65532
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
       volumes:
       - name: uploads
         persistentVolumeClaim:
