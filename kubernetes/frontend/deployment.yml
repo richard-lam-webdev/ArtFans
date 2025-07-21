@@ -14,7 +14,8 @@ spec:
     metadata:
       labels:
         app: artfans-web
-    spec:                             
+    spec:         
+      serviceAccountName: cloudsql-proxy                     
       containers:
         - name: web
           image: europe-docker.pkg.dev/pure-karma-466322-v8/artfans/artfans-web:latest
