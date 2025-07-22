@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'metrics_service.dart';
@@ -10,21 +9,15 @@ class AuthService {
 
   AuthService()
     : _secureStorage = const FlutterSecureStorage(),
-      _baseUrl =
-          (() {
-            try {
-              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-            } catch (_) {
-              return 'http://localhost:8080';
-            }
-          })();
+      _baseUrl ='';
+
 
   Future<void> register({
     required String username,
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('$_baseUrl/api/auth/register');
+    final uri = Uri.parse('/api/auth/register');
     final payload = jsonEncode({
       'username': username,
       'email': email,
@@ -53,7 +46,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('$_baseUrl/api/auth/login');
+    final uri = Uri.parse('/api/auth/login');
     final response = await _performRequest(
       '/auth/login',
       () => http.post(
