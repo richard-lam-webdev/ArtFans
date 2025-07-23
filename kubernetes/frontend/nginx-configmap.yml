@@ -10,6 +10,14 @@ data:
         server_name _;
         root /usr/share/nginx/html;
         index index.html;
+
+        gzip on;
+        gzip_types text/plain text/css text/javascript application/javascript application/json;
+
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+            expires 1y;
+            add_header Cache-Control "public, immutable";
+        }
         
         location /api {
             proxy_pass http://artfans-api-service:8080;

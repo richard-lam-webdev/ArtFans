@@ -14,8 +14,6 @@ FROM nginx:alpine
 RUN mkdir -p /var/cache/nginx/client_temp \
  && chown -R nginx:nginx /var/cache/nginx
 
-COPY nginx.conf /etc/nginx/nginx.conf
-
 COPY --from=flutter_builder /app/build/web /usr/share/nginx/html
 
 RUN chown -R nginx:nginx /usr/share/nginx/html
