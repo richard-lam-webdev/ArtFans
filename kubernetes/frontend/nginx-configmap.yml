@@ -18,7 +18,6 @@ data:
             expires 1y;
             add_header Cache-Control "public, immutable";
         }
-
         
         location /api {
             proxy_pass http://artfans-api-service:8080;
