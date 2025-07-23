@@ -12,7 +12,7 @@ data:
     root /usr/share/nginx/html;
     index index.html;
 
-    location /api{
+    location /api {
         proxy_pass http://artfans-api-service:8080;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
