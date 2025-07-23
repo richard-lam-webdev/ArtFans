@@ -17,7 +17,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('/api/auth/register');
+    final uri = Uri.parse('$_baseUrl/api/auth/register');
     final payload = jsonEncode({
       'username': username,
       'email': email,
@@ -46,7 +46,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    final uri = Uri.parse('/api/auth/login');
+    final uri = Uri.parse('$_baseUrl/api/auth/login');
     final response = await _performRequest(
       '/auth/login',
       () => http.post(
