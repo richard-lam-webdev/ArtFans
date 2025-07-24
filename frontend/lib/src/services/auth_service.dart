@@ -170,9 +170,8 @@ class AuthService {
       return null;
     }
   }
-}
 
-Future<http.Response> _performRequest(
+  Future<http.Response> _performRequest(
   String endpoint,
   Future<http.Response> Function() request,
 ) async {
@@ -195,3 +194,6 @@ Future<http.Response> _performRequest(
     rethrow;
   }
 }
+}
+
+
