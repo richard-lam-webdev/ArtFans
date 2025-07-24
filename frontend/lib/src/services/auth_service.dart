@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'metrics_service.dart';
@@ -9,7 +10,7 @@ class AuthService {
 
   AuthService()
     : _secureStorage = const FlutterSecureStorage(),
-      _baseUrl ='';
+        _baseUrl = kReleaseMode ? '' : 'http://localhost:8080';
 
 
   Future<void> register({
