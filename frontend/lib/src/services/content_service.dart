@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:universal_platform/universal_platform.dart';
 import 'package:path_provider/path_provider.dart';
 import 'metrics_service.dart';
@@ -12,20 +11,12 @@ import 'package:frontend/src/utils/web_download_stub.dart'
     if (dart.library.html) 'package:frontend/src/utils/web_download_web.dart';
 
 class ContentService {
-  final String _baseUrl;
+  final String _baseUrl = '';
   final _storage = const FlutterSecureStorage();
 
-  ContentService()
-    : _baseUrl =
-          (() {
-            try {
-              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-            } catch (_) {
-              return 'http://localhost:8080';
-            }
-          })();
+  
 
-  String get baseUrl => _baseUrl;
+
 
   Future<String?> _getToken() async {
     return await _storage.read(key: 'jwt_token');

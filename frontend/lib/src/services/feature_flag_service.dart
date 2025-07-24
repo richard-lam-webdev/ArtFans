@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,14 +12,8 @@ class FeatureFlagService {
   FeatureFlagService({http.Client? client})
     : _secureStorage = const FlutterSecureStorage(),
       _client = client ?? http.Client(),
-      _baseUrl =
-          (() {
-            try {
-              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-            } catch (_) {
-              return 'http://localhost:8080';
-            }
-          })();
+      _baseUrl = '';
+
 
   Future<List<Feature>> getFeatures() async {
     final token = await _secureStorage.read(key: 'jwt_token');
