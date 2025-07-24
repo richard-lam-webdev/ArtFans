@@ -1,22 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/message_model.dart';
 
 class MessageService {
-  final String _baseUrl;
   final _storage = const FlutterSecureStorage();
+  final String _baseUrl='';  
 
-  MessageService()
-    : _baseUrl =
-          (() {
-            try {
-              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-            } catch (_) {
-              return 'http://localhost:8080';
-            }
-          })();
 
   Future<String?> _getToken() async {
     return await _storage.read(key: 'jwt_token');

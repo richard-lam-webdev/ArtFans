@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -17,14 +16,7 @@ class EditContentScreen extends StatefulWidget {
 }
 
 class _EditContentScreenState extends State<EditContentScreen> {
-  final String _baseUrl =
-      (() {
-        try {
-          return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-        } catch (_) {
-          return 'http://localhost:8080';
-        }
-      })();
+    final String _baseUrl = '';
 
   String get baseUrl => _baseUrl;
 

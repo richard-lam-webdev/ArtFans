@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -9,15 +8,7 @@ class AdminContentService {
 
   AdminContentService()
     : _secureStorage = const FlutterSecureStorage(),
-      _baseUrl =
-          (() {
-            try {
-              // si dotenv n'est pas initialisé, on tombe dans le catch
-              return dotenv.env['API_URL'] ?? 'http://localhost:8080';
-            } catch (_) {
-              return 'http://localhost:8080';
-            }
-          })();
+      _baseUrl = '';
 
   Future<List<Map<String, dynamic>>> fetchContents() async {
     final token = await _secureStorage.read(key: 'jwt_token');

@@ -1,19 +1,11 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class MetricsService {
-  static final String _baseUrl =
-      (() {
-        try {
-          return dotenv.env['API_URL'] != null
-              ? '${dotenv.env['API_URL']}/api/metrics/client'
-              : 'http://localhost:8080/api/metrics/client';
-        } catch (_) {
-          return 'http://localhost:8080/api/metrics/client';
-        }
-      })();
+  static final String _baseUrl = kReleaseMode 
+      ? '/api/metrics/client'  
+      : 'http://localhost:8080/api/metrics/client';
   static Future<void> reportPageLoad(String pageName, int durationMs) async {
     try {
       await http.post(

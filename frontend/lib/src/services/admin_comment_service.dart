@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/src/services/auth_service.dart';
 
 class AdminCommentService {
-  final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
+  final String _baseUrl = '';
   Future<Map<String, String>> _headers() async {
     final token = await AuthService().getToken();
     return {
